@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piano Trainer Engine</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Vendor libs -->
+    <script src="assets/js/Tone.js"></script>
+    <script src="assets/js/opensheetmusicdisplay.min.js"></script>
+</head>
+<body>
+
+    <nav id="static-menu">
+        <div class="menu-left">
+            <button id="btn-scores">🎼 Scores</button>
+            <input type="file" id="score-import-input" accept=".xml,.mxl,.musicxml" multiple style="display:none;">
+            <input type="file" id="library-backup-input" accept=".json,application/json" style="display:none;">
+            <input type="file" id="file-input" accept=".xml,.mxl,.musicxml" style="display:none;">
+        </div>
+
+        <div class="menu-center">
+            <div class="menu-group transport-group">
+                <button id="btn-play">▶ Play</button>
+                <button id="btn-reset">⏮ Reset</button>
+            </div>
+
+            <div class="menu-separator" aria-hidden="true"></div>
+
+            <div class="menu-group toolbar-popup-launchers">
+                <button id="btn-tempo">♪ Tempo</button>
+                <button id="btn-practice">🎹 Trainer</button>
+                <button id="btn-looper">🔁 Looper</button>
+            </div>
+
+            <div class="menu-separator" aria-hidden="true"></div>
+
+            <div class="menu-group score-display">
+                Score: <span id="live-score">100%</span>
+            </div>
+        </div>
+
+        <div class="menu-right">
+            <button id="btn-options">⚙ Settings</button>
+        </div>
+    </nav>
+
+
+
+    <div id="scores-panel" class="scores-drawer popup-surface hidden">
+        <div class="scores-drawer-inner">
+            <div class="scores-drawer-header">
+                
+            </div>
+
+            <div class="scores-drawer-body">
+                <div class="scores-section scores-actions">
+                    <div class="scores-section-label">Actions</div>
+                    <div class="scores-action-grid">
+                        <button type="button" id="btn-scores-open-file">Open Score</button>
+                        <button type="button" id="btn-scores-import-files">Import Files</button>
+                        <button type="button" id="btn-scores-save-current">Save Current Score</button>
+                        <button type="button" id="btn-scores-new-folder">New Folder</button>
+                    </div>
+                </div>
+
+                <div class="scores-section scores-library">
+                    <div class="scores-section-label">Library</div>
+                    <div id="scores-library-list" class="scores-list-box scores-library-list">
+                        <div class="scores-empty-state">Library tools will appear here in the next step.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="scores-drawer-footer">
+                <div class="scores-footer-grid">
+                    <button type="button" id="btn-scores-export-library">Export Library</button>
+                    <button type="button" id="btn-scores-import-library">Import Library</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="options-overlay" class="popup-surface hidden">
+        <div class="options-grid">
+            <fieldset id="fs-hand-assign">
+                <legend>Staff Assignment</legend>
+                <div class="two-col-inline compact-pairs hand-assign-row">
+                    <label>(L) ✋
+                        <select id="assign-lh"><option value="2">2</option></select>
+                    </label>
+                    <label>(R) 🤚
+                        <select id="assign-rh"><option value="1">1</option></select>
+                    </label>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Connections</legend>
+                <div class="connection-stack">
+                    <div class="connection-row connection-main-row">
+                        <label class="connection-field"><span class="connection-label">MIDI In:</span>
+                            <select id="midi-in"><option value="none">None</option></select>
+                        </label>
+                        <span id="midi-in-connection-status" class="connection-status status-none-text">
+                            <span class="status-dot status-none"></span>
+                            <span class="status-label">None</span>
+                        </span>
+                    </div>
+                    <div class="connection-row connection-main-row">
+                        <label class="connection-field"><span class="connection-label">MIDI Out:</span>
+                            <select id="midi-out"><option value="none">None</option></select>
+                        </label>
+                        <span id="midi-out-connection-status" class="connection-status status-none-text">
+                            <span class="status-dot status-none"></span>
+                            <span class="status-label">None</span>
+                        </span>
+                    </div>
+                    <div class="connection-row connection-subrow connection-channel-row">
+                        <label class="connection-field connection-field-compact"><span class="connection-label">Channel:</span>
+                            <select id="midi-out-channel"></select>
+                        </label>
+                    </div>
+                    <div class="connection-row connection-main-row">
+                        <label class="connection-field"><span class="connection-label">LED Lights:</span>
+                            <select id="led-output-mode">
+                                <option value="none">None</option>
+                                <option value="midi">MIDI Device</option>
+                                <option value="wled">WLED</option>
+                            </select>
+                        </label>
+                        <span id="led-connection-status" class="connection-status status-none-text">
+                            <span class="status-dot status-none"></span>
+                            <span class="status-label">None</span>
+                        </span>
+                    </div>
+                </div>
+                <div id="midi-permission-help" class="setting-note permission-note hidden"></div>
+
+                <div id="midi-lights-row" class="connection-subgroup hidden">
+                    <div class="connection-row connection-main-row">
+                        <label class="connection-field"><span class="connection-label">LED MIDI Device:</span>
+                            <select id="midi-lights"><option value="none">None</option></select>
+                        </label>
+                    </div>
+                    <div class="connection-row connection-subrow connection-channel-row">
+                        <label class="connection-field connection-field-compact"><span class="connection-label">Channel:</span>
+                            <select id="midi-lights-channel"></select>
+                        </label>
+                    </div>
+                </div>
+                <div id="midi-led-test-settings" class="connection-subgroup hidden">
+                    <div class="connection-inline-controls">
+                        <label class="toggle-inline"><input type="checkbox" id="check-midi-led-low-velocity"> <span>Low Velocity Mode</span></label>
+                        <button type="button" id="btn-test-midi-led">Test LED Strip</button>
+                    </div>
+                    <div id="midi-led-test-status" class="setting-note">MIDI LED idle.</div>
+                </div>
+
+                <div id="wled-settings" class="connection-subgroup hidden">
+                    <div class="connection-row connection-main-row">
+                        <label class="connection-field"><span class="connection-label">WLED IP Address:</span>
+                            <input type="text" id="input-wled-ip" placeholder="192.168.1.50">
+                        </label>
+                    </div>
+                    <div class="connection-row connection-subrow connection-transport-row">
+                        <label class="connection-field"><span class="connection-label">Transport:</span>
+                            <select id="wled-transport">
+                                <option value="http-json">HTTP JSON (recommended)</option>
+                                <option value="ddp">DDP (lower latency, experimental)</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div id="wled-transport-hint" class="setting-note hidden">DDP may require a local sender in browser mode.</div>
+                    <div id="wled-transport-runtime" class="setting-note">Active: HTTP JSON</div>
+                    <div id="wled-helper-status" class="setting-note hidden">Helper: Not detected.</div>
+                    <label class="toggle-inline"><input type="checkbox" id="check-wled-ddp-debug"> <span>Enable DDP Debug Logging</span></label>
+                    <div class="connection-inline-controls">
+                        <button type="button" id="btn-test-wled">Test LED Strip</button>
+                        <button type="button" id="btn-resend-wled">Re-send LEDs</button>
+                    </div>
+                    <div id="wled-status" class="setting-note">WLED idle.</div>
+                    <div id="wled-permission-help" class="setting-note permission-note hidden"></div>
+                </div>
+            </fieldset>
+
+            
+
+            <fieldset id="fs-player-range">
+                <legend>Player Piano</legend>
+                <div class="two-col-inline compact-pairs player-piano-row">
+                    <label>Keys
+                        <select id="select-player-piano-type">
+                            <option value="88">88</option>
+                            <option value="76">76</option>
+                            <option value="73">73</option>
+                            <option value="61">61</option>
+                            <option value="49">49</option>
+                            <option value="37">37</option>
+                            <option value="32">32</option>
+                            <option value="25">25</option>
+                        </select>
+                    </label>
+                    <label>LED Count
+                        <input type="number" id="input-led-count" value="88" min="1" max="500" class="num-input">
+                    </label>
+                </div>
+                <div id="player-piano-range-label" class="setting-note">Playable Range: MIDI 21–108</div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Display &amp; Debug</legend>
+                <label><input type="checkbox" id="check-debug"> Debug Note Feedback</label>
+                <div class="update-check-row">
+                    <button type="button" id="btn-check-updates">Check for Updates</button>
+                    <div id="update-status" class="setting-note">Version: not initialized.</div>
+                </div>
+                <label><input type="checkbox" id="check-led-simulator"> Virtual LEDs</label>
+
+                <div class="setting-subgroup">
+                    <div class="setting-subgroup-title">LED Brightness</div>
+                    <div class="led-brightness-grid">
+                        <div class="brightness-row">
+                            <label for="slider-led-master" class="brightness-label">Master</label>
+                            <input type="range" id="slider-led-master" min="1" max="100" value="25">
+                            <div class="value-suffix-group">
+                                <input type="number" id="val-led-master" value="25" min="1" max="100" class="num-input"><span>%</span>
+                            </div>
+                        </div>
+                        <div class="led-brightness-subtitle">Future note brightness</div>
+                        <div class="brightness-row">
+                            <label for="slider-led-future1" class="brightness-label">Future</label>
+                            <input type="range" id="slider-led-future1" min="0" max="100" value="10">
+                            <div class="value-suffix-group">
+                                <input type="number" id="val-led-future1" value="10" min="0" max="100" class="num-input"><span>%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-subgroup">
+                    <div class="setting-subgroup-title">LED Calibration</div>
+                    <button type="button" id="btn-led-calibration-toggle">Start LED Calibration</button>
+                    <div class="setting-note">Opens a small live calibration bar so you can still see the keyboard and LEDs.</div>
+                </div>
+            </fieldset>
+        </div>
+
+
+            <div class="settings-reset-wrap">
+                <div class="settings-action-row">
+                    <button type="button" id="btn-backup-settings" class="settings-action-button">Backup All Settings</button>
+                    <button type="button" id="btn-import-settings" class="settings-action-button">Import Settings</button>
+                    <button type="button" id="btn-reset-preferences" class="settings-action-button settings-reset-button">Reset All Settings</button>
+                </div>
+                <input type="file" id="input-settings-import" accept=".json,application/json" class="hidden">
+                <div class="setting-note settings-reset-note">Backup includes saved Settings, Trainer preferences, Connections, WLED settings, and LED calibration. Score Library export stays separate.</div>
+            </div>
+    </div>
+
+    <div id="tempo-popup" class="toolbar-popup popup-surface hidden">
+        <fieldset id="fs-tempo-popup">
+            <legend>Tempo</legend>
+            <div class="tempo-popup-grid">
+                <div class="tempo-row bpm-row">
+                    <label for="val-bpm" class="tempo-label">BPM</label>
+                    <input type="number" id="val-bpm" value="120" class="num-input">
+                </div>
+
+                <div class="tempo-row speed-row">
+                    <label for="slider-speed" class="tempo-label">Speed</label>
+                    <input type="range" id="slider-speed" min="10" max="200" value="100">
+                    <div class="value-suffix-group">
+                        <input type="number" id="val-speed" value="100" min="10" max="200" class="num-input"><span>%</span>
+                    </div>
+                </div>
+
+                <div class="tempo-row metro-row">
+                    <label class="metro-enable"><input type="checkbox" id="check-metronome"> Metronome</label>
+                    <label for="slider-metro-vol" class="tempo-label metro-volume-label">Volume</label>
+                    <input type="range" id="slider-metro-vol" min="0" max="100" value="25">
+                    <div class="value-suffix-group">
+                        <input type="number" id="val-metro-vol" value="25" min="0" max="100" class="num-input"><span>%</span>
+                    </div>
+                </div>
+
+                <div class="tempo-row tempo-accented-downbeat-row">
+                    <div class="tempo-row-spacer" aria-hidden="true"></div>
+                    <label class="tempo-accented-downbeat-toggle"><input type="checkbox" id="check-accented-downbeat" checked> Accented Downbeat</label>
+                </div>
+
+                <div class="tempo-row tempo-visual-pulse-row">
+                    <div class="tempo-row-spacer" aria-hidden="true"></div>
+                    <label class="tempo-visual-pulse-toggle"><input type="checkbox" id="check-visual-pulse" checked> Visual Pulse</label>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+
+    <div id="practice-popup" class="toolbar-popup popup-surface hidden">
+        <fieldset id="fs-practice-popup">
+            <legend>🎹 Trainer</legend>
+
+            <div class="practice-rows">
+                <div class="practice-row">
+                    <div class="practice-row-label">Mode</div>
+                    <select id="select-mode">
+                        <option value="realtime">Realtime</option>
+                        <option value="wait">Wait</option>
+                    </select>
+                </div>
+
+                <div class="practice-row">
+                    <div class="practice-row-label">Hands</div>
+                    <div class="inline-checkboxes compact-checkboxes">
+                        <label><input type="checkbox" id="practice-lh" checked> L ✋</label>
+                        <label><input type="checkbox" id="practice-rh" checked> R 🤚</label>
+                    </div>
+                </div>
+
+                <div class="practice-row feedback-row">
+                    <div class="practice-row-spacer"></div>
+                    <label class="inline-row-flex"><input type="checkbox" id="check-feedback" checked> Staff Feedback</label>
+                </div>
+
+                <div class="practice-row future-notes-row">
+                    <div class="practice-row-spacer"></div>
+                    <div class="inline-row-flex future-notes-inline"><label class="inline-row-flex"><input type="checkbox" id="check-future-preview" checked> Highlight Future Notes</label><label class="inline-row-flex"><input type="checkbox" id="check-correct-highlight"> Highlight Correct Notes</label></div>
+                </div>
+
+                <div class="practice-divider"></div>
+
+                <div class="practice-section-title">Playback &amp; Routing</div>
+
+                <div class="routing-grid">
+                    <section class="routing-card">
+                        <div class="routing-card-title">In-App Audio</div>
+                        <div class="routing-card-subtitle">Playback from score through the browser.</div>
+
+                        <div class="practice-row value-row routing-volume-row">
+                            <label for="slider-piano-vol" class="practice-row-label inline-label">In-App Volume</label>
+                            <input type="range" id="slider-piano-vol" min="0" max="100" value="80">
+                            <div class="routing-value-group">
+                                <input type="number" id="val-piano-vol" value="80" min="0" max="100" class="num-input">
+                            </div>
+                        </div>
+
+                        <div class="routing-source-groups">
+                            <div class="routing-source-group">
+                                <div class="routing-source-group-label">Score Playback</div>
+                                <div class="routing-source-grid routing-source-grid-score">
+                                    <label><input type="checkbox" id="enable-staff-lh" checked> L ✋</label>
+                                    <label><input type="checkbox" id="enable-staff-rh" checked> R 🤚</label>
+                                    <label><input type="checkbox" id="enable-other"> Other Staffs</label>
+                                </div>
+                            </div>
+                            <div class="routing-source-group">
+                                <div class="routing-source-group-label">Live Input</div>
+                                <div class="routing-source-grid routing-source-grid-live">
+                                    <label><input type="checkbox" id="enable-instrument"> MIDI In</label>
+                                    <label><input type="checkbox" id="enable-virtual-keyboard" checked> Virtual Keyboard</label>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="routing-card" id="trainer-midiout-card">
+                        <div class="routing-card-title">MIDI Out</div>
+                        <div class="routing-card-subtitle" id="trainer-midi-out-summary">Choose a MIDI Out device in Settings to enable this routing.</div>
+
+                        <div class="routing-source-groups">
+                            <div class="routing-source-group">
+                                <div class="routing-source-group-label">Score Playback</div>
+                                <div class="routing-source-grid routing-source-grid-score">
+                                    <label><input type="checkbox" id="enable-midiout-lh"> L ✋</label>
+                                    <label><input type="checkbox" id="enable-midiout-rh"> R 🤚</label>
+                                    <label><input type="checkbox" id="enable-midiout-other"> Other Staffs</label>
+                                </div>
+                            </div>
+                            <div class="routing-source-group">
+                                <div class="routing-source-group-label">Live Input</div>
+                                <div class="routing-source-grid routing-source-grid-live">
+                                    <label><input type="checkbox" id="enable-midiout-instrument"> MIDI In</label>
+                                    <label><input type="checkbox" id="enable-midiout-virtual-keyboard"> Virtual Keyboard</label>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="routing-inline-options routing-global-options">
+                    <div class="routing-inline-title">Live Input Behavior</div>
+                    <div class="routing-inline-help">Applies to In-App Audio and MIDI Out.</div>
+                    <label><input type="checkbox" id="check-input-velocity" checked> Use MIDI input velocity for live monitoring</label>
+                    <label><input type="checkbox" id="check-live-low-latency"> Low-latency live monitoring</label>
+                    <div class="routing-inline-note">Reduces live-monitor delay for MIDI In and Virtual Keyboard. May sound slightly drier on some devices.</div>
+                </div>
+
+                <div class="practice-divider"></div>
+
+                <div class="practice-section-title">Display</div>
+
+                <div class="practice-row value-row">
+                    <label for="slider-zoom" class="practice-row-label inline-label">Zoom</label>
+                    <input type="range" id="slider-zoom" min="50" max="200" value="100">
+                    <div class="value-suffix-group">
+                        <input type="number" id="val-zoom" value="100" class="num-input"><span>%</span>
+                    </div>
+                </div>
+
+                <div class="practice-row display-toggle-row">
+                    <label><input type="checkbox" id="check-autoscroll" checked> Auto Scroll</label>
+                    <label><input type="checkbox" id="check-keyboard" checked> Virtual Keyboard</label>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+
+    <div id="looper-popup" class="toolbar-popup popup-surface hidden">
+        <fieldset id="fs-looper">
+            <legend>Looper</legend>
+            <div class="loop-top-row">
+                <label><input type="checkbox" id="check-looper"> Enable Loop</label>
+                <label><input type="checkbox" id="check-loop-countin" checked> Loop Count-in</label>
+            </div>
+            <div class="loop-measures-row">
+                <span>Measures</span>
+                <div class="loop-measure-inputs">
+                    <input type="number" id="val-loop-min" value="1" class="num-input">
+                    <span>-</span>
+                    <input type="number" id="val-loop-max" value="100" class="num-input">
+                </div>
+            </div>
+            <div class="dual-slider-wrapper">
+                <div class="dual-slider-track"></div>
+                <input type="range" id="slider-loop-min" min="1" max="100" value="1">
+                <input type="range" id="slider-loop-max" min="1" max="100" value="100">
+            </div>
+        </fieldset>
+    </div>
+
+    <div id="music-area">
+        <div id="canvas-wrapper">
+            <div id="cursor-layer"></div>
+            <div id="looper-layer"></div>
+            <div id="feedback-layer"></div>
+            <div id="osmd-container"></div>
+        </div>
+    </div>
+
+    <div id="trainer-bottom-stack">
+        <div id="led-simulator-host"></div>
+        <div id="virtual-keyboard-container" class="hidden">
+            <div id="virtual-keyboard"></div>
+        </div>
+    </div>
+
+    <div id="led-calibration-panel" class="hidden">
+        <div id="led-calibration-panel-title">LED Calibration</div>
+        <div id="led-calibration-current">No key selected</div>
+        <div id="led-calibration-hint">Press any piano key or click a virtual key to select it.</div>
+        <div class="sync-inputs calibration-buttons">
+            <button type="button" id="btn-led-calibration-left">← Move Left</button>
+            <button type="button" id="btn-led-calibration-right">Move Right →</button>
+        </div>
+        <div class="sync-inputs calibration-buttons">
+            <button type="button" id="btn-led-calibration-reset-key">Reset Selected Key</button>
+            <button type="button" id="btn-led-calibration-reset-all">Reset All Calibration</button>
+            <button type="button" id="btn-led-calibration-done">Done</button>
+        </div>
+        <div class="sync-inputs calibration-buttons">
+            <button type="button" id="btn-led-calibration-export">Export Calibration</button>
+            <button type="button" id="btn-led-calibration-import">Import Calibration</button>
+        </div>
+        <input type="file" id="input-led-calibration-import" accept=".json,application/json" class="hidden">
+    </div>
+
+    <!-- Shared state first; core loads last -->
+    <script src="js/trainer-state.js"></script>
+    <script src="js/toolbar-ui.js"></script>
+    <script src="js/score-library.js"></script>
+    <script src="js/scores-ui.js"></script>
+    <script src="js/led.js"></script>
+    <script src="js/midi.js"></script>
+    <script src="js/feedback-engine.js"></script>
+    <script src="js/feedback-debug.js"></script>
+    <script src="js/trainer-core.js"></script>
+</body>
+</html>

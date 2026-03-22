@@ -1,0 +1,13 @@
+{
+  "name": "piano-trainer-wled-helper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local transport-only helper for Piano Trainer WLED HTTP/DDP output",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

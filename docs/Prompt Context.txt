@@ -1,0 +1,48 @@
+PROJECT: Piano Trainer Web App
+You are helping develop a piano training web app that renders sheet music and MIDI feedback notes.
+
+/js
+  trainer-core.js
+  trainer-state.js
+  toolbar-ui.js
+  scores-ui.js
+  score-library.js
+  midi.js
+  led.js
+  feedback-engine.js
+  feedback-debug.js
+
+/assets
+/docs
+index.html
+style.css
+
+DO NOT reintroduce old score logic or UI elements.
+Only modify files I provide.
+Do not assume missing files.
+Preserve feedback-engine and rendering behavior.
+
+
+
+There are strict historical bugs that must NEVER return:
+Rendering system rules (DO NOT BREAK):
+1. Beam groups must never drift when the window resizes.
+2. Feedback notes must anchor to the original VexFlow note positions.
+3. MIDI fallback notes must not place sharps/flats on incorrect staff lines.
+4. Clef changes must not affect feedback note placement.
+5. Debug overlays must not interfere with rendering layers.
+6. Rendering is done with VexFlow and MIDI input via WebMIDI.
+7. Important rule: Feedback notes must always anchor to the original rendered note positions, never recalculated positions.
+Never modify beam layout logic or anchor coordinate systems.
+
+Known stable fixes:
+- Beam drift solved by anchoring beams to original stave note X positions
+- Feedback notes must use cached layout coordinates instead of recalculated ones
+- Rendering must not recompute beam layout on resize
+
+DO NOT:
+- Recalculate beam groups during resize
+- Change anchor coordinate system
+- Re-layout VexFlow beams after initial render
+
+
