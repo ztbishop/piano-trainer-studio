@@ -41,6 +41,7 @@
         </div>
 
         <div class="menu-right">
+            <button id="btn-help">ℹ Help</button>
             <button id="btn-options">⚙ Settings</button>
         </div>
     </nav>
@@ -77,6 +78,90 @@
                     <button type="button" id="btn-scores-export-library">Export Library</button>
                     <button type="button" id="btn-scores-import-library">Import Library</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="help-overlay" class="popup-surface hidden">
+        <div class="info-panel info-panel-help">
+            <div class="info-panel-header">
+                <div>
+                    <div class="info-panel-kicker">Piano Trainer</div>
+                    <h2>Help / About</h2>
+                </div>
+                <button type="button" id="btn-help-close" class="info-panel-close" aria-label="Close help">✕</button>
+            </div>
+
+            <div class="info-panel-body">
+                <section class="info-panel-section">
+                    <h3>Quick Start</h3>
+                    <ul>
+                        <li>Open a score from the Scores menu, or import your own MusicXML files.</li>
+                        <li>Connect your MIDI keyboard in Settings.</li>
+                        <li>On iPad / iPhone, use <a href="https://midiweb.cc" target="_blank" rel="noopener noreferrer">midiweb.cc</a> for MIDI input support.</li>
+                        <li>LED output is optional. WLED can use HTTP JSON, or DDP with the local helper for lower latency.</li>
+                        <li>Starter songs can be included on first run when the built-in starter library is available.</li>
+                    </ul>
+                </section>
+
+                <section class="info-panel-section">
+                    <h3>Library &amp; Backups</h3>
+                    <ul>
+                        <li>Your score library is stored in your browser.</li>
+                        <li>Use <strong>Scores → Export Library</strong> to back up your song library.</li>
+                        <li>Use <strong>Settings → Backup All Settings</strong> to save trainer preferences, connections, and LED calibration.</li>
+                    </ul>
+                </section>
+
+                <section class="info-panel-section">
+                    <h3>MusicXML Sources</h3>
+                    <ul>
+                        <li>Browse free starter songs at <a href="https://musetrainer.github.io/library/" target="_blank" rel="noopener noreferrer">musetrainer.github.io/library</a>.</li>
+                        <li>Use tools like MuseScore to convert MIDI to MusicXML or transpose songs before importing.</li>
+                    </ul>
+                </section>
+
+                <section class="info-panel-section">
+                    <h3>More Help</h3>
+                    <p>For deeper help, LED strip setup notes, and WLED guidance, open the <a href="README.html" target="_blank" rel="noopener noreferrer">Full Setup Guide</a>.</p>
+                </section>
+
+                <section class="info-panel-section">
+                    <h3>Important Note</h3>
+                    <p>Some browsers may clear local site storage, especially on mobile or low-storage devices. Back up your library and LED calibration if the data matters to you.</p>
+                </section>
+            </div>
+
+            <div class="info-panel-footer">
+                <button type="button" id="btn-help-got-it">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="first-run-overlay" class="first-run-overlay hidden">
+        <div class="info-panel info-panel-first-run">
+            <div class="info-panel-header">
+                <div>
+                    <div class="info-panel-kicker">Welcome</div>
+                    <h2>Welcome to Piano Trainer</h2>
+                </div>
+            </div>
+
+            <div class="info-panel-body">
+                <p class="first-run-lead">Default settings have been initialized, and starter songs can be added automatically when the bundled starter library is available.</p>
+                <ul>
+                    <li>Open songs from <strong>Scores</strong>.</li>
+                    <li>Connect your keyboard in <strong>Settings</strong>.</li>
+                    <li>On iPad / iPhone, use <strong>midiweb.cc</strong> for MIDI input.</li>
+                    <li>LEDs are optional.</li>
+                </ul>
+                <p class="first-run-note">Your score library is stored in the browser, so back it up occasionally with <strong>Scores → Export Library</strong>.</p>
+            </div>
+
+            <div class="info-panel-footer info-panel-footer-first-run">
+                <button type="button" id="btn-first-run-help">More Info</button>
+                <button type="button" id="btn-first-run-start" class="primary">Start</button>
             </div>
         </div>
     </div>

@@ -2792,7 +2792,9 @@ initLedOutputControls();
 applyPersistedTrainerAndSettingsPreferences();
 if (typeof consumePendingFirstRunNotice === 'function' && consumePendingFirstRunNotice()) {
     window.setTimeout(() => {
-        window.alert('First-time setup: default settings have been initialized. Audio samples may take a moment to prepare on first use. Demo scores can be added later.');
+        if (window.IntroUI?.maybeShowFirstRunIntro) {
+            window.IntroUI.maybeShowFirstRunIntro();
+        }
     }, 0);
 }
 setupMIDI();

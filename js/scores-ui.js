@@ -723,6 +723,11 @@ async function refreshScoresDrawer() {
 
     try {
         await ScoreLibrary.init();
+        try {
+            await ScoreLibrary.importStarterLibraryOnce();
+        } catch (err) {
+            console.warn('Could not import starter library', err);
+        }
         const [folders, scores] = await Promise.all([
             ScoreLibrary.getAllFolders(),
             ScoreLibrary.getAllScores()

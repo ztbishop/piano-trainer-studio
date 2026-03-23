@@ -1,3 +1,6 @@
+VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!
+
+
 //Phase 5
 - Renamed app.js to trainer-core.js.
 - Added internal section markers and warning comments around playback/metronome/navigation hotspots.
@@ -558,4 +561,28 @@ v0.9.6 thru v0.1.0 -
 v1.0.1
 * Fixed launcer files, implemented updater. 
 
+v1.0.2
+*Restored v0.96 thru v0.1.0 (rebuild the behaviors)
+Help button + help popup
+First-run welcome popup
+iPad/iPhone MIDI note in help / first-run with midiweb.cc
+Rename score fix by restoring ScoreLibrary.renameScore(...)
+Starter library auto-import once from assets/Starter_Scores.json when the library is empty
+Fix 'help' menu width
+Link to more in-depth 'Readme'
+VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!
 
+
+
+
+
+**KEEP AT BOTTOM OF FILE FOR REFERENCE!**
+//----------------------------------------------------------------------------------------------------------//
+VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!
+
+version.json
+  "version": 
+
+trainer-state.js
+const APP_VERSION = 
+//----------------------------------------------------------------------------------------------------------//

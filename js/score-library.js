@@ -10,6 +10,8 @@ const SCORE_LIBRARY_DB_NAME = 'pianoTrainerLibrary';
 const SCORE_LIBRARY_DB_VERSION = 1;
 const SCORE_LIBRARY_FOLDER_STORE = 'folders';
 const SCORE_LIBRARY_SCORE_STORE = 'scores';
+const STARTER_LIBRARY_ASSET_PATH = '/assets/Starter_Scores.json';
+const STARTER_LIBRARY_IMPORT_STORAGE_KEY = 'pt_starterLibraryImported_v1';
 
 
 // ===== Score library + drawer workflow =====
@@ -228,6 +230,24 @@ const ScoreLibrary = {
         );
     },
 
+    async renameScore(scoreId, nextTitle) {
+        const trimmed = String(nextTitle || '').trim();
+        if (!scoreId) throw new Error('Score not found.');
+        if (!trimmed) throw new Error('Score name is required.');
+
+        const score = await this.getScoreById(scoreId);
+        if (!score) throw new Error('Score not found.');
+
+        score.title = trimmed;
+        score.updatedAt = Date.now();
+
+        await this.transaction([SCORE_LIBRARY_SCORE_STORE], 'readwrite', ({ [SCORE_LIBRARY_SCORE_STORE]: store }) => {
+            store.put(score);
+        });
+
+        return score;
+    },
+
     async markScoreOpened(scoreId) {
         const score = await this.getScoreById(scoreId);
         if (!score) return null;
@@ -317,6 +337,26 @@ const ScoreLibrary = {
                 });
             });
         });
+    },
+
+    async importStarterLibraryOnce() {
+        if (localStorage.getItem(STARTER_LIBRARY_IMPORT_STORAGE_KEY) === 'true') return false;
+
+        const existingScores = await this.getAllScores();
+        if (existingScores.length > 0) {
+            localStorage.setItem(STARTER_LIBRARY_IMPORT_STORAGE_KEY, 'true');
+            return false;
+        }
+
+        const response = await fetch(STARTER_LIBRARY_ASSET_PATH, { cache: 'no-store' });
+        if (!response.ok) {
+            throw new Error(`Could not load starter library (${response.status}).`);
+        }
+
+        const payload = await response.json();
+        await this.importBackup(payload);
+        localStorage.setItem(STARTER_LIBRARY_IMPORT_STORAGE_KEY, 'true');
+        return true;
     }
 };
 

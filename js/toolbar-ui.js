@@ -13,11 +13,13 @@ const optionsOverlay = document.getElementById('options-overlay');
 const tempoPopup = document.getElementById('tempo-popup');
 const practicePopup = document.getElementById('practice-popup');
 const looperPopup = document.getElementById('looper-popup');
-const popupPanels = [scoresPanel, optionsOverlay, tempoPopup, practicePopup, looperPopup].filter(Boolean);
+const helpOverlay = document.getElementById('help-overlay');
+const popupPanels = [scoresPanel, optionsOverlay, tempoPopup, practicePopup, looperPopup, helpOverlay].filter(Boolean);
 const POPUP_ANIMATION_MS = 180;
 const panelButtonMap = new Map([
     [scoresPanel, document.getElementById('btn-scores')],
     [optionsOverlay, document.getElementById('btn-options')],
+    [helpOverlay, document.getElementById('btn-help')],
     [tempoPopup, document.getElementById('btn-tempo')],
     [practicePopup, document.getElementById('btn-practice')],
     [looperPopup, document.getElementById('btn-looper')]
@@ -108,6 +110,24 @@ document.getElementById('btn-options').addEventListener('click', (e) => {
     toggleToolbarPanel(optionsOverlay);
 });
 
+const btnHelp = document.getElementById('btn-help');
+if (btnHelp && helpOverlay) {
+    btnHelp.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleToolbarPanel(helpOverlay);
+    });
+}
+
+const btnHelpClose = document.getElementById('btn-help-close');
+if (btnHelpClose && helpOverlay) {
+    btnHelpClose.addEventListener('click', () => closeToolbarPanel(helpOverlay));
+}
+
+const btnHelpGotIt = document.getElementById('btn-help-got-it');
+if (btnHelpGotIt && helpOverlay) {
+    btnHelpGotIt.addEventListener('click', () => closeToolbarPanel(helpOverlay));
+}
+
 const btnTempo = document.getElementById('btn-tempo');
 if (btnTempo && tempoPopup) {
     btnTempo.addEventListener('click', (e) => {
@@ -144,6 +164,8 @@ document.addEventListener('click', (e) => {
         e.target.closest('#tempo-popup') ||
         e.target.closest('#practice-popup') ||
         e.target.closest('#looper-popup') ||
+        e.target.closest('#help-overlay') ||
+        e.target.closest('#first-run-overlay') ||
         e.target.closest('#led-calibration-panel') ||
         e.target.closest('.scores-action-menu-overlay') ||
         e.target.closest('.scores-folder-picker-overlay')
@@ -175,6 +197,51 @@ function positionScoresPanel() {
 
 
 
+
+function showFirstRunIntro() {
+    const overlay = document.getElementById('first-run-overlay');
+    if (!overlay) return;
+    hideToolbarPanels(true);
+    overlay.classList.remove('hidden');
+}
+
+function closeFirstRunIntro() {
+    const overlay = document.getElementById('first-run-overlay');
+    if (!overlay) return;
+    overlay.classList.add('hidden');
+}
+
+function markFirstRunIntroSeen() {
+    try { localStorage.setItem('pt_firstRunIntroSeen', 'true'); } catch (err) {}
+}
+
+function maybeShowFirstRunIntro() {
+    const overlay = document.getElementById('first-run-overlay');
+    if (!overlay) return false;
+    try {
+        if (localStorage.getItem('pt_firstRunIntroSeen') === 'true') return false;
+    } catch (err) {}
+    showFirstRunIntro();
+    return true;
+}
+
+const btnFirstRunStart = document.getElementById('btn-first-run-start');
+if (btnFirstRunStart) {
+    btnFirstRunStart.addEventListener('click', () => {
+        markFirstRunIntroSeen();
+        closeFirstRunIntro();
+    });
+}
+
+const btnFirstRunHelp = document.getElementById('btn-first-run-help');
+if (btnFirstRunHelp) {
+    btnFirstRunHelp.addEventListener('click', () => {
+        markFirstRunIntroSeen();
+        closeFirstRunIntro();
+        if (helpOverlay) showToolbarPanel(helpOverlay);
+    });
+}
+
 window.ToolbarUI = {
     syncToolbarButtonStates,
     showToolbarPanel,
@@ -183,4 +250,11 @@ window.ToolbarUI = {
     toggleToolbarPanel,
     isAnyToolbarPanelOpen,
     positionScoresPanel
+};
+
+window.IntroUI = {
+    maybeShowFirstRunIntro,
+    showFirstRunIntro,
+    closeFirstRunIntro,
+    markFirstRunIntroSeen
 };

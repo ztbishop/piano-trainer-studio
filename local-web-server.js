@@ -16,7 +16,9 @@ const ALLOWED_ROOT_PATHS = new Set([
   "assets",
   "js",
   "favicon.ico",
-  "version.json"
+  "version.json",
+  "README.html",
+  "README.md"
 ]);
 
 const MIME_TYPES = {
