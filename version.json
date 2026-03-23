@@ -1,4 +1,5 @@
 {
-  "version": "1.0.2",
-  "releaseUrl": "https://github.com/ztbishop/piano-trainer-studio/releases/latest"
+  "version": "1.0.3",
+  "releaseUrl": "https://github.com/ztbishop/piano-trainer-studio/releases/latest",
+  "downloadUrl": "https://github.com/ztbishop/piano-trainer-studio/archive/refs/tags/v1.0.3.zip"
 }

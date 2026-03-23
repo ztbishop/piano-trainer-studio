@@ -6,10 +6,13 @@
 // ==========================================
 // STATE MANAGEMENT
 // ==========================================
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.0.3';
+const APP_REPO_SLUG = 'ztbishop/piano-trainer-studio';
 const UPDATE_MANIFEST_URL = 'https://ztbishop.github.io/piano-trainer-studio/version.json';
 const UPDATE_MANIFEST_URL_STORAGE_KEY = 'pt_updateManifestUrl';
-const UPDATE_RELEASES_URL = 'https://github.com/ztbishop/piano-trainer-studio/releases/latest';
+const UPDATE_RELEASES_URL = `https://github.com/${APP_REPO_SLUG}/releases/latest`;
+const UPDATE_TAG_ZIP_URL = `https://github.com/${APP_REPO_SLUG}/archive/refs/tags/v${APP_VERSION}.zip`;
+const ASSET_VERSION_OVERRIDE_STORAGE_KEY = 'pt_assetVersionOverride';
 
 const AppState = {
     mode: 'realtime',

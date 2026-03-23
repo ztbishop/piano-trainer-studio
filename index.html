@@ -3,11 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Piano Trainer Engine</title>
-    <link rel="stylesheet" href="style.css">
-    <!-- Vendor libs -->
-    <script src="assets/js/Tone.js"></script>
-    <script src="assets/js/opensheetmusicdisplay.min.js"></script>
+    <script>
+        (function () {
+            const CURRENT_APP_VERSION = '1.0.2';
+            const OVERRIDE_KEY = 'pt_assetVersionOverride';
+            let assetVersion = CURRENT_APP_VERSION;
+            try {
+                const url = new URL(window.location.href);
+                const requestedVersion = String(url.searchParams.get('appv') || '').trim();
+                const storedVersion = String(localStorage.getItem(OVERRIDE_KEY) || '').trim();
+                assetVersion = requestedVersion || storedVersion || CURRENT_APP_VERSION;
+            } catch (_) {}
+
+            window.__PT_ASSET_VERSION__ = assetVersion;
+            window.__PT_CURRENT_VERSION__ = CURRENT_APP_VERSION;
+
+            function writeStyle(href) {
+                document.write('<link rel="stylesheet" href="' + href + '?v=' + encodeURIComponent(assetVersion) + '">');
+            }
+
+            function writeScript(src) {
+                document.write('<script src="' + src + '?v=' + encodeURIComponent(assetVersion) + '"><\/script>');
+            }
+
+            writeStyle('style.css');
+            writeScript('assets/js/Tone.js');
+            writeScript('assets/js/opensheetmusicdisplay.min.js');
+        })();
+    </script>
 </head>
 <body>
 
@@ -564,14 +591,14 @@
     </div>
 
     <!-- Shared state first; core loads last -->
-    <script src="js/trainer-state.js"></script>
-    <script src="js/toolbar-ui.js"></script>
-    <script src="js/score-library.js"></script>
-    <script src="js/scores-ui.js"></script>
-    <script src="js/led.js"></script>
-    <script src="js/midi.js"></script>
-    <script src="js/feedback-engine.js"></script>
-    <script src="js/feedback-debug.js"></script>
-    <script src="js/trainer-core.js"></script>
+    <script>document.write('<script src="js/trainer-state.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
+    <script>document.write('<script src="js/toolbar-ui.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
+    <script>document.write('<script src="js/score-library.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
+    <script>document.write('<script src="js/scores-ui.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
+    <script>document.write('<script src="js/led.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
+    <script>document.write('<script src="js/midi.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
+    <script>document.write('<script src="js/feedback-engine.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
+    <script>document.write('<script src="js/feedback-debug.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
+    <script>document.write('<script src="js/trainer-core.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
 </body>
 </html>

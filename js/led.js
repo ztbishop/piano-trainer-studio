@@ -565,8 +565,64 @@ function isLocalAppRuntime() {
 }
 
 function getUpdateActionUrl() {
+    const downloadUrl = String(AppState.updateInfo?.downloadUrl || '').trim();
     const releaseUrl = String(AppState.updateInfo?.releaseUrl || '').trim();
-    return releaseUrl || UPDATE_RELEASES_URL || '';
+    return downloadUrl || releaseUrl || UPDATE_RELEASES_URL || '';
+}
+
+function getRequestedAssetVersion() {
+    try {
+        const url = new URL(window.location.href);
+        return String(url.searchParams.get('appv') || '').trim();
+    } catch (_) {
+        return '';
+    }
+}
+
+function setAssetVersionOverride(version) {
+    const normalized = String(version || '').trim();
+    if (!normalized) {
+        localStorage.removeItem(ASSET_VERSION_OVERRIDE_STORAGE_KEY);
+        return;
+    }
+    localStorage.setItem(ASSET_VERSION_OVERRIDE_STORAGE_KEY, normalized);
+}
+
+function clearAssetVersionOverrideIfCurrent() {
+    const requested = getRequestedAssetVersion();
+    const stored = String(localStorage.getItem(ASSET_VERSION_OVERRIDE_STORAGE_KEY) || '').trim();
+    if (requested && compareSemverLoose(APP_VERSION, requested) >= 0) {
+        localStorage.removeItem(ASSET_VERSION_OVERRIDE_STORAGE_KEY);
+        try {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('appv');
+            url.searchParams.delete('t');
+            window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+        } catch (_) {}
+        return;
+    }
+    if (stored && compareSemverLoose(APP_VERSION, stored) >= 0) {
+        localStorage.removeItem(ASSET_VERSION_OVERRIDE_STORAGE_KEY);
+    }
+}
+
+function forceReloadToVersion(version) {
+    const normalized = String(version || '').trim();
+    if (!normalized) {
+        window.location.reload();
+        return;
+    }
+
+    setAssetVersionOverride(normalized);
+
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('appv', normalized);
+        url.searchParams.set('t', String(Date.now()));
+        window.location.replace(url.toString());
+    } catch (_) {
+        window.location.reload();
+    }
 }
 
 function syncUpdateControls() {
@@ -608,14 +664,16 @@ async function checkForUpdates({ manual = false } = {}) {
         if (!response.ok) throw new Error(`Manifest HTTP ${response.status}`);
         const manifest = await response.json();
         const remoteVersion = String(manifest?.version || '').trim();
-        const releaseUrl = String(manifest?.releaseUrl || manifest?.downloadUrl || UPDATE_RELEASES_URL || '').trim();
+        const releaseUrl = String(manifest?.releaseUrl || UPDATE_RELEASES_URL || '').trim();
+        const downloadUrl = String(manifest?.downloadUrl || '').trim();
         const updateAvailable = remoteVersion ? compareSemverLoose(remoteVersion, APP_VERSION) > 0 : false;
 
         AppState.updateInfo = {
             currentVersion: APP_VERSION,
             remoteVersion,
             updateAvailable,
-            releaseUrl
+            releaseUrl,
+            downloadUrl
         };
         AppState.updateLastCheckedAt = Date.now();
 
@@ -625,6 +683,7 @@ async function checkForUpdates({ manual = false } = {}) {
             AppState.updateStatus = `Update available: ${remoteVersion}.`;
         } else {
             AppState.updateStatus = 'Up to date.';
+            clearAssetVersionOverrideIfCurrent();
         }
     } catch (err) {
         AppState.updateLastCheckedAt = Date.now();
@@ -640,6 +699,7 @@ async function checkForUpdates({ manual = false } = {}) {
 function initUpdateControls() {
     AppState.updateManifestUrl = String(localStorage.getItem(UPDATE_MANIFEST_URL_STORAGE_KEY) || UPDATE_MANIFEST_URL || '').trim();
     AppState.updateStatus = '';
+    clearAssetVersionOverrideIfCurrent();
     const button = document.getElementById('btn-check-updates');
     if (button && !button.dataset.boundCheckUpdates) {
         button.dataset.boundCheckUpdates = 'true';
@@ -652,7 +712,7 @@ function initUpdateControls() {
                     return;
                 }
                 const shouldReload = window.confirm(`Version ${AppState.updateInfo.remoteVersion} is available. Reload now?`);
-                if (shouldReload) window.location.reload();
+                if (shouldReload) forceReloadToVersion(AppState.updateInfo.remoteVersion);
                 return;
             }
             await checkForUpdates({ manual: true });

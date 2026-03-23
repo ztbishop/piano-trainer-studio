@@ -562,16 +562,19 @@ v1.0.1
 * Fixed launcer files, implemented updater. 
 
 v1.0.2
-*Restored v0.96 thru v0.1.0 (rebuild the behaviors)
-Help button + help popup
-First-run welcome popup
-iPad/iPhone MIDI note in help / first-run with midiweb.cc
-Rename score fix by restoring ScoreLibrary.renameScore(...)
-Starter library auto-import once from assets/Starter_Scores.json when the library is empty
-Fix 'help' menu width
-Link to more in-depth 'Readme'
-VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!
+* Restored v0.96 thru v0.1.0 (rebuild the behaviors)
+- Help button + help popup
+- First-run welcome popup
+- iPad/iPhone MIDI note in help / first-run with midiweb.cc
+- Rename score fix by restoring ScoreLibrary.renameScore(...)
+- Starter library auto-import once from assets/Starter_Scores.json when the library is empty
+- Fix 'help' menu width
+- Link to more in-depth 'Readme'
+- VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!
 
+v1.0.3
+* Fixed update function
+- will need to test this after next update!
 
 
 
