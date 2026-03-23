@@ -549,34 +549,44 @@ function compareSemverLoose(a, b) {
     return 0;
 }
 
+function getAppVersionDisplayText() {
+    return `Version: ${APP_VERSION || 'unknown'}`;
+}
+
 function buildUpdateStatusText() {
-    const appVersion = APP_VERSION || 'unknown';
-    const helperVersion = AppState.helperVersion || 'unknown';
-    if (!AppState.updateManifestUrl) {
-        return `App ${appVersion} • Helper ${helperVersion} • Update checks not configured yet.`;
-    }
     if (AppState.updateStatus) return AppState.updateStatus;
-    return `App ${appVersion} • Helper ${helperVersion}`;
+    if (!AppState.updateManifestUrl) return 'Update checks are not configured yet.';
+    return 'Update status: not checked yet.';
+}
+
+function isLocalAppRuntime() {
+    const host = String(window.location.hostname || '').toLowerCase();
+    return window.location.protocol === 'file:' || host === 'localhost' || host === '127.0.0.1';
+}
+
+function getUpdateActionUrl() {
+    const releaseUrl = String(AppState.updateInfo?.releaseUrl || '').trim();
+    return releaseUrl || UPDATE_RELEASES_URL || '';
 }
 
 function syncUpdateControls() {
-    const status = document.getElementById('update-status');
+    const versionEl = document.getElementById('app-version-display');
+    const statusEl = document.getElementById('update-status');
     const button = document.getElementById('btn-check-updates');
-    if (status) status.textContent = buildUpdateStatusText();
-    if (button) button.disabled = false;
-}
 
-async function refreshHelperVersionFromHealth() {
-    try {
-        const response = await fetch(`${WLED_HELPER_HEALTH_URL}?debug=${AppState.wledDdpDebugEnabled ? '1' : '0'}`, {
-            cache: 'no-store'
-        });
-        if (!response.ok) return;
-        const data = await response.json().catch(() => ({}));
-        if (data && typeof data.version === 'string' && data.version.trim()) {
-            AppState.helperVersion = data.version.trim();
+    if (versionEl) versionEl.textContent = getAppVersionDisplayText();
+    if (statusEl) statusEl.textContent = buildUpdateStatusText();
+
+    if (button) {
+        button.disabled = false;
+        if (AppState.updateInfo?.updateAvailable) {
+            button.textContent = isLocalAppRuntime() ? 'Download Latest' : 'Reload to Update';
+        } else if (AppState.updateInfo && AppState.updateInfo.remoteVersion) {
+            button.textContent = 'Up to Date';
+        } else {
+            button.textContent = 'Check for Updates';
         }
-    } catch (_) {}
+    }
 }
 
 async function checkForUpdates({ manual = false } = {}) {
@@ -584,66 +594,44 @@ async function checkForUpdates({ manual = false } = {}) {
     if (button) button.disabled = true;
 
     if (!AppState.updateManifestUrl) {
-        await refreshHelperVersionFromHealth();
         AppState.updateLastCheckedAt = Date.now();
         AppState.updateInfo = null;
-        AppState.updateStatus = `App ${APP_VERSION} • Helper ${AppState.helperVersion || 'unknown'} • Update checks not configured yet.`;
+        AppState.updateStatus = 'Update checks are not configured yet.';
         syncUpdateControls();
         return;
     }
 
     try {
-        await refreshHelperVersionFromHealth();
         const response = await fetch(`${AppState.updateManifestUrl}${AppState.updateManifestUrl.includes('?') ? '&' : '?'}t=${Date.now()}`, {
             cache: 'no-store'
         });
         if (!response.ok) throw new Error(`Manifest HTTP ${response.status}`);
         const manifest = await response.json();
-        const remoteAppVersion = String(manifest?.appVersion || '').trim();
-        const remoteHelperVersion = String(manifest?.helperVersion || '').trim();
-        const minHelperVersion = String(manifest?.minimumHelperVersion || remoteHelperVersion || '').trim();
-
-        const appOutdated = remoteAppVersion ? compareSemverLoose(remoteAppVersion, APP_VERSION) > 0 : false;
-        const helperOutdated = remoteHelperVersion && AppState.helperVersion
-            ? compareSemverLoose(remoteHelperVersion, AppState.helperVersion) > 0
-            : false;
-        const helperBelowMinimum = minHelperVersion && AppState.helperVersion
-            ? compareSemverLoose(minHelperVersion, AppState.helperVersion) > 0
-            : false;
+        const remoteVersion = String(manifest?.version || '').trim();
+        const releaseUrl = String(manifest?.releaseUrl || manifest?.downloadUrl || UPDATE_RELEASES_URL || '').trim();
+        const updateAvailable = remoteVersion ? compareSemverLoose(remoteVersion, APP_VERSION) > 0 : false;
 
         AppState.updateInfo = {
-            appVersion: APP_VERSION,
-            helperVersion: AppState.helperVersion || '',
-            remoteAppVersion,
-            remoteHelperVersion,
-            minimumHelperVersion: minHelperVersion,
-            downloads: manifest?.downloads || {}
+            currentVersion: APP_VERSION,
+            remoteVersion,
+            updateAvailable,
+            releaseUrl
         };
         AppState.updateLastCheckedAt = Date.now();
 
-        const parts = [`App ${APP_VERSION}`];
-        if (AppState.helperVersion) parts.push(`Helper ${AppState.helperVersion}`);
-
-        if (appOutdated) {
-            parts.push(`App update available (${remoteAppVersion})`);
+        if (!remoteVersion) {
+            AppState.updateStatus = 'Update manifest is missing a version value.';
+        } else if (updateAvailable) {
+            AppState.updateStatus = `Update available: ${remoteVersion}.`;
         } else {
-            parts.push('App up to date');
+            AppState.updateStatus = 'Up to date.';
         }
-
-        if (helperBelowMinimum) {
-            parts.push(`Helper update required (${minHelperVersion}+)`);
-        } else if (helperOutdated) {
-            parts.push(`Helper update available (${remoteHelperVersion})`);
-        } else if (AppState.helperVersion) {
-            parts.push('Helper up to date');
-        }
-
-        AppState.updateStatus = parts.join(' • ');
     } catch (err) {
         AppState.updateLastCheckedAt = Date.now();
+        AppState.updateInfo = null;
         AppState.updateStatus = manual
             ? `Update check failed: ${err?.message || String(err)}`
-            : `App ${APP_VERSION} • Helper ${AppState.helperVersion || 'unknown'} • Update check unavailable.`;
+            : 'Update check unavailable.';
     } finally {
         syncUpdateControls();
     }
@@ -656,6 +644,17 @@ function initUpdateControls() {
     if (button && !button.dataset.boundCheckUpdates) {
         button.dataset.boundCheckUpdates = 'true';
         button.addEventListener('click', async () => {
+            if (AppState.updateInfo?.updateAvailable) {
+                if (isLocalAppRuntime()) {
+                    const releaseUrl = getUpdateActionUrl();
+                    if (releaseUrl) window.open(releaseUrl, '_blank', 'noopener');
+                    else window.alert('No release URL is configured yet.');
+                    return;
+                }
+                const shouldReload = window.confirm(`Version ${AppState.updateInfo.remoteVersion} is available. Reload now?`);
+                if (shouldReload) window.location.reload();
+                return;
+            }
             await checkForUpdates({ manual: true });
         });
     }

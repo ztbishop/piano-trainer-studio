@@ -551,5 +551,11 @@ v0.9.4
 v0.9.5
 * re-try to fix settings import not trigger firstrun override. 
 
-v0.9.6 same
+v0.9.6 thru v0.1.0 - 
+* Lost data - somehow dev_notes was over-written. 
+* Highlights: improved launcher files, added update placeholder, added readme
+
+v1.0.1
+* Fixed launcer files, implemented updater. 
+
 
