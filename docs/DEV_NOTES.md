@@ -576,6 +576,8 @@ v1.0.3
 * Fixed update function
 - will need to test this after next update!
 
+v1.0.4
+* Test from 1.0.3 to ensure updater works
 
 
 
