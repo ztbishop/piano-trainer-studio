@@ -13,14 +13,16 @@ const optionsOverlay = document.getElementById('options-overlay');
 const tempoPopup = document.getElementById('tempo-popup');
 const practicePopup = document.getElementById('practice-popup');
 const looperPopup = document.getElementById('looper-popup');
+const transposePopup = document.getElementById('transpose-popup');
 const helpOverlay = document.getElementById('help-overlay');
-const popupPanels = [scoresPanel, optionsOverlay, tempoPopup, practicePopup, looperPopup, helpOverlay].filter(Boolean);
+const popupPanels = [scoresPanel, optionsOverlay, tempoPopup, transposePopup, practicePopup, looperPopup, helpOverlay].filter(Boolean);
 const POPUP_ANIMATION_MS = 180;
 const panelButtonMap = new Map([
     [scoresPanel, document.getElementById('btn-scores')],
     [optionsOverlay, document.getElementById('btn-options')],
     [helpOverlay, document.getElementById('btn-help')],
     [tempoPopup, document.getElementById('btn-tempo')],
+    [transposePopup, document.getElementById('btn-transpose')],
     [practicePopup, document.getElementById('btn-practice')],
     [looperPopup, document.getElementById('btn-looper')]
 ].filter(([panel, button]) => panel && button));
@@ -136,6 +138,15 @@ if (btnTempo && tempoPopup) {
     });
 }
 
+
+const btnTranspose = document.getElementById('btn-transpose');
+if (btnTranspose && transposePopup) {
+    btnTranspose.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleToolbarPanel(transposePopup);
+    });
+}
+
 const btnPractice = document.getElementById('btn-practice');
 if (btnPractice && practicePopup) {
     btnPractice.addEventListener('click', (e) => {
@@ -162,6 +173,7 @@ document.addEventListener('click', (e) => {
         e.target.closest('#scores-panel') ||
         e.target.closest('#options-overlay') ||
         e.target.closest('#tempo-popup') ||
+        e.target.closest('#transpose-popup') ||
         e.target.closest('#practice-popup') ||
         e.target.closest('#looper-popup') ||
         e.target.closest('#help-overlay') ||

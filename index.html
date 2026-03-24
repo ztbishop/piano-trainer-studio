@@ -41,9 +41,9 @@
     <nav id="static-menu">
         <div class="menu-left">
             <button id="btn-scores">🎼 Scores</button>
-            <input type="file" id="score-import-input" accept=".xml,.mxl,.musicxml" multiple style="display:none;">
+            <input type="file" id="score-import-input" accept=".musicxml,.xml,.mxl,.mid,.midi,.mscz,.mscx,.gp,.gp3,.gp4,.gp5,.gpx,.gtp,.ptb" multiple style="display:none;">
             <input type="file" id="library-backup-input" accept=".json,application/json" style="display:none;">
-            <input type="file" id="file-input" accept=".xml,.mxl,.musicxml" style="display:none;">
+            <input type="file" id="file-input" accept=".musicxml,.xml,.mxl,.mid,.midi,.mscz,.mscx,.gp,.gp3,.gp4,.gp5,.gpx,.gtp,.ptb" style="display:none;">
         </div>
 
         <div class="menu-center">
@@ -56,6 +56,7 @@
 
             <div class="menu-group toolbar-popup-launchers">
                 <button id="btn-tempo">♪ Tempo</button>
+                <button id="btn-transpose">↕ Transpose</button>
                 <button id="btn-practice">🎹 Trainer</button>
                 <button id="btn-looper">🔁 Looper</button>
             </div>
@@ -379,6 +380,50 @@
             </div>
     </div>
 
+    <div id="transpose-popup" class="toolbar-popup popup-surface hidden">
+        <fieldset id="fs-transpose-popup">
+            <legend>Transpose</legend>
+            <div class="transpose-grid">
+                <div class="transpose-row transpose-current-row">
+                    <span class="transpose-label">Current Key</span>
+                    <strong id="transpose-current-key">No score loaded</strong>
+                </div>
+
+                <div class="transpose-row">
+                    <label for="transpose-mode">Mode</label>
+                    <select id="transpose-mode">
+                        <option value="key">Transpose to Key</option>
+                        <option value="semitone">Transpose by Semitones</option>
+                    </select>
+                </div>
+
+                <div class="transpose-row" data-transpose-mode-row="key">
+                    <label for="transpose-target-key">Target Key</label>
+                    <select id="transpose-target-key"></select>
+                </div>
+
+                <div class="transpose-row hidden" data-transpose-mode-row="semitone">
+                    <label for="transpose-semitones">Semitones</label>
+                    <div class="transpose-semitone-row">
+                        <input type="range" id="transpose-semitones" min="-12" max="12" step="1" value="0">
+                        <span id="transpose-semitones-value">0</span>
+                    </div>
+                </div>
+
+                <div class="transpose-row transpose-checkbox-row">
+                    <label><input type="checkbox" id="transpose-update-key-signature" checked> Update key signature</label>
+                </div>
+
+                <div id="transpose-status" class="transpose-status">Load a MusicXML-based score to enable transpose.</div>
+
+                <div class="transpose-actions">
+                    <button type="button" id="btn-transpose-apply">Apply</button>
+                    <button type="button" id="btn-transpose-reset">Reset to Original</button>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+
     <div id="tempo-popup" class="toolbar-popup popup-surface hidden">
         <fieldset id="fs-tempo-popup">
             <legend>Tempo</legend>
@@ -598,11 +643,14 @@
 
     <!-- Shared state first; core loads last -->
     <script>document.write('<script src="js/trainer-state.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
+    <script>document.write('<script src="js/transpose/transpose-engine.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
+    <script>document.write('<script src="js/transpose/transpose-ui.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
     <script>document.write('<script src="js/toolbar-ui.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
     <script>document.write('<script src="js/score-library.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
     <script>document.write('<script src="js/scores-ui.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
     <script>document.write('<script src="js/led.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
     <script>document.write('<script src="js/midi.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
+    <script>document.write('<script src="js/midi-import.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
     <script>document.write('<script src="js/feedback-engine.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
     <script>document.write('<script src="js/feedback-debug.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>
     <script>document.write('<script src="js/trainer-core.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.0.2') + '"><\/script>');</script>

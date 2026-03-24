@@ -2308,3 +2308,103 @@ fieldset {
         padding-right: 16px;
     }
 }
+
+
+#fs-transpose-popup {
+    min-width: min(560px, calc(100vw - 32px));
+}
+
+.transpose-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.transpose-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.transpose-row.hidden {
+    display: none;
+}
+
+.transpose-row label,
+.transpose-label {
+    font-weight: 600;
+    color: #415263;
+}
+
+.transpose-current-row strong {
+    color: #2c3e50;
+}
+
+.transpose-semitone-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 280px;
+}
+
+.transpose-semitone-row input[type="range"] {
+    flex: 1 1 auto;
+}
+
+#transpose-semitones-value {
+    min-width: 26px;
+    text-align: right;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.transpose-checkbox-row {
+    justify-content: flex-start;
+}
+
+.transpose-status {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(109, 129, 148, 0.28);
+    background: rgba(255,255,255,0.62);
+    color: #526273;
+    line-height: 1.35;
+}
+
+.transpose-status.is-error {
+    color: #8e2f2f;
+    border-color: rgba(196, 78, 78, 0.35);
+    background: rgba(255, 236, 236, 0.72);
+}
+
+.transpose-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 680px) {
+    #fs-transpose-popup {
+        min-width: min(96vw, 560px);
+    }
+
+    .transpose-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .transpose-semitone-row {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .transpose-actions {
+        justify-content: stretch;
+    }
+
+    .transpose-actions button {
+        flex: 1 1 180px;
+    }
+}

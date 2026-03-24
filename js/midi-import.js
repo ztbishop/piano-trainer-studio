@@ -15,7 +15,8 @@
         '.gp5': 'gp5',
         '.gpx': 'gpx',
         '.gtp': 'gtp',
-        '.ptb': 'ptb'
+        '.ptb': 'ptb',
+        '.mxl': 'mxl'
     });
 
     let webMscoreScriptPromise = null;
@@ -152,6 +153,44 @@
         }
     }
 
+
+
+    async function normalizeScoreToMusicXml(rawData, { fileName = 'Untitled Score', fileType = '' } = {}) {
+        const resolvedType = String(fileType || getFileExtension(fileName || '') || '').toLowerCase().replace(/^\./, '');
+        if (resolvedType === 'xml' || resolvedType === 'musicxml') {
+            return uint8ArrayToString(rawData);
+        }
+
+        if (resolvedType !== 'mxl') {
+            throw new Error('Only MusicXML text and compressed MXL are supported for transpose normalization.');
+        }
+
+        const WebMscore = await ensureWebMscoreLoaded();
+        const bytes = rawData instanceof Uint8Array
+            ? rawData
+            : rawData instanceof ArrayBuffer
+                ? new Uint8Array(rawData)
+                : rawData instanceof Blob
+                    ? new Uint8Array(await rawData.arrayBuffer())
+                    : rawData && rawData.buffer instanceof ArrayBuffer
+                        ? new Uint8Array(rawData.buffer, rawData.byteOffset || 0, rawData.byteLength || rawData.buffer.byteLength)
+                        : null;
+
+        if (!bytes) {
+            throw new Error('Could not normalize this score for transpose.');
+        }
+
+        let score = null;
+        try {
+            score = await WebMscore.load('mxl', bytes);
+            return await exportMusicXmlText(score);
+        } finally {
+            if (score && typeof score.destroy === 'function') {
+                try { score.destroy(); } catch (_) {}
+            }
+        }
+    }
+
     async function convertAndLoadScoreFile(file) {
         const converted = await convertFileToScore(file);
         if (typeof window.loadScoreIntoApp !== 'function') {
@@ -168,6 +207,7 @@
         convertFileToScore,
         convertAndLoadScoreFile,
         convertAndLoadMidiFile: convertAndLoadScoreFile,
+        normalizeScoreToMusicXml,
         supportedExtensions: Object.freeze(Object.keys(CONVERTER_IMPORT_FORMATS))
     };
 })();

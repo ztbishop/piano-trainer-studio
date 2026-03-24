@@ -717,26 +717,93 @@ function readScoreFile(file) {
     });
 }
 
+
+
+function cloneScoreRawData(rawData) {
+    if (typeof rawData === 'string') return rawData;
+    if (rawData instanceof ArrayBuffer) return rawData.slice(0);
+    if (ArrayBuffer.isView(rawData)) {
+        return rawData.buffer.slice(rawData.byteOffset, rawData.byteOffset + rawData.byteLength);
+    }
+    if (typeof Blob !== 'undefined' && rawData instanceof Blob) {
+        return rawData.slice(0, rawData.size, rawData.type || '');
+    }
+    return rawData;
+}
+
+async function getCanonicalMusicXmlForTranspose(rawData, { fileName = 'Untitled Score', fileType = 'xml' } = {}) {
+    const resolvedType = String(fileType || getScoreFileTypeFromName(fileName || '') || 'xml').toLowerCase();
+    if (resolvedType === 'xml' || resolvedType === 'musicxml') {
+        return typeof rawData === 'string' ? rawData : null;
+    }
+
+    if (resolvedType === 'mxl' && window.MidiImport && typeof window.MidiImport.normalizeScoreToMusicXml === 'function') {
+        try {
+            return await window.MidiImport.normalizeScoreToMusicXml(rawData, { fileName, fileType: resolvedType });
+        } catch (err) {
+            console.warn('Could not normalize MXL to MusicXML for transpose support.', err);
+            return null;
+        }
+    }
+
+    return null;
+}
+
 function getOsmdLoadPayload(rawData, fileType = 'xml', fileName = 'Untitled Score') {
     const resolvedType = String(fileType || getScoreFileTypeFromName(fileName || '') || 'xml').toLowerCase();
     if (resolvedType !== 'mxl') return rawData;
 
-    if (rawData instanceof Blob) return rawData;
+    const resolvedName = fileName || 'Untitled Score.mxl';
+
+    // For reconstructed library MXL files, do not force a MIME type.
+    // Browser-selected .mxl files usually arrive with an empty/neutral type,
+    // and OSMD reliably identifies them by filename/contents.
+    // Forcing an XML-ish MIME here can make compressed MXL payloads look like
+    // invalid plain documents when reopening starter-library scores.
+    if (rawData instanceof File) return rawData;
+    if (rawData instanceof Blob) {
+        if (typeof File === 'function') {
+            return new File([rawData], resolvedName);
+        }
+        rawData.name = resolvedName;
+        return rawData;
+    }
     if (rawData instanceof ArrayBuffer) {
-        return new Blob([rawData], { type: 'application/vnd.recordare.musicxml+xml' });
+        if (typeof File === 'function') {
+            return new File([rawData], resolvedName);
+        }
+        const blob = new Blob([rawData]);
+        blob.name = resolvedName;
+        return blob;
     }
     if (ArrayBuffer.isView(rawData)) {
-        return new Blob([rawData.buffer.slice(rawData.byteOffset, rawData.byteOffset + rawData.byteLength)], {
-            type: 'application/vnd.recordare.musicxml+xml'
-        });
+        const slice = rawData.buffer.slice(rawData.byteOffset, rawData.byteOffset + rawData.byteLength);
+        if (typeof File === 'function') {
+            return new File([slice], resolvedName);
+        }
+        const blob = new Blob([slice]);
+        blob.name = resolvedName;
+        return blob;
     }
 
     return rawData;
 }
 
-async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType = 'xml', libraryScoreId = null, title = null } = {}) {
+async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType = 'xml', libraryScoreId = null, title = null, originalRawData = undefined, originalFileName = undefined, originalFileType = undefined, skipTransposeReset = false } = {}) {
     try {
-        const osmdLoadPayload = getOsmdLoadPayload(rawData, fileType, fileName);
+        const resolvedOriginalRawData = originalRawData !== undefined ? originalRawData : rawData;
+        const resolvedOriginalFileName = originalFileName !== undefined ? originalFileName : (fileName || 'Untitled Score');
+        const resolvedOriginalFileType = originalFileType !== undefined ? originalFileType : (fileType || getScoreFileTypeFromName(fileName));
+
+        const transposeSourceRawData = cloneScoreRawData(resolvedOriginalRawData);
+        const osmdSourceRawData = cloneScoreRawData(rawData);
+
+        const canonicalOriginalMusicXml = await getCanonicalMusicXmlForTranspose(transposeSourceRawData, {
+            fileName: resolvedOriginalFileName,
+            fileType: resolvedOriginalFileType
+        });
+
+        const osmdLoadPayload = getOsmdLoadPayload(osmdSourceRawData, fileType, fileName);
         await osmd.load(osmdLoadPayload);
         renderScoreAndRefreshGeometry();
         initSongUI();
@@ -754,14 +821,26 @@ async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType
         AppState.lastLedPreviewEvents = [];
 
         AppState.currentScoreData = rawData;
+        AppState.currentScoreOriginalData = canonicalOriginalMusicXml || resolvedOriginalRawData;
         AppState.currentScoreFileName = fileName || 'Untitled Score';
+        AppState.currentScoreOriginalFileName = resolvedOriginalFileName;
         AppState.currentScoreFileType = fileType || getScoreFileTypeFromName(fileName);
+        AppState.currentScoreOriginalFileType = resolvedOriginalFileType;
         AppState.currentScoreLibraryId = libraryScoreId ?? null;
         AppState.currentScoreTitle = title || getScoreDisplayTitle(fileName || '');
 
         if (libraryScoreId && window.ScoreLibrary) {
             await ScoreLibrary.markScoreOpened(libraryScoreId);
             await refreshScoresDrawer();
+        }
+
+        if (window.TransposeUI && typeof window.TransposeUI.handleScoreLoaded === 'function') {
+            if (!skipTransposeReset) {
+                window.TransposeUI.handleScoreLoaded();
+            } else {
+                window.TransposeUI.refreshAvailabilityFromCurrentScore();
+                window.TransposeUI.syncUiFromState();
+            }
         }
 
         console.error('File loaded successfully.');

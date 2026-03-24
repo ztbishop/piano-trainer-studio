@@ -603,6 +603,10 @@ User-facing note:
 - Recommend MusicXML / MXL for best reliability.
 - MIDI / MuseScore / Guitar Pro support is available, but some complex converted files may still fail or load imperfectly.
 
+v1.0.6
+* Added transpose feature.  
+- Will still verify / improve enharmonic values after testing key signature changes.
+- Need to update text to correct 'current / original' keys. 
 
 
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**

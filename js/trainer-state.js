@@ -6,7 +6,7 @@
 // ==========================================
 // STATE MANAGEMENT
 // ==========================================
-const APP_VERSION = '1.0.5';
+const APP_VERSION = '1.0.6';
 const APP_REPO_SLUG = 'ztbishop/piano-trainer-studio';
 const UPDATE_MANIFEST_URL = 'https://ztbishop.github.io/piano-trainer-studio/version.json';
 const UPDATE_MANIFEST_URL_STORAGE_KEY = 'pt_updateManifestUrl';
@@ -82,12 +82,27 @@ const AppState = {
     accentedDownbeatEnabled: true,
     loopCountInEnabled: true,
     currentScoreData: null,
+    currentScoreOriginalData: null,
     currentScoreFileName: '',
+    currentScoreOriginalFileName: '',
     inputVelocityEnabled: true,
     liveLowLatencyMonitoringEnabled: false,
     currentScoreFileType: '',
+    currentScoreOriginalFileType: '',
     currentScoreLibraryId: null,
     currentScoreTitle: '',
+    transpose: {
+        available: false,
+        sourceKeyLabel: 'No score loaded',
+        sourceKeyFound: false,
+        mode: 'key',
+        semitones: 0,
+        targetKey: 'sig-0',
+        updateKeySignature: true,
+        active: false,
+        activeLabel: 'Original score',
+        disableReason: 'Load a MusicXML-based score to enable transpose.'
+    },
     scoreLibrarySelectedFolderId: '__all__',
     scoreLibraryView: 'folders',
     scoreLibraryManageMode: false,
