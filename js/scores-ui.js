@@ -906,8 +906,11 @@ async function importFilesToLibrary(files) {
         if (selectedFolderId === '__cancel__') return;
 
         for (const file of incoming) {
-            if ((file.name || '').match(/\.(mid|midi)$/i)) continue;
-            const scoreFile = await readScoreFile(file);
+            const useConverter = window.MidiImport && typeof window.MidiImport.isConverterImportFileName === 'function'
+                && window.MidiImport.isConverterImportFileName(file.name || '');
+            const scoreFile = useConverter
+                ? await window.MidiImport.convertFileToScore(file)
+                : await readScoreFile(file);
             await ScoreLibrary.saveScore({
                 title: scoreFile.title,
                 folderId: selectedFolderId,
@@ -924,7 +927,7 @@ async function importFilesToLibrary(files) {
         await refreshScoresDrawer();
     } catch (err) {
         console.error('Could not import score files', err);
-        window.alert('Could not import one or more score files.');
+        window.alert(err?.message || 'Could not import one or more score files.');
     }
 }
 

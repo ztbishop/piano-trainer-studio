@@ -777,7 +777,7 @@ async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType
         }
     } catch (err) {
         console.error('OSMD Load Error:', err);
-        alert('Error loading XML file.');
+        alert(err?.message || 'Error loading score file.');
         throw err;
     }
 }
@@ -785,8 +785,9 @@ async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType
 async function handleDirectScoreFileSelection(file) {
     if (!file) return;
 
-    if ((file.name || '').match(/\.(mid|midi)$/i)) {
-        alert('Piano Trainer strictly requires MusicXML (.xml or .mxl) files to render sheet music.');
+    if (window.MidiImport && typeof window.MidiImport.isConverterImportFileName === 'function' && window.MidiImport.isConverterImportFileName(file.name || '')) {
+        const convertedScore = await window.MidiImport.convertFileToScore(file);
+        await loadScoreIntoApp(convertedScore.rawData, convertedScore);
         return;
     }
 

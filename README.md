@@ -8,11 +8,12 @@ A browser-based piano training app that uses MusicXML scores with real-time MIDI
 
 ## 🚀 Features
 
-- 🎼 Load and play **MusicXML** piano scores  
+- 🎼 Load and play **MusicXML / MXL** piano scores  
+- 🔄 Import **MIDI, MuseScore, and Guitar Pro files** (converted automatically to MusicXML)  
 - 🎹 Real-time **MIDI keyboard input feedback**  
 - ⏱️ Wait Mode and Realtime Mode  
-- 💡 Optional **LED visualization via Midi LED Keyboard or WLED**  
-- 🌐 Runs in your browser — no install required (Download can run offline) 
+- 💡 Optional **LED visualization via MIDI LED keyboard or WLED**  
+- 🌐 Runs in your browser — no install required (Download can run offline)  
 - 📱 iPad/iPhone support via MIDIWeb (see below)
 
 ---
@@ -27,10 +28,12 @@ Open:
 (or Mac equivalent)
 
 ### 2. Connect your MIDI keyboard
-- Plug in via USB or Bluetooth (Bluetooth support may be limited due to browser support)  -CME WIDI Bud Pro is a good wireless to USB dongle alternative
+- Plug in via USB or Bluetooth (Bluetooth support may be limited due to browser support)  
+- CME WIDI Bud Pro is a good wireless to USB dongle alternative  
 
 ### 3. Load a song
-- Import MusicXML files into the app
+- Import **MusicXML / MXL** for best results  
+- You can also import **MIDI, MuseScore, and Guitar Pro files**  
 
 ---
 
@@ -62,7 +65,7 @@ iOS does not support MIDI in normal browsers.
 5. Connect your MIDI device  
 
 ### What works:
-- ✅ MIDI input 
+- ✅ MIDI input  
 - ✅ Full app functionality  
 
 ### What does NOT work:
@@ -70,133 +73,122 @@ iOS does not support MIDI in normal browsers.
 
 ---
 
+## 🎼 Supported Score Formats
+
+### ✅ Recommended (Best Compatibility)
+- `.xml`
+- `.musicxml`
+- `.mxl`
+
+### 🔄 Supported via Conversion
+- `.mid`, `.midi`
+- `.mscz`, `.mscx`
+- `.gp`, `.gp3`, `.gp4`, `.gp5`, `.gpx`, `.gtp`, `.ptb`
+
+### ⚠️ Notes
+- MusicXML / MXL provides the most reliable results  
+- Other formats are converted in-browser and may vary depending on the file  
+- If a file does not load correctly, export it as MusicXML from MuseScore for best results  
+
+---
+
 ## 💡 WLED / LED Support
+
 LED / WLED is optional but enables LED feedback for notes.
 
-If you have a keyboard with built in LEDs and MIDI in support, you may connect that via Connections > LED Lights > MIDI Device (select correct channel for your LED Piano) - only 'expected' notes will light up on this configuration. 
+If you have a keyboard with built-in LEDs and MIDI input, you may connect that via:
 
-For a more interactive, color-coded setup, WLED can be setup, and is quite inexpensive.  
-For WLED controllers, the following colors are used: 
-- Free-play mode / Correctly played notes (optional): Off-white amber color
-- Epected Notes for L/R hands: Blue & Green
-- Future expected notes (optional): lighter blue & green (brightness is setup in the app). 
-- Incorrectly played notes: Red
+Connections → LED Lights → MIDI Device  
+
+(Only "expected" notes will light up in this mode)
+
+For a more interactive, color-coded setup, WLED can be used.
+
+### LED Color Behavior
+- Free-play / Correct notes: Off-white amber  
+- Expected Notes (L/R): Blue & Green  
+- Future Notes: lighter blue & green  
+- Incorrect Notes: Red  
+
+---
+
+### 🔧 Before LED Calibration (IMPORTANT)
+
+Before starting LED calibration:
+
+- Set **Player Piano Keys** to match your keyboard  
+- Set **LED Count** to match your strip  
+- Lower **LED Brightness to ~20%** for safety  
 
 ---
 
 ### Recommended setup
 
 - Use an **ESP32-based WLED controller**
-- Use a **5V addressable strip** such as **WS2812B / WS2812-compatible** LEDs
-- For easy disconnects, a **3-pin JST-SM style connector** can be helpful
-
-Try to buy a strip that arrives as one continuous run at the length you need. Some listings ship multiple shorter sections that may require soldering together.
-At least 160 LEDs per meter recommended.  I found 200 LED/Meter works great to ensure alignment over correct keys. 
-
-- Pro tip: - I sourced a 5mm wide 200led/m, 2 meter strip from ali -with an adhesive backing.  I cut some white stickers to place behind my keys facing upward (giving the illusion of extending my piano keys upward).  I stuck my LED strip across those stickers and it gives the illusion that my LED strip is directly on the keys, making 'guidance' very clear on which notes are expected. My strip was already in a very light/faint white coating which acts as a diffuser. 
-- Some other bare looking LEDs may do well in a 'diffuser strip' if they don't have a sticky backing.  However, as this is not meant to put on a 'light show' I wouldn't get a diffuser that diffuses the lights TOO much.  Clear or semi-transparent may work well.  The goal here is to tell the player which notes are expected, as well as live feedback on what the player is pressing. 
-
-
-### WLED settings worth checking (on the WLED device)
-
-For the best real-time response:
-- Disable transitions
-- Disable effects while using real-time note data
-- Enable real-time override
-- Turn gamma correction off if you want the most direct LED response
+- Use a **5V addressable strip** such as **WS2812B / WS2812-compatible**
+- Recommended: **160–200 LEDs per meter**
 
 ---
 
 ### Option 1: HTTP JSON (Simplest)
 
-- Works from:
-  - Desktop (local or GitHub)
-  - iPad (via MIDIWeb)
-
-Enter your WLED device IP in the app settings.
-
-👉 No helper required
+- Works on desktop and iPad (via MIDIWeb)
+- Enter your WLED device IP in settings
 
 ---
 
 ### Option 2: Low Latency Mode (DDP) — Optional
 
-For better LED responsiveness (NOT REQUIRED):
-
 Run:
 
 `Launchers/Windows/WLED Helper - Low Latency (DDP).bat`
-`Launchers/Mac/WLED Helper - Low Latency (DDP).command`
-
-Then enable DDP in the app.
 
 ### Notes:
 - ✅ Best performance (desktop)  
-- ⚠️ Not supported on iPad (currently)  
-- ⚠️ Requires helper running on same computer  
-- ⚠️ Requires installing node.js v18 or higher 
-
----
-
-### iPad + WLED
-
-To use LEDs on iPad: 
-You must download the project folder (zip) from Github and run the included script to host from a Mac or PC on your network:
-
-1. Run:
-
-`Launchers/Windows/Piano Trainer - iPad (Wi-Fi).bat`
-`Launchers/Mac/Piano Trainer - iPad (Wi-Fi).command`
-
-2. Open the displayed IP in MIDIWeb ios app 
-3. Use **HTTP JSON mode**
-
-### Notes:
-- ✅ Works well  
-- ❌ DDP not supported on iPad  
+- ❌ Not supported on iPad  
+- ⚠️ Requires Node.js v18+  
 
 ---
 
 ## 🎹 Supported Input
 
-- MIDI keyboard (USB or Bluetooth, depending on platform)  
-- Note: I have not found a browser yet to directly support Bluetooth Midi
-- You can connect Bluetooth midi keyboard to a small USB dongle on your device, called CME WIDI Bud Pro.  It's quite easy to use, and wireless.
-- Other MIDI instruments may work, but the interface is optimized for piano/keyboard use  
-
-⚠️ Note: MIDI file import is not currently supported — use MusicXML scores.
-- There are online tools to convert MIDI to XML but not great results. 
-- Musescore (app) can be used to export XML to midi with much better results. 
-- Musescore (app) can also transpose songs prior to export. 
-
+- MIDI keyboard (USB or Bluetooth with adapter)  
+- Other MIDI instruments may work, but app is optimized for piano  
 
 ---
 
 ## 💾 Library & Backup (IMPORTANT)
 
-Songs are stored in your browser using IndexedDB.
+Songs are stored in IndexedDB (browser storage).
 
-⚠️ Browsers may clear this data unexpectedly.
+⚠️ Browsers may clear this data.
 
 ### You should:
-- Regularly use **Scores → Export Library**
-- Regularly use **Settings → Backup All Settings**
-- Keep backups of your song library, trainer settings, and LED calibration
+- Use **Scores → Export Library**
+- Use **Settings → Backup All Settings**
 
 ---
 
 ## ⚠️ Known Limitations
 
+### Conversion-based imports
+- MIDI, MuseScore, and Guitar Pro files may:
+  - Load imperfectly  
+  - Require cleanup  
+  - Fail on complex arrangements  
+
+👉 Exporting to MusicXML is always the most reliable fallback  
+
+---
+
 ### iOS / iPad
 - No Web MIDI in Safari/Chrome  
-- Requires MIDIWeb for MIDI support  
+- Requires MIDIWeb  
+
+---
 
 ### WLED
 - DDP not supported on iPad  
-- HTTP JSON has slightly higher latency, but not very noticeable. 
-
-### Browser Storage
-- Library may be lost if browser clears storage  
 
 ---
 
@@ -204,57 +196,37 @@ Songs are stored in your browser using IndexedDB.
 
 ### MIDI not detected
 - Use Chrome (desktop)  
-- On iPad: use MIDIWeb  
-- Try reconnecting device  
-- Refresh page  
-- Use USB -or a receiver (WIDI Bud Pro) for Bluetotooth MIDI
+- Use MIDIWeb on iPad  
 
----
+### Import issues
+- Try exporting the file to MusicXML first  
 
 ### LEDs not working
-- Check WLED IP  
-- Confirm device is on same network  
-- Try HTTP JSON mode first  
-
----
-
-### App not loading correctly
-- Hard refresh (Ctrl + Shift + R)  
-- Clear browser cache  
-
----
-
-## 🔄 Updates (Planned)
-
-- On-staff Feedback Note improvements
+- Check IP  
+- Use HTTP JSON first  
 
 ---
 
 ## 📘 Notes
 
-- This is a **web-first app**  
-- Desktop provides the best experience  
-- iPad support is available via MIDIWeb workaround  
+- Web-first app  
+- Desktop = best experience  
+- iPad supported via MIDIWeb  
 
 ---
 
 ## 🙌 Credits
 
-- MusicXML rendering libraries (OSMD)
-- WLED project  
-- MIDIWeb (iOS MIDI support)  
-- MuseTrainer Public Domain Library
-- NodeJS open-source runtime environment
-- ToneJS Web Audio Framework
+- OSMD (MusicXML rendering)  
+- WLED  
+- MIDIWeb  
+- MuseTrainer Public Domain Library  
+- NodeJS  
+- Tone.js  
+- Webmscore
 
 ---
 
 ## License
 
-This project is licensed under the GNU Affero General Public License v3.0.
-
-Any modifications — including versions hosted as a service — must also make their source code available under the same license.
-
-See the LICENSE file for full details.
-
----
+AGPL v3.0

@@ -579,6 +579,30 @@ v1.0.3
 v1.0.4
 * Test from 1.0.3 to ensure updater works
 
+v1.0.5
+* Added broader score import support using local browser-side conversion via webmscore.
+
+- Open / Import now accepts:
+  .xml, .musicxml, .mxl
+  .mid, .midi
+  .mscz, .mscx
+  .gp, .gp3, .gp4, .gp5, .gpx, .gtp, .ptb
+
+Behavior:
+- MusicXML / MXL still load directly and remain the recommended format.
+- MIDI / MuseScore / Guitar Pro files are converted locally in-browser to MusicXML, then passed into the existing OSMD pipeline.
+- Core rendering, anchor logic, beam stability, clef handling, and feedback note placement were intentionally left untouched.
+
+Implementation notes:
+- Replaced handwritten midi-import conversion logic with a wrapper around webmscore.
+- Kept converter isolated under assets/vendor/webmscore.
+- Existing Open Score / Import flows now allow additional formats instead of blocking them.
+- Local web server updated to serve .wasm with application/wasm and related runtime files correctly.
+
+User-facing note:
+- Recommend MusicXML / MXL for best reliability.
+- MIDI / MuseScore / Guitar Pro support is available, but some complex converted files may still fail or load imperfectly.
+
 
 
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
