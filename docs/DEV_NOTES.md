@@ -608,6 +608,9 @@ v1.0.6
 - Will still verify / improve enharmonic values after testing key signature changes.
 - Need to update text to correct 'current / original' keys. 
 
+v1.0.7
+* Fixed first time library for web version
+
 
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
 //----------------------------------------------------------------------------------------------------------//

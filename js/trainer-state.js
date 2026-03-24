@@ -6,7 +6,7 @@
 // ==========================================
 // STATE MANAGEMENT
 // ==========================================
-const APP_VERSION = '1.0.6';
+const APP_VERSION = '1.0.7';
 const APP_REPO_SLUG = 'ztbishop/piano-trainer-studio';
 const UPDATE_MANIFEST_URL = 'https://ztbishop.github.io/piano-trainer-studio/version.json';
 const UPDATE_MANIFEST_URL_STORAGE_KEY = 'pt_updateManifestUrl';

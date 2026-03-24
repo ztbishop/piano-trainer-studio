@@ -10,7 +10,7 @@ const SCORE_LIBRARY_DB_NAME = 'pianoTrainerLibrary';
 const SCORE_LIBRARY_DB_VERSION = 1;
 const SCORE_LIBRARY_FOLDER_STORE = 'folders';
 const SCORE_LIBRARY_SCORE_STORE = 'scores';
-const STARTER_LIBRARY_ASSET_PATH = '/assets/Starter_Scores.json';
+const STARTER_LIBRARY_ASSET_PATH = new URL('assets/Starter_Scores.json', document.baseURI).toString();
 const STARTER_LIBRARY_IMPORT_STORAGE_KEY = 'pt_starterLibraryImported_v1';
 
 
