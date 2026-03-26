@@ -9,15 +9,15 @@
 // alternate note state here unless the playback/render core is updated together.
 
 function getConfiguredLedMasterBrightness() {
-    return normalizeLedMasterBrightness(getClampedNumber(LED_MASTER_BRIGHTNESS_STORAGE_KEY, 1, 100, 40));
+    return normalizeLedMasterBrightness(getClampedNumber(LED_MASTER_BRIGHTNESS_STORAGE_KEY, 1, 100, 25));
 }
 
 function getConfiguredLedFuture1Pct() {
-    return normalizeLedFuturePct(getClampedNumber(LED_FUTURE1_PCT_STORAGE_KEY, 0, 100, 10), 10);
+    return normalizeLedFuturePct(getClampedNumber(LED_FUTURE1_PCT_STORAGE_KEY, 0, 100, 1), 1);
 }
 
 function getConfiguredLedFuture2Pct() {
-    return normalizeLedFuturePct(getClampedNumber(LED_FUTURE2_PCT_STORAGE_KEY, 0, 100, 10), 10);
+    return normalizeLedFuturePct(getClampedNumber(LED_FUTURE2_PCT_STORAGE_KEY, 0, 100, 1), 1);
 }
 
 function getConfiguredLedCount() {
@@ -25,15 +25,7 @@ function getConfiguredLedCount() {
 }
 
 (function migrateLegacyLedDefaults() {
-    const migrationKey = 'pt_ledDefaultsMigration_20260321';
-    if (localStorage.getItem(migrationKey)) return;
-    if (localStorage.getItem(LED_MASTER_BRIGHTNESS_STORAGE_KEY) === '25') {
-        localStorage.setItem(LED_MASTER_BRIGHTNESS_STORAGE_KEY, '40');
-    }
-    if (localStorage.getItem(LED_FUTURE1_PCT_STORAGE_KEY) === '4') {
-        localStorage.setItem(LED_FUTURE1_PCT_STORAGE_KEY, '10');
-    }
-    localStorage.setItem(migrationKey, 'true');
+    // Legacy migration disabled so first-run defaults are not overwritten.
 })();
 
 let ledCalibration = {};
@@ -431,8 +423,8 @@ function syncLedBrightnessControls() {
     const future1Slider = document.getElementById('slider-led-future1');
     const future1Input = document.getElementById('val-led-future1');
 
-    const masterPercent = Math.round((LedEngine.config.masterBrightness || 0.4) * 100);
-    const future1Percent = String(LedEngine.config.future1BrightnessPct ?? 10);
+    const masterPercent = Math.round((LedEngine.config.masterBrightness ?? 0.25) * 100);
+    const future1Percent = String(LedEngine.config.future1BrightnessPct ?? 1);
 
     if (masterSlider) masterSlider.value = String(masterPercent);
     if (masterInput) masterInput.value = String(masterPercent);
@@ -458,7 +450,7 @@ function setLedMasterBrightness(value, { save = true, rerender = true } = {}) {
 }
 
 function setLedFuture1BrightnessPct(value, { save = true, rerender = true } = {}) {
-    const normalized = normalizeLedFuturePct(value, 10);
+    const normalized = normalizeLedFuturePct(value, 1);
     LedEngine.config.future1BrightnessPct = normalized;
     if (save) {
         localStorage.setItem(LED_FUTURE1_PCT_STORAGE_KEY, String(normalized));
@@ -467,7 +459,7 @@ function setLedFuture1BrightnessPct(value, { save = true, rerender = true } = {}
 }
 
 function setLedFuture2BrightnessPct(value, { save = true, rerender = true } = {}) {
-    const normalized = normalizeLedFuturePct(value, 10);
+    const normalized = normalizeLedFuturePct(value, 1);
     LedEngine.config.future2BrightnessPct = normalized;
     if (save) {
         localStorage.setItem(LED_FUTURE2_PCT_STORAGE_KEY, String(normalized));
@@ -1246,9 +1238,9 @@ const LedEngine = {
   // configurable settings
   config: {
     ledCount: 88,
-    masterBrightness: 0.40,
-    future1BrightnessPct: 10,
-    future2BrightnessPct: 10,
+    masterBrightness: 0.25,
+    future1BrightnessPct: 1,
+    future2BrightnessPct: 1,
     futurePreview: 1,   // 0,1
     pulseEnabled: false
   },
@@ -1304,12 +1296,12 @@ const LedEngine = {
   },
 
   getStateBrightnessMultiplier(state) {
-    let multiplier = Math.max(0, Math.min(1, this.config.masterBrightness ?? 0.40));
+    let multiplier = Math.max(0, Math.min(1, this.config.masterBrightness ?? 0.25));
 
     if (state === 'future1-l' || state === 'future1-r') {
-      multiplier *= Math.max(0, Math.min(1, (this.config.future1BrightnessPct ?? 10) / 100));
+      multiplier *= Math.max(0, Math.min(1, (this.config.future1BrightnessPct ?? 1) / 100));
     } else if (state === 'future2-l' || state === 'future2-r') {
-      multiplier *= Math.max(0, Math.min(1, (this.config.future2BrightnessPct ?? 10) / 100));
+      multiplier *= Math.max(0, Math.min(1, (this.config.future2BrightnessPct ?? 1) / 100));
     }
 
     return multiplier;

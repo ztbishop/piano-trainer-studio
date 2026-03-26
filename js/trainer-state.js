@@ -6,7 +6,7 @@
 // ==========================================
 // STATE MANAGEMENT
 // ==========================================
-const APP_VERSION = '1.0.7';
+const APP_VERSION = '1.0.8';
 const APP_REPO_SLUG = 'ztbishop/piano-trainer-studio';
 const UPDATE_MANIFEST_URL = 'https://ztbishop.github.io/piano-trainer-studio/version.json';
 const UPDATE_MANIFEST_URL_STORAGE_KEY = 'pt_updateManifestUrl';
@@ -86,7 +86,7 @@ const AppState = {
     currentScoreFileName: '',
     currentScoreOriginalFileName: '',
     inputVelocityEnabled: true,
-    liveLowLatencyMonitoringEnabled: false,
+    liveLowLatencyMonitoringEnabled: true,
     currentScoreFileType: '',
     currentScoreOriginalFileType: '',
     currentScoreLibraryId: null,
@@ -171,9 +171,9 @@ const DEFAULT_PREFERENCES = Object.freeze({
     ledCount: 88,
     trainerPianoVolume: 80,
     metronomeVolume: 25,
-    ledMasterBrightness: 40,
-    ledFuture1Pct: 10,
-    ledFuture2Pct: 10
+    ledMasterBrightness: 25,
+    ledFuture1Pct: 1,
+    ledFuture2Pct: 1
 });
 
 const FIRST_RUN_INIT_STORAGE_KEY = 'pt_firstRunInit_20260321';
@@ -294,6 +294,7 @@ function getStoredNumber(key, fallback) {
 
 function getClampedNumber(key, min, max, defaultVal) {
     const raw = localStorage.getItem(key);
+    if (raw === null || raw === '') return Math.min(max, Math.max(min, defaultVal));
     const num = Number(raw);
     return Math.min(max, Math.max(min, Number.isFinite(num) ? num : defaultVal));
 }
@@ -404,5 +405,7 @@ AppState.midiOutChannel = normalizeMidiChannel(localStorage.getItem(MIDI_OUT_CHA
 AppState.midiLightsChannel = normalizeMidiChannel(localStorage.getItem(MIDI_LIGHTS_CHANNEL_STORAGE_KEY), 1);
 
 AppState.midiLedLowVelocity = getStoredBool(MIDI_LED_LOW_VELOCITY_STORAGE_KEY, false);
-AppState.inputVelocityEnabled = getStoredBool(TRAINER_INPUT_VELOCITY_STORAGE_KEY, true);
-AppState.liveLowLatencyMonitoringEnabled = getStoredBool(TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY, false);
+AppState.inputVelocityEnabled = true;
+AppState.liveLowLatencyMonitoringEnabled = true;
+setStoredBool(TRAINER_INPUT_VELOCITY_STORAGE_KEY, true);
+setStoredBool(TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY, true);

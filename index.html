@@ -352,9 +352,9 @@
                         <div class="led-brightness-subtitle">Future note brightness</div>
                         <div class="brightness-row">
                             <label for="slider-led-future1" class="brightness-label">Future</label>
-                            <input type="range" id="slider-led-future1" min="0" max="100" value="10">
+                            <input type="range" id="slider-led-future1" min="0" max="100" value="1">
                             <div class="value-suffix-group">
-                                <input type="number" id="val-led-future1" value="10" min="0" max="100" class="num-input"><span>%</span>
+                                <input type="number" id="val-led-future1" value="1" min="0" max="100" class="num-input"><span>%</span>
                             </div>
                         </div>
                     </div>
@@ -468,35 +468,61 @@
             <legend>🎹 Trainer</legend>
 
             <div class="practice-rows">
-                <div class="practice-row">
-                    <div class="practice-row-label">Mode</div>
-                    <select id="select-mode">
-                        <option value="realtime">Realtime</option>
-                        <option value="wait">Wait</option>
-                    </select>
+                <div class="practice-section-title">Mode</div>
+
+                <div class="practice-mode-group" role="radiogroup" aria-label="Practice mode">
+                    <label class="practice-mode-option">
+                        <input type="radio" name="practice-mode" id="mode-realtime" value="realtime">
+                        <span class="practice-mode-copy">
+                            <span class="practice-mode-title">Realtime</span>
+                            <span class="practice-mode-desc">Play continuously at the set tempo.</span>
+                        </span>
+                    </label>
+
+                    <label class="practice-mode-option">
+                        <input type="radio" name="practice-mode" id="mode-wait" value="wait">
+                        <span class="practice-mode-copy">
+                            <span class="practice-mode-title">Wait for Me</span>
+                            <span class="practice-mode-desc">Waits for correct notes before continuing.</span>
+                            <span class="practice-mode-note">Guide playback is off in Wait mode.</span>
+                        </span>
+                    </label>
                 </div>
 
+                <div class="practice-divider"></div>
+
+                <div class="practice-section-title">Hands</div>
+
                 <div class="practice-row">
-                    <div class="practice-row-label">Hands</div>
+                    <div class="practice-row-label">What you play</div>
                     <div class="inline-checkboxes compact-checkboxes">
                         <label><input type="checkbox" id="practice-lh" checked> L ✋</label>
                         <label><input type="checkbox" id="practice-rh" checked> R 🤚</label>
                     </div>
                 </div>
 
+                <div class="practice-divider"></div>
+
+                <div class="practice-section-title">Feedback</div>
+
                 <div class="practice-row feedback-row">
                     <div class="practice-row-spacer"></div>
-                    <label class="inline-row-flex"><input type="checkbox" id="check-feedback" checked> Staff Feedback</label>
+                    <label class="inline-row-flex"><input type="checkbox" id="check-feedback" checked> Show note feedback (on staff)</label>
                 </div>
 
                 <div class="practice-row future-notes-row">
                     <div class="practice-row-spacer"></div>
-                    <div class="inline-row-flex future-notes-inline"><label class="inline-row-flex"><input type="checkbox" id="check-future-preview" checked> Highlight Future Notes</label><label class="inline-row-flex"><input type="checkbox" id="check-correct-highlight"> Highlight Correct Notes</label></div>
+                    <div class="inline-row-flex future-notes-inline"><label class="inline-row-flex"><input type="checkbox" id="check-future-preview" checked> Show future notes (keyboard)</label><label class="inline-row-flex"><input type="checkbox" id="check-correct-highlight"> Highlight correct notes</label></div>
                 </div>
 
                 <div class="practice-divider"></div>
 
                 <div class="practice-section-title">Playback &amp; Routing</div>
+
+                <div class="practice-row practice-mode-status-row" id="practice-wait-note-row">
+                    <div class="practice-row-spacer"></div>
+                    <div class="practice-inline-note" id="practice-wait-note">Guide playback is unavailable in Wait mode.</div>
+                </div>
 
                 <div class="routing-grid">
                     <section class="routing-card">
@@ -554,23 +580,15 @@
                     </section>
                 </div>
 
-                <div class="routing-inline-options routing-global-options">
-                    <div class="routing-inline-title">Live Input Behavior</div>
-                    <div class="routing-inline-help">Applies to In-App Audio and MIDI Out.</div>
-                    <label><input type="checkbox" id="check-input-velocity" checked> Use MIDI input velocity for live monitoring</label>
-                    <label><input type="checkbox" id="check-live-low-latency"> Low-latency live monitoring</label>
-                    <div class="routing-inline-note">Reduces live-monitor delay for MIDI In and Virtual Keyboard. May sound slightly drier on some devices.</div>
-                </div>
-
                 <div class="practice-divider"></div>
 
                 <div class="practice-section-title">Display</div>
 
                 <div class="practice-row value-row">
                     <label for="slider-zoom" class="practice-row-label inline-label">Zoom</label>
-                    <input type="range" id="slider-zoom" min="50" max="200" value="100">
+                    <input type="range" id="slider-zoom" min="50" max="150" value="100">
                     <div class="value-suffix-group">
-                        <input type="number" id="val-zoom" value="100" class="num-input"><span>%</span>
+                        <input type="number" id="val-zoom" value="100" min="50" max="150" class="num-input"><span>%</span>
                     </div>
                 </div>
 

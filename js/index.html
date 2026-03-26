@@ -215,17 +215,17 @@
                     <div class="led-brightness-grid">
                         <div class="brightness-row">
                             <label for="slider-led-master" class="brightness-label">Master</label>
-                            <input type="range" id="slider-led-master" min="1" max="100" value="40">
+                            <input type="range" id="slider-led-master" min="1" max="100" value="25">
                             <div class="value-suffix-group">
-                                <input type="number" id="val-led-master" value="40" min="1" max="100" class="num-input"><span>%</span>
+                                <input type="number" id="val-led-master" value="25" min="1" max="100" class="num-input"><span>%</span>
                             </div>
                         </div>
                         <div class="led-brightness-subtitle">Future note brightness</div>
                         <div class="brightness-row">
                             <label for="slider-led-future1" class="brightness-label">Future</label>
-                            <input type="range" id="slider-led-future1" min="0" max="100" value="10">
+                            <input type="range" id="slider-led-future1" min="0" max="100" value="1">
                             <div class="value-suffix-group">
-                                <input type="number" id="val-led-future1" value="10" min="0" max="100" class="num-input"><span>%</span>
+                                <input type="number" id="val-led-future1" value="1" min="0" max="100" class="num-input"><span>%</span>
                             </div>
                         </div>
                     </div>
@@ -291,10 +291,10 @@
 
             <div class="practice-rows">
                 <div class="practice-row">
-                    <div class="practice-row-label">Mode</div>
+                    <div class="practice-row-label">Trainer Style</div>
                     <select id="select-mode">
-                        <option value="realtime">Realtime</option>
-                        <option value="wait">Wait</option>
+                        <option value="realtime">Realtime (keep going)</option>
+                        <option value="wait">Wait for Correct Key</option>
                     </select>
                 </div>
 
@@ -376,23 +376,15 @@
                     </section>
                 </div>
 
-                <div class="routing-inline-options routing-global-options">
-                    <div class="routing-inline-title">Live Input Behavior</div>
-                    <div class="routing-inline-help">Applies to In-App Audio and MIDI Out.</div>
-                    <label><input type="checkbox" id="check-input-velocity" checked> Use MIDI input velocity for live monitoring</label>
-                    <label><input type="checkbox" id="check-live-low-latency"> Low-latency live monitoring</label>
-                    <div class="routing-inline-note">Reduces live-monitor delay for MIDI In and Virtual Keyboard. May sound slightly drier on some devices.</div>
-                </div>
-
                 <div class="practice-divider"></div>
 
                 <div class="practice-section-title">Display</div>
 
                 <div class="practice-row value-row">
                     <label for="slider-zoom" class="practice-row-label inline-label">Zoom</label>
-                    <input type="range" id="slider-zoom" min="50" max="200" value="100">
+                    <input type="range" id="slider-zoom" min="50" max="150" value="100">
                     <div class="value-suffix-group">
-                        <input type="number" id="val-zoom" value="100" class="num-input"><span>%</span>
+                        <input type="number" id="val-zoom" value="100" min="50" max="150" class="num-input"><span>%</span>
                     </div>
                 </div>
 

@@ -59,15 +59,22 @@ function applyPersistedTrainerAndSettingsPreferences() {
     AppState.midiOutEnabled.other = getStoredBool(TRAINER_MIDIOUT_OTHER_STORAGE_KEY, false);
     AppState.midiOutEnabled.instrument = getStoredBool(TRAINER_MIDIOUT_INSTRUMENT_STORAGE_KEY, false);
     AppState.midiOutEnabled.virtual = getStoredBool(TRAINER_MIDIOUT_VIRTUAL_STORAGE_KEY, false);
-    AppState.inputVelocityEnabled = getStoredBool(TRAINER_INPUT_VELOCITY_STORAGE_KEY, true);
-    AppState.liveLowLatencyMonitoringEnabled = getStoredBool(TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY, false);
+    AppState.inputVelocityEnabled = true;
+    AppState.liveLowLatencyMonitoringEnabled = true;
+    setStoredBool(TRAINER_INPUT_VELOCITY_STORAGE_KEY, true);
+    setStoredBool(TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY, true);
     AppState.ledSimulatorVisible = getStoredBool(SETTINGS_LED_SIM_STORAGE_KEY, false);
     AppState.visualPulseEnabled = getStoredBool(VISUAL_PULSE_STORAGE_KEY, true);
     AppState.accentedDownbeatEnabled = getStoredBool(ACCENTED_DOWNBEAT_STORAGE_KEY, true);
     AppState.loopCountInEnabled = getStoredBool(LOOP_COUNT_IN_STORAGE_KEY, true);
 
-    const modeSelect = document.getElementById('select-mode');
-    if (modeSelect) modeSelect.value = AppState.mode;
+    const realtimeRadio = document.getElementById('mode-realtime');
+    const waitRadio = document.getElementById('mode-wait');
+    if (AppState.mode === 'wait') {
+        if (waitRadio) waitRadio.checked = true;
+    } else {
+        if (realtimeRadio) realtimeRadio.checked = true;
+    }
 
     const feedbackCheckbox = document.getElementById('check-feedback');
     if (feedbackCheckbox) feedbackCheckbox.checked = AppState.feedbackEnabled;
@@ -114,17 +121,16 @@ function applyPersistedTrainerAndSettingsPreferences() {
     const midiOutVirtualCheckbox = document.getElementById('enable-midiout-virtual-keyboard');
     if (midiOutVirtualCheckbox) midiOutVirtualCheckbox.checked = AppState.midiOutEnabled.virtual;
 
-    const inputVelocityCheckbox = document.getElementById('check-input-velocity');
-    if (inputVelocityCheckbox) inputVelocityCheckbox.checked = AppState.inputVelocityEnabled;
-
-    const liveLowLatencyCheckbox = document.getElementById('check-live-low-latency');
-    if (liveLowLatencyCheckbox) liveLowLatencyCheckbox.checked = AppState.liveLowLatencyMonitoringEnabled;
 
     const pianoVolume = getClampedNumber(TRAINER_PIANO_VOL_STORAGE_KEY, 0, 100, 80);
     updatePianoVolume(pianoVolume);
 
-    const zoomPercent = getClampedNumber(TRAINER_ZOOM_STORAGE_KEY, 50, 200, 100);
-    applyZoom(zoomPercent);
+    const zoomPercent = getClampedNumber(TRAINER_ZOOM_STORAGE_KEY, 50, 150, 100);
+    if (localStorage.getItem(TRAINER_ZOOM_STORAGE_KEY) === null || localStorage.getItem(TRAINER_ZOOM_STORAGE_KEY) === '') {
+        localStorage.setItem(TRAINER_ZOOM_STORAGE_KEY, String(zoomPercent));
+    }
+    syncZoomControls(zoomPercent);
+    applyZoom(zoomPercent, { save: false });
 
     const autoScrollCheckbox = document.getElementById('check-autoscroll');
     if (autoScrollCheckbox) autoScrollCheckbox.checked = getStoredBool(TRAINER_AUTOSCROLL_STORAGE_KEY, true);
@@ -155,8 +161,10 @@ function restoreDefaultPreferences({ reloadDevices = true } = {}) {
     clearSavedPreferences();
 
     AppState.mode = 'realtime';
-    const modeSelect = document.getElementById('select-mode');
-    if (modeSelect) modeSelect.value = 'realtime';
+    const realtimeRadio = document.getElementById('mode-realtime');
+    const waitRadio = document.getElementById('mode-wait');
+    if (realtimeRadio) realtimeRadio.checked = true;
+    if (waitRadio) waitRadio.checked = false;
 
     AppState.feedbackEnabled = true;
     const feedbackCheckbox = document.getElementById('check-feedback');
@@ -244,9 +252,9 @@ function restoreDefaultPreferences({ reloadDevices = true } = {}) {
 
     setPlayerPianoType(88);
     setLedCount(88);
-    setLedMasterBrightness(40);
-    setLedFuture1BrightnessPct(10);
-    setLedFuture2BrightnessPct(10);
+    setLedMasterBrightness(25);
+    setLedFuture1BrightnessPct(1);
+    setLedFuture2BrightnessPct(1);
     resetAllLedCalibration();
 
     setWledIp('');
@@ -648,7 +656,7 @@ function scheduleMetronomeForPlaybackWindow(startTimeSec, currentMeasureIdx, cur
             const timeoutId = window.setTimeout(() => {
                 if (!AppState.isPlaying || AppState.countInActive) return;
                 if (!document.getElementById('check-metronome')?.checked) return;
-                metronomeSynth.triggerAttackRelease(clickSpec.note, '64n', Tone.now(), clickSpec.velocity);
+                metronomeSynth.triggerAttackRelease(clickSpec.note, '64n', getLiveAudioTime(), clickSpec.velocity);
                 triggerTempoVisualPulse();
             }, delayMs);
             scheduledMetronomeEventIds.push(timeoutId);
@@ -791,6 +799,8 @@ function getOsmdLoadPayload(rawData, fileType = 'xml', fileName = 'Untitled Scor
 
 async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType = 'xml', libraryScoreId = null, title = null, originalRawData = undefined, originalFileName = undefined, originalFileType = undefined, skipTransposeReset = false } = {}) {
     try {
+        resetPlaybackForLoadedScore();
+
         const resolvedOriginalRawData = originalRawData !== undefined ? originalRawData : rawData;
         const resolvedOriginalFileName = originalFileName !== undefined ? originalFileName : (fileName || 'Untitled Score');
         const resolvedOriginalFileType = originalFileType !== undefined ? originalFileType : (fileType || getScoreFileTypeFromName(fileName));
@@ -987,6 +997,10 @@ function initSongUI() {
     const totalMeasures = osmd.GraphicSheet.MeasureList.length;
     document.getElementById('slider-loop-max').max = totalMeasures;
     document.getElementById('slider-loop-min').max = totalMeasures;
+    document.getElementById('val-loop-min').min = 1;
+    document.getElementById('val-loop-min').max = totalMeasures;
+    document.getElementById('val-loop-max').min = 1;
+    document.getElementById('val-loop-max').max = totalMeasures;
     document.getElementById('val-loop-max').value = totalMeasures;
     document.getElementById('val-loop-min').value = 1;
     AppState.looper.min = 1;
@@ -2006,6 +2020,8 @@ function applyModeSettings() {
     const midiOutLhToggle = document.getElementById('enable-midiout-lh');
     const midiOutRhToggle = document.getElementById('enable-midiout-rh');
     const midiOutOtherToggle = document.getElementById('enable-midiout-other');
+    const waitNoteRow = document.getElementById('practice-wait-note-row');
+    const waitNote = document.getElementById('practice-wait-note');
 
     if (isWait) {
         lhAudioToggle.checked = false;
@@ -2033,6 +2049,9 @@ function applyModeSettings() {
     if (midiOutLhToggle) midiOutLhToggle.disabled = isWait || !getSelectedMidiOutOutput();
     if (midiOutRhToggle) midiOutRhToggle.disabled = isWait || !getSelectedMidiOutOutput();
     if (midiOutOtherToggle) midiOutOtherToggle.disabled = isWait || !getSelectedMidiOutOutput();
+
+    waitNoteRow?.classList.toggle('is-hidden', !isWait);
+    waitNote?.classList.toggle('is-disabled', !isWait);
     syncTrainerRoutingUiState();
 }
 
@@ -2112,14 +2131,22 @@ document.getElementById('check-feedback').addEventListener('change', (e) => {
     }
 });
 
-document.getElementById('select-mode').addEventListener('change', (e) => {
-    AppState.mode = e.target.value;
-    localStorage.setItem(TRAINER_MODE_STORAGE_KEY, AppState.mode);
-    clearScheduledMetronomeEvents();
-    stopWaitModeMetronome();
-    applyModeSettings();
-updatePianoVolume(pianoVolSlider ? pianoVolSlider.value : 80);
-updateMetroVolume(metroVolSlider ? metroVolSlider.value : 50); 
+document.querySelectorAll('input[name="practice-mode"]').forEach((radio) => {
+    radio.addEventListener('change', (e) => {
+        if (!e.target.checked) return;
+
+        const nextMode = e.target.value;
+        if (AppState.isPlaying || AppState.countInActive) {
+            pausePlaybackFromToolbar();
+        }
+        AppState.mode = nextMode;
+        localStorage.setItem(TRAINER_MODE_STORAGE_KEY, AppState.mode);
+        clearScheduledMetronomeEvents();
+        stopWaitModeMetronome();
+        applyModeSettings();
+        updatePianoVolume(pianoVolSlider ? pianoVolSlider.value : 80);
+        updateMetroVolume(metroVolSlider ? metroVolSlider.value : 50);
+    });
 });
 
 
@@ -2271,23 +2298,45 @@ function silencePlaybackOutputsImmediately() {
     }
 }
 
-function pausePlaybackFromToolbar() {
+function stopPlaybackState({ pauseTransport = true } = {}) {
     AppState.isPlaying = false;
     AppState.countInActive = false;
     AppState.lastLedPreviewEvents = [];
     AppState.ledPreviewTraversalIndex = -1;
-    Tone.Transport.pause();
+
+    if (pauseTransport) {
+        Tone.Transport.pause();
+    } else {
+        Tone.Transport.stop();
+    }
+
     clearScheduledMetronomeEvents();
     stopWaitModeMetronome();
     silencePlaybackOutputsImmediately();
     clearTempoVisualPulse();
     updatePlayPauseButton();
+
     if (AppState.ledOutputMode === 'midi') {
         wipeHardwareLEDs();
     }
     if (AppState.ledOutputMode === 'wled') {
         WLEDController.forceClear().catch(() => {});
     }
+}
+
+function pausePlaybackFromToolbar() {
+    stopPlaybackState({ pauseTransport: true });
+}
+
+function resetPlaybackForLoadedScore() {
+    stopPlaybackState({ pauseTransport: false });
+
+    GeometryEngine.clearSvgFeedback();
+    AppState.pendingAudio = [];
+    AppState.score.correct = 0;
+    AppState.score.wrong = 0;
+    updateScoreDisplay();
+    clearVisuals();
 }
 
 if (playPauseButton) {
@@ -2347,11 +2396,13 @@ window.addEventListener('resize', () => {
 
 const zoomSlider = document.getElementById('slider-zoom');
 const zoomInput = document.getElementById('val-zoom');
+if (zoomSlider) { zoomSlider.min = '50'; zoomSlider.max = '150'; }
+if (zoomInput) { zoomInput.min = '50'; zoomInput.max = '150'; }
 function normalizeZoomValue(val) {
     let normalized = parseInt(val, 10);
     if (isNaN(normalized)) return null;
     if (normalized < 50) normalized = 50;
-    if (normalized > 200) normalized = 200;
+    if (normalized > 150) normalized = 150;
     return normalized;
 }
 function syncZoomControls(val) {
@@ -2376,6 +2427,7 @@ function applyZoom(val, { save = true } = {}) {
 }
 zoomSlider.addEventListener('input', (e) => syncZoomControls(e.target.value));
 zoomSlider.addEventListener('change', (e) => applyZoom(e.target.value));
+zoomInput.addEventListener('input', (e) => syncZoomControls(e.target.value));
 zoomInput.addEventListener('change', (e) => applyZoom(e.target.value));
 
 const speedSlider = document.getElementById('slider-speed');
@@ -2506,14 +2558,6 @@ document.getElementById('enable-midiout-virtual-keyboard').addEventListener('cha
     AppState.midiOutEnabled.virtual = e.target.checked;
     setStoredBool(TRAINER_MIDIOUT_VIRTUAL_STORAGE_KEY, AppState.midiOutEnabled.virtual);
 });
-document.getElementById('check-input-velocity').addEventListener('change', (e) => {
-    AppState.inputVelocityEnabled = e.target.checked;
-    setStoredBool(TRAINER_INPUT_VELOCITY_STORAGE_KEY, AppState.inputVelocityEnabled);
-});
-document.getElementById('check-live-low-latency').addEventListener('change', (e) => {
-    AppState.liveLowLatencyMonitoringEnabled = e.target.checked;
-    setStoredBool(TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY, AppState.liveLowLatencyMonitoringEnabled);
-});
 
 const loopMinSlider = document.getElementById('slider-loop-min');
 const loopMaxSlider = document.getElementById('slider-loop-max');
@@ -2568,29 +2612,60 @@ if (metronomeCheckbox) {
 }
 
 function syncLooper(source, changedId) {
-    let minVal = parseInt(source === 'slider' ? loopMinSlider.value : loopMinInput.value);
-    let maxVal = parseInt(source === 'slider' ? loopMaxSlider.value : loopMaxInput.value);
-    const maxAllowed = parseInt(loopMaxSlider.max) || 100;
+    let minVal = parseInt(loopMinInput.value, 10);
+    let maxVal = parseInt(loopMaxInput.value, 10);
+    const maxAllowed = parseInt(loopMaxSlider.max, 10) || 100;
+
+    if (changedId === 'slider-loop-min') minVal = parseInt(loopMinSlider.value, 10);
+    if (changedId === 'slider-loop-max') maxVal = parseInt(loopMaxSlider.value, 10);
 
     if (isNaN(minVal) || minVal < 1) minVal = 1;
-    if (isNaN(maxVal) || maxVal > maxAllowed) maxVal = maxAllowed;
+    if (isNaN(maxVal) || maxVal < 1) maxVal = 1;
+    if (minVal > maxAllowed) minVal = maxAllowed;
+    if (maxVal > maxAllowed) maxVal = maxAllowed;
 
     if (minVal > maxVal) {
         if (changedId === 'slider-loop-min' || changedId === 'val-loop-min') maxVal = minVal;
         else if (changedId === 'slider-loop-max' || changedId === 'val-loop-max') minVal = maxVal;
     }
 
-    loopMinSlider.value = minVal; loopMaxSlider.value = maxVal;
-    loopMinInput.value = minVal; loopMaxInput.value = maxVal;
-    AppState.looper.min = minVal; AppState.looper.max = maxVal;
-    
+    loopMinSlider.value = minVal;
+    loopMaxSlider.value = maxVal;
+    loopMinInput.value = minVal;
+    loopMaxInput.value = maxVal;
+    AppState.looper.min = minVal;
+    AppState.looper.max = maxVal;
+
     renderLooper();
     enforceLooperBounds();
 }
+
+function syncLooperInputIfReady(changedId) {
+    const targetInput = changedId === 'val-loop-min' ? loopMinInput : loopMaxInput;
+    if (!targetInput) return;
+    if (targetInput.value === '') return;
+    syncLooper('input', changedId);
+}
+
+function bringLooperThumbToFront(activeSlider) {
+    if (!loopMinSlider || !loopMaxSlider) return;
+    loopMinSlider.style.zIndex = activeSlider === loopMinSlider ? '5' : '2';
+    loopMaxSlider.style.zIndex = activeSlider === loopMaxSlider ? '5' : '3';
+}
+
+loopMinSlider.addEventListener('pointerdown', () => bringLooperThumbToFront(loopMinSlider));
+loopMaxSlider.addEventListener('pointerdown', () => bringLooperThumbToFront(loopMaxSlider));
+loopMinSlider.addEventListener('focus', () => bringLooperThumbToFront(loopMinSlider));
+loopMaxSlider.addEventListener('focus', () => bringLooperThumbToFront(loopMaxSlider));
+
 loopMinSlider.addEventListener('input', (e) => syncLooper('slider', e.target.id));
 loopMaxSlider.addEventListener('input', (e) => syncLooper('slider', e.target.id));
+loopMinInput.addEventListener('input', (e) => syncLooperInputIfReady(e.target.id));
+loopMaxInput.addEventListener('input', (e) => syncLooperInputIfReady(e.target.id));
 loopMinInput.addEventListener('change', (e) => syncLooper('input', e.target.id));
-loopMinInput.addEventListener('change', (e) => syncLooper('input', e.target.id));
+loopMaxInput.addEventListener('change', (e) => syncLooper('input', e.target.id));
+loopMinInput.addEventListener('blur', (e) => syncLooper('input', e.target.id));
+loopMaxInput.addEventListener('blur', (e) => syncLooper('input', e.target.id));
 
 
 // ==========================================
@@ -2607,14 +2682,12 @@ function playbackLoop() {
     if (!AppState.isPlaying) return;
     
     if (osmd.cursor.Iterator.EndReached) {
-        AppState.isPlaying = false;
-        AppState.countInActive = false;
-        AppState.lastLedPreviewEvents = [];
-        AppState.ledPreviewTraversalIndex = -1;
-        Tone.Transport.stop();
-        clearScheduledMetronomeEvents();
-        stopWaitModeMetronome();
-        clearTempoVisualPulse();
+        const isLoopEnabledAtEnd = document.getElementById('check-looper')?.checked;
+        if (!isLoopEnabledAtEnd) {
+            pausePlaybackFromToolbar();
+            osmd.cursor.update();
+            handleAutoScroll();
+        }
         return;
     }
     

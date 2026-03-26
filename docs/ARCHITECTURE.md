@@ -48,3 +48,9 @@ Keeping those areas together is safer while playback/navigation behavior is stil
 ## Rename note
 - `app.js` was renamed to `trainer-core.js` once the safer module boundaries were extracted
 - The rename is organizational only; playback/rendering logic remains together on purpose
+
+------------------------
+- Note - if first run values look different in menu than what they actually are - check if the storagehelper looks to localstorage and is defaulting to 0. 
+
+- When the app is more stable, plan to change from nodejs install requirement, to included mac/win runtime. 
+

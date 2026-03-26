@@ -611,6 +611,20 @@ v1.0.6
 v1.0.7
 * Fixed first time library for web version
 
+v1.0.8
+Fix Zoom slider to show correct value on load. 
+Change default LED brightness from 40/10 to 25/1. 
+Fixed play/pause toggle on end-song
+Song auto resets upon loading
+Improved 'future' notes of virtual keyboard
+Synced looper slider with numeric inputs
+Improved slider options for ipad: larger thumb + larger touch area
+Fixed metronome latency
+Changing practice mode pauses song
+Improved wording on practice modes
+Removed 'Live Input Behavior' settings from trainer menu, defaulted code to use midi input velocity, and low-latency for live monitoring. 
+
+
 
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
 //----------------------------------------------------------------------------------------------------------//

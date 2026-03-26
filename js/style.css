@@ -859,6 +859,92 @@ fieldset {
 #fs-practice-popup select,
 #fs-practice-popup input[type="range"] { min-width: 0; }
 
+/* Touch-friendly sliders */
+.toolbar-popup input[type="range"],
+#settings-popup input[type="range"],
+#options-overlay input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    min-width: 0;
+    height: 32px;
+    padding: 10px 0;
+    margin: 0;
+    background: transparent;
+    touch-action: pan-y;
+}
+.toolbar-popup input[type="range"]::-webkit-slider-runnable-track,
+#settings-popup input[type="range"]::-webkit-slider-runnable-track,
+#options-overlay input[type="range"]::-webkit-slider-runnable-track {
+    height: 8px;
+    background: #d7d7d7;
+    border: 1px solid #b8c1cc;
+    border-radius: 999px;
+}
+.toolbar-popup input[type="range"]::-webkit-slider-thumb,
+#settings-popup input[type="range"]::-webkit-slider-thumb,
+#options-overlay input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    margin-top: -8px;
+    border-radius: 50%;
+    background: #2d8fd5;
+    border: 2px solid #2c3e50;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.18);
+    cursor: pointer;
+}
+.toolbar-popup input[type="range"]::-moz-range-track,
+#settings-popup input[type="range"]::-moz-range-track,
+#options-overlay input[type="range"]::-moz-range-track {
+    height: 8px;
+    background: #d7d7d7;
+    border: 1px solid #b8c1cc;
+    border-radius: 999px;
+}
+.toolbar-popup input[type="range"]::-moz-range-thumb,
+#settings-popup input[type="range"]::-moz-range-thumb,
+#options-overlay input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #2d8fd5;
+    border: 2px solid #2c3e50;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.18);
+    cursor: pointer;
+}
+@media (pointer: coarse) {
+    .toolbar-popup input[type="range"],
+    #settings-popup input[type="range"],
+    #options-overlay input[type="range"] {
+        height: 40px;
+        padding: 12px 0;
+    }
+    .toolbar-popup input[type="range"]::-webkit-slider-runnable-track,
+    #settings-popup input[type="range"]::-webkit-slider-runnable-track,
+    #options-overlay input[type="range"]::-webkit-slider-runnable-track,
+    .toolbar-popup input[type="range"]::-moz-range-track,
+    #settings-popup input[type="range"]::-moz-range-track,
+    #options-overlay input[type="range"]::-moz-range-track {
+        height: 10px;
+    }
+    .toolbar-popup input[type="range"]::-webkit-slider-thumb,
+    #settings-popup input[type="range"]::-webkit-slider-thumb,
+    #options-overlay input[type="range"]::-webkit-slider-thumb,
+    .toolbar-popup input[type="range"]::-moz-range-thumb,
+    #settings-popup input[type="range"]::-moz-range-thumb,
+    #options-overlay input[type="range"]::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+    }
+    .toolbar-popup input[type="range"]::-webkit-slider-thumb,
+    #settings-popup input[type="range"]::-webkit-slider-thumb,
+    #options-overlay input[type="range"]::-webkit-slider-thumb {
+        margin-top: -10px;
+    }
+}
+
 /* Looper */
 .loop-measures-row {
     display: flex;
@@ -883,37 +969,97 @@ fieldset {
 .dual-slider-wrapper {
     position: relative;
     width: 100%;
-    height: 30px;
+    height: 40px;
+    overflow: visible;
 }
 .dual-slider-track {
     position: absolute;
+    inset: 50% 0 auto 0;
     width: 100%;
-    height: 6px;
-    background: #e0e0e0;
-    top: 50%;
+    height: 10px;
+    background: #d7d7d7;
     transform: translateY(-50%);
-    border-radius: 3px;
-    border: 1px solid #ccc;
+    border-radius: 999px;
+    border: 1px solid #b8c1cc;
 }
 .dual-slider-wrapper input[type="range"] {
     position: absolute;
-    width: 100%;
     top: 50%;
+    left: 0;
+    width: 100%;
+    height: 10px;
     transform: translateY(-50%);
     background: transparent;
+    border: 0;
+    outline: none;
+    box-shadow: none;
     pointer-events: none;
     -webkit-appearance: none;
+    appearance: none;
     margin: 0;
+    padding: 0;
+    touch-action: pan-y;
+}
+#slider-loop-min { z-index: 2; }
+#slider-loop-max { z-index: 3; }
+#slider-loop-min:focus,
+#slider-loop-min:active,
+#slider-loop-max:focus,
+#slider-loop-max:active {
+    z-index: 5;
+}
+.dual-slider-wrapper input[type="range"]::-webkit-slider-runnable-track {
+    height: 10px;
+    background: transparent;
 }
 .dual-slider-wrapper input[type="range"]::-webkit-slider-thumb {
     pointer-events: all;
     -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    background: #3498db;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    margin-top: -7px;
+    background: #2d8fd5;
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid #2c3e50;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.18);
+}
+.dual-slider-wrapper input[type="range"]::-moz-range-track {
+    height: 10px;
+    background: transparent;
+    border: none;
+}
+.dual-slider-wrapper input[type="range"]::-moz-range-thumb {
+    pointer-events: all;
+    width: 22px;
+    height: 22px;
+    background: #2d8fd5;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #2c3e50;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.18);
+}
+@media (pointer: coarse) {
+    .dual-slider-wrapper {
+        height: 44px;
+    }
+    .dual-slider-wrapper input[type="range"] {
+        height: 10px;
+    }
+    .dual-slider-track,
+    .dual-slider-wrapper input[type="range"]::-webkit-slider-runnable-track,
+    .dual-slider-wrapper input[type="range"]::-moz-range-track {
+        height: 10px;
+    }
+    .dual-slider-wrapper input[type="range"]::-webkit-slider-thumb,
+    .dual-slider-wrapper input[type="range"]::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+    }
+    .dual-slider-wrapper input[type="range"]::-webkit-slider-thumb {
+        margin-top: -9px;
+    }
 }
 
 /* Music Area */
@@ -1062,10 +1208,7 @@ fieldset {
 
 .future1-l::after,
 .future1-r::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
+    content: none;
 }
 .future1-l::after {
     background: rgba(52,152,219,0.22);
@@ -2097,3 +2240,8 @@ fieldset {
 
 
 #check-wled-ddp-debug:disabled { opacity: 0.65; }
+
+.future1-l::before,
+.future1-r::before {
+  height: clamp(10px, 14%, 18px);
+}
