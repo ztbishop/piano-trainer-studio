@@ -876,11 +876,17 @@ async function handleDirectScoreFileSelection(file) {
     if (window.MidiImport && typeof window.MidiImport.isConverterImportFileName === 'function' && window.MidiImport.isConverterImportFileName(file.name || '')) {
         const convertedScore = await window.MidiImport.convertFileToScore(file);
         await loadScoreIntoApp(convertedScore.rawData, convertedScore);
+        if (window.ScoresUI && typeof window.ScoresUI.closeScoresDrawer === 'function') {
+            window.ScoresUI.closeScoresDrawer();
+        }
         return;
     }
 
     const scoreFile = await readScoreFile(file);
     await loadScoreIntoApp(scoreFile.rawData, scoreFile);
+    if (window.ScoresUI && typeof window.ScoresUI.closeScoresDrawer === 'function') {
+        window.ScoresUI.closeScoresDrawer();
+    }
 }
 
 document.getElementById('file-input').addEventListener('change', async (e) => {
@@ -2586,6 +2592,10 @@ const loopMinSlider = document.getElementById('slider-loop-min');
 const loopMaxSlider = document.getElementById('slider-loop-max');
 const loopMinInput = document.getElementById('val-loop-min');
 const loopMaxInput = document.getElementById('val-loop-max');
+const loopMinDecreaseBtn = document.getElementById('btn-loop-min-decrease');
+const loopMinIncreaseBtn = document.getElementById('btn-loop-min-increase');
+const loopMaxDecreaseBtn = document.getElementById('btn-loop-max-decrease');
+const loopMaxIncreaseBtn = document.getElementById('btn-loop-max-increase');
 
 function syncLooperDependentUi() {
     const looperCheckbox = document.getElementById('check-looper');
@@ -2595,17 +2605,12 @@ function syncLooperDependentUi() {
 
     if (loopCountInCheckbox) {
         loopCountInCheckbox.disabled = !loopEnabled;
-        if (!loopEnabled) {
-            loopCountInCheckbox.checked = false;
-            AppState.loopCountInEnabled = false;
-            setStoredBool(LOOP_COUNT_IN_STORAGE_KEY, false);
-        } else {
-            loopCountInCheckbox.checked = !!AppState.loopCountInEnabled;
-        }
+        loopCountInCheckbox.checked = !!AppState.loopCountInEnabled;
     }
 
     if (loopCountInRow) {
         loopCountInRow.classList.toggle('is-disabled', !loopEnabled);
+        loopCountInRow.setAttribute('aria-disabled', String(!loopEnabled));
     }
 }
 
@@ -2698,6 +2703,16 @@ function syncLooperInputIfReady(changedId) {
     if (targetInput.value === '') return;
     syncLooper('input', changedId);
 }
+
+function stepLooperValue(target, delta) {
+    const input = target === 'min' ? loopMinInput : loopMaxInput;
+    if (!input) return;
+    const fallbackValue = target === 'min' ? AppState.looper.min : AppState.looper.max;
+    const currentValue = parseInt(input.value, 10);
+    input.value = (Number.isNaN(currentValue) ? fallbackValue : currentValue) + delta;
+    syncLooper('input', target === 'min' ? 'val-loop-min' : 'val-loop-max');
+}
+
 loopMinSlider.addEventListener('input', (e) => syncLooper('slider', e.target.id));
 loopMaxSlider.addEventListener('input', (e) => syncLooper('slider', e.target.id));
 loopMinInput.addEventListener('input', (e) => syncLooperInputIfReady(e.target.id));
@@ -2706,6 +2721,77 @@ loopMinInput.addEventListener('change', (e) => syncLooper('input', e.target.id))
 loopMaxInput.addEventListener('change', (e) => syncLooper('input', e.target.id));
 loopMinInput.addEventListener('blur', (e) => syncLooper('input', e.target.id));
 loopMaxInput.addEventListener('blur', (e) => syncLooper('input', e.target.id));
+loopMinDecreaseBtn?.addEventListener('click', () => stepLooperValue('min', -1));
+loopMinIncreaseBtn?.addEventListener('click', () => stepLooperValue('min', 1));
+loopMaxDecreaseBtn?.addEventListener('click', () => stepLooperValue('max', -1));
+loopMaxIncreaseBtn?.addEventListener('click', () => stepLooperValue('max', 1));
+
+const LOOP_STEPPER_HOLD_DELAY_MS = 320;
+const LOOP_STEPPER_HOLD_REPEAT_MS = 170;
+let activeLooperHold = null;
+
+function clearLooperHold() {
+    if (!activeLooperHold) return;
+    if (activeLooperHold.delayTimer) clearTimeout(activeLooperHold.delayTimer);
+    if (activeLooperHold.repeatTimer) clearInterval(activeLooperHold.repeatTimer);
+    if (activeLooperHold.button && activeLooperHold.button.releasePointerCapture && activeLooperHold.pointerId != null) {
+        try {
+            if (activeLooperHold.button.hasPointerCapture?.(activeLooperHold.pointerId)) {
+                activeLooperHold.button.releasePointerCapture(activeLooperHold.pointerId);
+            }
+        } catch (_) {}
+    }
+    activeLooperHold.button?.classList.remove('is-holding');
+    activeLooperHold = null;
+}
+
+function beginLooperHold(button, target, delta, pointerId) {
+    clearLooperHold();
+    activeLooperHold = { button, pointerId, delayTimer: null, repeatTimer: null };
+    button.classList.add('is-holding');
+
+    if (button.setPointerCapture && pointerId != null) {
+        try { button.setPointerCapture(pointerId); } catch (_) {}
+    }
+
+    activeLooperHold.delayTimer = setTimeout(() => {
+        if (!activeLooperHold || activeLooperHold.button !== button) return;
+        activeLooperHold.repeatTimer = setInterval(() => {
+            stepLooperValue(target, delta);
+        }, LOOP_STEPPER_HOLD_REPEAT_MS);
+    }, LOOP_STEPPER_HOLD_DELAY_MS);
+}
+
+function wireLooperHold(button, target, delta) {
+    if (!button) return;
+    button.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    });
+    button.addEventListener('dragstart', (e) => {
+        e.preventDefault();
+    });
+    button.addEventListener('pointerdown', (e) => {
+        if (e.button !== undefined && e.button !== 0) return;
+        e.preventDefault();
+        beginLooperHold(button, target, delta, e.pointerId);
+    });
+    button.addEventListener('pointerup', clearLooperHold);
+    button.addEventListener('pointercancel', clearLooperHold);
+    button.addEventListener('lostpointercapture', clearLooperHold);
+    button.addEventListener('pointerleave', (e) => {
+        if (activeLooperHold?.button !== button) return;
+        if (e.buttons === 0) clearLooperHold();
+    });
+}
+
+wireLooperHold(loopMinDecreaseBtn, 'min', -1);
+wireLooperHold(loopMinIncreaseBtn, 'min', 1);
+wireLooperHold(loopMaxDecreaseBtn, 'max', -1);
+wireLooperHold(loopMaxIncreaseBtn, 'max', 1);
+
+document.addEventListener('pointerup', clearLooperHold);
+document.addEventListener('pointercancel', clearLooperHold);
+window.addEventListener('blur', clearLooperHold);
 
 
 // ==========================================

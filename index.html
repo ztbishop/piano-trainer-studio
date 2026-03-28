@@ -84,11 +84,15 @@
             <div class="scores-drawer-body">
                 <div class="scores-section scores-actions">
                     <div class="scores-section-label">Actions</div>
-                    <div class="scores-action-grid">
-                        <button type="button" id="btn-scores-open-file">Open Score</button>
-                        <button type="button" id="btn-scores-import-files">Import Files</button>
-                        <button type="button" id="btn-scores-save-current">Save Current Score</button>
-                        <button type="button" id="btn-scores-new-folder">New Folder</button>
+                    <div class="scores-action-toolbar">
+                        <div class="scores-action-group scores-action-group-current">
+                            <button type="button" id="btn-scores-open-file">Open File</button>
+                            <button type="button" id="btn-scores-save-current">Save to Library</button>
+                        </div>
+                        <div class="scores-action-group scores-action-group-library">
+                            <button type="button" id="btn-scores-export-library">Backup Library</button>
+                            <button type="button" id="btn-scores-import-library">Import Library (Merge)</button>
+                        </div>
                     </div>
                 </div>
 
@@ -100,12 +104,6 @@
                 </div>
             </div>
 
-            <div class="scores-drawer-footer">
-                <div class="scores-footer-grid">
-                    <button type="button" id="btn-scores-export-library">Export Library</button>
-                    <button type="button" id="btn-scores-import-library">Import Library</button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -122,79 +120,45 @@
 
             <div class="info-panel-body">
                 <section class="info-panel-section">
+                    <p><strong>More in-depth help:</strong> <a href="https://ztbishop.github.io/piano-trainer-studio/README.html" target="_blank" rel="noopener noreferrer">Full Setup Guide / README</a></p>
+                </section>
+
+                <section class="info-panel-section">
                     <h3>Quick Start</h3>
                     <ul>
-                        <li>Open a score from the Scores menu, or import your own score files.</li>
+                        <li>Open a file temporarily from the Scores menu, or add your own score files to the library.</li>
                         <li>Best compatibility comes from <strong>MusicXML / MXL</strong>.</li>
-                        <li>You can also import <strong>MIDI, MuseScore, and Guitar Pro</strong> files. These are converted in-browser before loading.</li>
+                        <li>You can also import <strong>MIDI, MuseScore, and Guitar Pro</strong> files. These are experimental, and MIDI does not contain full details (key signature, etc.).</li>
                         <li>Connect your MIDI keyboard in Settings.</li>
-                        <li>On iPad / iPhone, use <a href="https://midiweb.cc" target="_blank" rel="noopener noreferrer">midiweb.cc</a> for MIDI input support.</li>
-                        <li>LED output is optional. WLED can use HTTP JSON, or DDP with the local helper for lower latency.</li>
+                        <li>On iPad / iPhone, use <a href="https://midiweb.cc" target="_blank" rel="noopener noreferrer">midiweb.cc</a> for MIDI input support (<a href="https://ztbishop.github.io/piano-trainer-studio/README.html" target="_blank" rel="noopener noreferrer">See Readme</a>).</li>
+                        <li>LED output is optional. See <a href="https://ztbishop.github.io/piano-trainer-studio/README.html" target="_blank" rel="noopener noreferrer">Readme</a> for instructions.</li>
                         <li>Starter songs are added on first run and can be deleted.</li>
+                        <li>Browse free starter songs at <a href="https://musetrainer.github.io/library/" target="_blank" rel="noopener noreferrer">musetrainer.github.io/library</a>. See <a href="https://ztbishop.github.io/piano-trainer-studio/README.html" target="_blank" rel="noopener noreferrer">Readme</a> for additional resources.</li>
                     </ul>
                 </section>
 
                 <section class="info-panel-section">
                     <h3>Library &amp; Backups</h3>
                     <ul>
-                        <li>Your score library is stored in your browser.</li>
-                        <li>Use <strong>Scores → Export Library</strong> to back up your song library.</li>
+                        <li>Your score library is stored in your browser. Back it up often.</li>
+                        <li>Use <strong>Scores → Backup Library</strong> to back up your song library.</li>
                         <li>Use <strong>Settings → Backup All Settings</strong> to save trainer preferences, connections, and LED calibration.</li>
                     </ul>
-                </section>
-
-                <section class="info-panel-section">
-                    <h3>Score Files</h3>
-                    <ul>
-                        <li>Recommended formats: <strong>.xml</strong>, <strong>.musicxml</strong>, and <strong>.mxl</strong>.</li>
-                        <li>Also supported through built-in conversion: <strong>.mid</strong>, <strong>.midi</strong>, <strong>.mscz</strong>, <strong>.mscx</strong>, <strong>.gp</strong>, <strong>.gp3</strong>, <strong>.gp4</strong>, <strong>.gp5</strong>, <strong>.gpx</strong>, <strong>.gtp</strong>, and <strong>.ptb</strong>.</li>
-                        <li>If a converted file loads imperfectly, try exporting it as MusicXML first.</li>
-                        <li>Browse free starter songs at <a href="https://musetrainer.github.io/library/" target="_blank" rel="noopener noreferrer">musetrainer.github.io/library</a>.</li>
-                    </ul>
-                </section>
-
-                <section class="info-panel-section">
-                    <h3>More Help</h3>
-                    <p>For deeper help, LED strip setup notes, and WLED guidance, open the <a href="README.html" target="_blank" rel="noopener noreferrer">Full Setup Guide</a>.</p>
                 </section>
 
                 <section class="info-panel-section">
                     <h3>Important Note</h3>
                     <p>Some browsers may clear local site storage, especially on mobile or low-storage devices. Back up your library and LED calibration if the data matters to you.</p>
                 </section>
+
+                <section class="info-panel-section">
+                    <h3>More Help</h3>
+                    <p>More detailed information can be found in the <a href="https://ztbishop.github.io/piano-trainer-studio/README.html" target="_blank" rel="noopener noreferrer">Full Setup Guide / README</a>.</p>
+                </section>
             </div>
 
             <div class="info-panel-footer">
                 <button type="button" id="btn-help-got-it">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="first-run-overlay" class="first-run-overlay hidden">
-        <div class="info-panel info-panel-first-run">
-            <div class="info-panel-header">
-                <div>
-                    <div class="info-panel-kicker">Welcome</div>
-                    <h2>Welcome to Piano Trainer</h2>
-                </div>
-            </div>
-
-            <div class="info-panel-body">
-                <p class="first-run-lead">Default settings have been initialized, and starter songs have been added.</p>
-                <ul>
-                    <li>Open songs from <strong>Scores</strong>.</li>
-                    <li><strong>MusicXML / MXL</strong> is recommended for best compatibility.</li>
-                    <li>You can also import <strong>MIDI, MuseScore, and Guitar Pro</strong> files. These are converted in-browser before loading.</li>
-                    <li>Connect your keyboard in <strong>Settings</strong>.</li>
-                    <li>On iPad / iPhone, use <strong>midiweb.cc</strong> for MIDI input.</li>
-                    <li>LEDs are optional.</li>
-                </ul>
-                <p class="first-run-note">Your score library is stored in the browser, so back it up occasionally with <strong>Scores → Export Library</strong>.</p>
-            </div>
-
-            <div class="info-panel-footer info-panel-footer-first-run">
-                <button type="button" id="btn-first-run-help">More Info</button>
-                <button type="button" id="btn-first-run-start" class="primary">Start</button>
             </div>
         </div>
     </div>
@@ -643,18 +607,26 @@
                 <label id="looper-enable-row" class="looper-option-row"><input type="checkbox" id="check-looper"> Enable Loop</label>
             </div>
             <div class="loop-countin-row">
-                <label class="loop-countin-label"><input type="checkbox" id="check-loop-countin" checked> Loop Count-in</label>
+                <label id="looper-countin-row" class="loop-countin-label looper-option-row"><input type="checkbox" id="check-loop-countin" checked> Loop Count-in</label>
             </div>
             <div class="loop-range-group">
                 <div class="loop-range-row">
                     <label for="slider-loop-min" class="loop-range-label">Beginning Measure</label>
                     <input type="range" id="slider-loop-min" min="1" max="100" value="1">
-                    <input type="number" id="val-loop-min" value="1" class="num-input loop-range-input">
+                    <div class="loop-stepper" aria-label="Beginning Measure controls">
+                        <button type="button" id="btn-loop-min-decrease" class="loop-stepper-btn" aria-label="Decrease beginning measure">−</button>
+                        <input type="number" id="val-loop-min" value="1" class="num-input loop-range-input">
+                        <button type="button" id="btn-loop-min-increase" class="loop-stepper-btn" aria-label="Increase beginning measure">+</button>
+                    </div>
                 </div>
                 <div class="loop-range-row">
                     <label for="slider-loop-max" class="loop-range-label">Ending Measure</label>
                     <input type="range" id="slider-loop-max" min="1" max="100" value="100">
-                    <input type="number" id="val-loop-max" value="100" class="num-input loop-range-input">
+                    <div class="loop-stepper" aria-label="Ending Measure controls">
+                        <button type="button" id="btn-loop-max-decrease" class="loop-stepper-btn" aria-label="Decrease ending measure">−</button>
+                        <input type="number" id="val-loop-max" value="100" class="num-input loop-range-input">
+                        <button type="button" id="btn-loop-max-increase" class="loop-stepper-btn" aria-label="Increase ending measure">+</button>
+                    </div>
                 </div>
             </div>
         </fieldset>

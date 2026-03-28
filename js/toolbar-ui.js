@@ -55,6 +55,11 @@ function showToolbarPanel(panel) {
 function closeToolbarPanel(panel, immediate = false) {
     if (!panel || panel.classList.contains('hidden')) return;
 
+    if (panel === helpOverlay && firstRunQuickStartActive) {
+        markFirstRunIntroSeen();
+        firstRunQuickStartActive = false;
+    }
+
     panel.classList.remove('is-open');
 
     if (immediate) {
@@ -114,6 +119,8 @@ document.getElementById('btn-options').addEventListener('click', (e) => {
     toggleToolbarPanel(optionsOverlay);
 });
 
+let firstRunQuickStartActive = false;
+
 const btnHelpClose = document.getElementById('btn-help-close');
 if (btnHelpClose && helpOverlay) {
     btnHelpClose.addEventListener('click', () => closeToolbarPanel(helpOverlay));
@@ -123,6 +130,7 @@ const btnHelpGotIt = document.getElementById('btn-help-got-it');
 if (btnHelpGotIt && helpOverlay) {
     btnHelpGotIt.addEventListener('click', () => closeToolbarPanel(helpOverlay));
 }
+
 
 const btnTempo = document.getElementById('btn-tempo');
 if (btnTempo && tempoPopup) {
@@ -229,7 +237,6 @@ document.addEventListener('click', (e) => {
         e.target.closest('#audio-popup') ||
         e.target.closest('#display-popup') ||
         e.target.closest('#help-overlay') ||
-        e.target.closest('#first-run-overlay') ||
         e.target.closest('#led-calibration-panel') ||
         e.target.closest('.scores-action-menu-overlay') ||
         e.target.closest('.scores-folder-picker-overlay')
@@ -263,16 +270,17 @@ function positionScoresPanel() {
 
 
 function showFirstRunIntro() {
-    const overlay = document.getElementById('first-run-overlay');
-    if (!overlay) return;
+    if (!helpOverlay) return;
+    firstRunQuickStartActive = true;
     hideToolbarPanels(true);
-    overlay.classList.remove('hidden');
+    showToolbarPanel(helpOverlay);
+    const helpBody = helpOverlay.querySelector('.info-panel-body');
+    if (helpBody) helpBody.scrollTop = 0;
 }
 
 function closeFirstRunIntro() {
-    const overlay = document.getElementById('first-run-overlay');
-    if (!overlay) return;
-    overlay.classList.add('hidden');
+    if (!helpOverlay) return;
+    closeToolbarPanel(helpOverlay);
 }
 
 function markFirstRunIntroSeen() {
@@ -280,30 +288,12 @@ function markFirstRunIntroSeen() {
 }
 
 function maybeShowFirstRunIntro() {
-    const overlay = document.getElementById('first-run-overlay');
-    if (!overlay) return false;
+    if (!helpOverlay) return false;
     try {
         if (localStorage.getItem('pt_firstRunIntroSeen') === 'true') return false;
     } catch (err) {}
     showFirstRunIntro();
     return true;
-}
-
-const btnFirstRunStart = document.getElementById('btn-first-run-start');
-if (btnFirstRunStart) {
-    btnFirstRunStart.addEventListener('click', () => {
-        markFirstRunIntroSeen();
-        closeFirstRunIntro();
-    });
-}
-
-const btnFirstRunHelp = document.getElementById('btn-first-run-help');
-if (btnFirstRunHelp) {
-    btnFirstRunHelp.addEventListener('click', () => {
-        markFirstRunIntroSeen();
-        closeFirstRunIntro();
-        if (helpOverlay) showToolbarPanel(helpOverlay);
-    });
 }
 
 window.ToolbarUI = {

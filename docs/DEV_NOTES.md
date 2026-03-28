@@ -623,7 +623,16 @@ v1.0.9
 * Added reverse wled mode
 * Removed virtual LED strip debug
 * Hide debug menu when no options enabled that use it
-* Todo - overhaul Scores menu
+
+v1.1.0
+* Moved quickstart help to external file for easier edits
+* Replaced 'first run' popup with existing 'quickstart' help menu. 
+* Fixed loop 'count-in' checkbox dependancy 
+* Applied touch friendly +- buttons to looper measure selection. 
+* Cleaned Scores menu
+* Clearned Starter Scores library
+
+
 
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
 //----------------------------------------------------------------------------------------------------------//

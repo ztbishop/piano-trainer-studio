@@ -164,7 +164,7 @@ Songs are stored in IndexedDB (browser storage).
 ⚠️ Browsers may clear this data.
 
 ### You should:
-- Use **Scores → Export Library**
+- Use **Scores → Backup Library**
 - Use **Settings → Backup All Settings**
 
 ---

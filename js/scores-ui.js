@@ -75,6 +75,34 @@ async function promptForLibraryFolderChoice({ allowAll = false, title = 'Choose 
 }
 
 
+
+function closeScoresDrawer() {
+    const panel = document.getElementById('scores-panel');
+    if (!panel) return;
+    if (window.ToolbarUI && typeof window.ToolbarUI.closeToolbarPanel === 'function') {
+        window.ToolbarUI.closeToolbarPanel(panel);
+        return;
+    }
+    panel.classList.remove('is-open', 'is-closing');
+    panel.classList.add('hidden');
+}
+
+function openScoresImportPicker() {
+    const input = document.getElementById('score-import-input');
+    if (!input) return;
+    input.value = '';
+    input.click();
+}
+
+function updateScoresActionButtonsState() {
+    const btnSaveCurrent = document.getElementById('btn-scores-save-current');
+    if (!btnSaveCurrent) return;
+    btnSaveCurrent.disabled = AppState.currentScoreData == null;
+    btnSaveCurrent.title = AppState.currentScoreData == null
+        ? 'Open a score first, then save it into the library.'
+        : 'Save the currently loaded score into your library.';
+}
+
 function getFolderLibrarySelectionSet() {
     return new Set((AppState.scoreLibrarySelectedFolderIds || []).filter(Boolean));
 }
@@ -162,15 +190,16 @@ function showFolderRowActionMenu(folder) {
         titleText: String(folder?.name || 'New Folder').trim() || 'New Folder',
         items: [
             { value: 'rename', label: 'Rename' },
-            { value: 'delete', label: 'Delete', danger: true },
-            { value: '__cancel__', label: 'Cancel' }
+            { value: 'delete', label: 'Delete', danger: true }
         ]
     });
 }
 
 function createFoldersLibraryToolbar({ folders = [], activeFolderId = '__all__' } = {}) {
     const toolbar = document.createElement('div');
-    toolbar.className = 'scores-library-toolbar';
+    const realFolders = (folders || []).filter(folder => folder && folder.id);
+    const manageMode = isFolderLibraryManageMode();
+    toolbar.className = `scores-library-toolbar${manageMode ? ' is-manage-mode' : ''}`;
 
     const info = document.createElement('div');
     info.className = 'scores-library-toolbar-info';
@@ -179,16 +208,18 @@ function createFoldersLibraryToolbar({ folders = [], activeFolderId = '__all__' 
     const actions = document.createElement('div');
     actions.className = 'scores-library-toolbar-actions';
     toolbar.appendChild(actions);
-
-    const realFolders = (folders || []).filter(folder => folder && folder.id);
-    const manageMode = isFolderLibraryManageMode();
     const selectedSet = getFolderLibrarySelectionSet();
     const selectedCount = selectedSet.size;
 
     if (!manageMode) {
-        info.textContent = activeFolderId && !isSystemFolderOption(activeFolderId)
-            ? `Selected folder: ${getScoreLibraryFolderLabel(activeFolderId, folders)}`
-            : 'Folders';
+        info.textContent = 'Folders';
+
+        const newFolderBtn = document.createElement('button');
+        newFolderBtn.type = 'button';
+        newFolderBtn.className = 'scores-toolbar-button';
+        newFolderBtn.textContent = 'New Folder';
+        newFolderBtn.addEventListener('click', createLibraryFolder);
+        actions.appendChild(newFolderBtn);
 
         const manageBtn = document.createElement('button');
         manageBtn.type = 'button';
@@ -438,7 +469,8 @@ function getFilteredLibraryScores(scores, activeFolderId) {
 
 function createScoresLibraryToolbar({ filteredScores = [], folders = [], activeFolderId = '__all__' } = {}) {
     const toolbar = document.createElement('div');
-    toolbar.className = 'scores-library-toolbar';
+    const manageMode = isScoreLibraryManageMode();
+    toolbar.className = `scores-library-toolbar${manageMode ? ' is-manage-mode' : ''}`;
 
     const info = document.createElement('div');
     info.className = 'scores-library-toolbar-info';
@@ -447,13 +479,18 @@ function createScoresLibraryToolbar({ filteredScores = [], folders = [], activeF
     const actions = document.createElement('div');
     actions.className = 'scores-library-toolbar-actions';
     toolbar.appendChild(actions);
-
-    const manageMode = isScoreLibraryManageMode();
     const selectedSet = getScoreLibrarySelectionSet();
     const selectedCount = selectedSet.size;
 
     if (!manageMode) {
         info.textContent = `Selected folder: ${getScoreLibraryFolderLabel(activeFolderId, folders)}`;
+
+        const addFilesBtn = document.createElement('button');
+        addFilesBtn.type = 'button';
+        addFilesBtn.className = 'scores-toolbar-button';
+        addFilesBtn.textContent = 'Add Files';
+        addFilesBtn.addEventListener('click', openScoresImportPicker);
+        actions.appendChild(addFilesBtn);
 
         const manageBtn = document.createElement('button');
         manageBtn.type = 'button';
@@ -565,8 +602,7 @@ function showScoreRowActionMenu(score) {
         items: [
             { value: 'rename', label: 'Rename' },
             { value: 'move', label: 'Move' },
-            { value: 'delete', label: 'Delete', danger: true },
-            { value: '__cancel__', label: 'Cancel' }
+            { value: 'delete', label: 'Delete', danger: true }
         ]
     });
 }
@@ -648,6 +684,7 @@ function createScoreRow(score, { compact = false, manageMode = false } = {}) {
                 libraryScoreId: fullScore.id,
                 title: fullScore.title
             });
+            closeScoresDrawer();
         } catch (err) {
             console.error('Could not open library score', err);
         }
@@ -719,6 +756,7 @@ function createScoreRow(score, { compact = false, manageMode = false } = {}) {
 
 async function refreshScoresDrawer() {
     const libraryList = document.getElementById('scores-library-list');
+    updateScoresActionButtonsState();
     if (!libraryList) return;
 
     try {
@@ -804,7 +842,7 @@ async function refreshScoresDrawer() {
                 const empty = document.createElement('div');
                 empty.className = 'scores-folder-empty';
                 empty.textContent = activeFolderId === '__all__'
-                    ? 'No saved scores yet. Import files or save the current score.'
+                    ? 'No saved scores yet. Add files to the library or save the current score.'
                     : `No scores in ${getScoreLibraryFolderLabel(activeFolderId, folders)} yet.`;
                 scoresList.appendChild(empty);
             } else {
@@ -881,7 +919,7 @@ async function refreshScoresDrawer() {
             const empty = document.createElement('div');
             empty.className = 'scores-folder-empty';
             empty.textContent = activeFolderId === '__all__'
-                ? 'No saved scores yet. Import files or save the current score.'
+                ? 'No saved scores yet. Add files to the library or save the current score.'
                 : `No scores in ${getScoreLibraryFolderLabel(activeFolderId, folders)} yet.`;
             scoresList.appendChild(empty);
         } else {
@@ -900,7 +938,7 @@ async function importFilesToLibrary(files) {
     try {
         const folders = await ScoreLibrary.getAllFolders();
         const selectedFolderId = await promptForLibraryFolderChoice({
-            title: 'Import scores into which folder?',
+            title: 'Add files to which folder?',
             folders
         });
         if (selectedFolderId === '__cancel__') return;
@@ -938,13 +976,13 @@ async function saveCurrentScoreToLibrary() {
     }
 
     const defaultTitle = AppState.currentScoreTitle || getScoreDisplayTitle(AppState.currentScoreFileName || 'Untitled Score');
-    const title = window.prompt('Save score to library as:', defaultTitle);
+    const title = window.prompt('Save to library as:', defaultTitle);
     if (title == null) return;
 
     try {
         const folders = await ScoreLibrary.getAllFolders();
         const selectedFolderId = await promptForLibraryFolderChoice({
-            title: 'Save score into which folder?',
+            title: 'Save into which folder?',
             folders
         });
         if (selectedFolderId === '__cancel__') return;
@@ -993,7 +1031,7 @@ async function exportScoreLibraryBackup() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'Scores-Export.json';
+        link.download = 'Scores-Library-Backup.json';
         link.addEventListener('click', (event) => {
             event.stopPropagation();
         });
@@ -1028,7 +1066,6 @@ function initScoresDrawerShell() {
     const btnOpenFile = document.getElementById('btn-scores-open-file');
     const btnImportFiles = document.getElementById('btn-scores-import-files');
     const btnSaveCurrent = document.getElementById('btn-scores-save-current');
-    const btnNewFolder = document.getElementById('btn-scores-new-folder');
     const btnExportLibrary = document.getElementById('btn-scores-export-library');
     const btnImportLibrary = document.getElementById('btn-scores-import-library');
     const importInput = document.getElementById('score-import-input');
@@ -1047,10 +1084,7 @@ function initScoresDrawerShell() {
 
     if (btnImportFiles && importInput && !btnImportFiles.dataset.boundScoresImport) {
         btnImportFiles.dataset.boundScoresImport = 'true';
-        btnImportFiles.addEventListener('click', () => {
-            importInput.value = '';
-            importInput.click();
-        });
+        btnImportFiles.addEventListener('click', openScoresImportPicker);
     }
 
     if (importInput && !importInput.dataset.boundScoresImportInput) {
@@ -1067,11 +1101,6 @@ function initScoresDrawerShell() {
     if (btnSaveCurrent && !btnSaveCurrent.dataset.boundScoresSaveCurrent) {
         btnSaveCurrent.dataset.boundScoresSaveCurrent = 'true';
         btnSaveCurrent.addEventListener('click', saveCurrentScoreToLibrary);
-    }
-
-    if (btnNewFolder && !btnNewFolder.dataset.boundScoresNewFolder) {
-        btnNewFolder.dataset.boundScoresNewFolder = 'true';
-        btnNewFolder.addEventListener('click', createLibraryFolder);
     }
 
     if (btnExportLibrary && !btnExportLibrary.dataset.boundScoresExportLibrary) {
@@ -1128,5 +1157,7 @@ window.ScoresUI = {
     createLibraryFolder,
     exportScoreLibraryBackup,
     importScoreLibraryBackupFile,
-    initScoresDrawerShell
+    initScoresDrawerShell,
+    closeScoresDrawer,
+    updateScoresActionButtonsState
 };
