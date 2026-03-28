@@ -63,7 +63,6 @@ function applyPersistedTrainerAndSettingsPreferences() {
     AppState.liveLowLatencyMonitoringEnabled = true;
     setStoredBool(TRAINER_INPUT_VELOCITY_STORAGE_KEY, true);
     setStoredBool(TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY, true);
-    AppState.ledSimulatorVisible = getStoredBool(SETTINGS_LED_SIM_STORAGE_KEY, false);
     AppState.visualPulseEnabled = getStoredBool(VISUAL_PULSE_STORAGE_KEY, true);
     AppState.accentedDownbeatEnabled = getStoredBool(ACCENTED_DOWNBEAT_STORAGE_KEY, true);
     AppState.loopCountInEnabled = getStoredBool(LOOP_COUNT_IN_STORAGE_KEY, true);
@@ -230,10 +229,6 @@ function restoreDefaultPreferences({ reloadDevices = true } = {}) {
     const keyboardContainer = document.getElementById('virtual-keyboard-container');
     if (keyboardContainer) keyboardContainer.classList.remove('hidden');
 
-    AppState.ledSimulatorVisible = false;
-    const ledSimulatorCheckbox = document.getElementById('check-led-simulator');
-    if (ledSimulatorCheckbox) ledSimulatorCheckbox.checked = false;
-
     AppState.visualPulseEnabled = true;
     const visualPulseCheckbox = document.getElementById('check-visual-pulse');
     if (visualPulseCheckbox) visualPulseCheckbox.checked = true;
@@ -247,6 +242,7 @@ function restoreDefaultPreferences({ reloadDevices = true } = {}) {
     if (loopCountInCheckbox) loopCountInCheckbox.checked = true;
 
     updateMetroVolume(25, { save: true });
+    syncTempoMetronomeDependentUi();
 
     setDebugEnabled(false, { clearHistory: true, logChange: false, reason: 'reset-defaults' });
 
@@ -298,7 +294,6 @@ function restoreDefaultPreferences({ reloadDevices = true } = {}) {
     applyModeSettings();
     syncLedBrightnessControls();
     syncLedOutputModeControls();
-    LedEngine.renderSimulator();
     renderLooper();
     renderVirtualKeyboard();
     positionLedCalibrationPanel();
@@ -800,6 +795,10 @@ function getOsmdLoadPayload(rawData, fileType = 'xml', fileName = 'Untitled Scor
 async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType = 'xml', libraryScoreId = null, title = null, originalRawData = undefined, originalFileName = undefined, originalFileType = undefined, skipTransposeReset = false } = {}) {
     try {
         resetPlaybackForLoadedScore();
+
+        if (!skipTransposeReset && typeof updateTempo === 'function') {
+            updateTempo('percent', 100);
+        }
 
         const resolvedOriginalRawData = originalRawData !== undefined ? originalRawData : rawData;
         const resolvedOriginalFileName = originalFileName !== undefined ? originalFileName : (fileName || 'Untitled Score');
@@ -1819,14 +1818,17 @@ function syncTrainerRoutingUiState() {
     const hasMidiOut = !!getSelectedMidiOutOutput();
     const summary = document.getElementById('trainer-midi-out-summary');
     const midiOutCard = document.getElementById('trainer-midiout-card');
+    const summaryHint = document.getElementById('trainer-midi-out-summary-hint');
     if (summary) {
         if (hasMidiOut) {
             const outName = document.getElementById('midi-out')?.selectedOptions?.[0]?.textContent?.replace(/\s*\(Disconnected\)\s*$/, '') || 'MIDI Out';
             summary.textContent = `Device: ${outName} | Channel: ${AppState.midiOutChannel || 1}`;
             summary.classList.remove('is-disabled');
+            summaryHint?.classList.add('hidden');
         } else {
             summary.textContent = 'No MIDI device selected.';
             summary.classList.add('is-disabled');
+            summaryHint?.classList.remove('hidden');
         }
     }
     midiOutCard?.classList.toggle('is-disabled', !hasMidiOut);
@@ -2056,17 +2058,7 @@ function applyModeSettings() {
 }
 
 function initLedSimulatorToggleControl() {
-    const checkbox = document.getElementById('check-led-simulator');
-    if (!checkbox || checkbox.dataset.boundLedSimulator) return;
-
-    checkbox.dataset.boundLedSimulator = 'true';
-    checkbox.checked = AppState.ledSimulatorVisible;
-    checkbox.addEventListener('change', (e) => {
-        AppState.ledSimulatorVisible = e.target.checked;
-        LedEngine.renderSimulator();
-        positionLedCalibrationPanel();
-        window.dispatchEvent(new Event('resize'));
-    });
+    return;
 }
 
 (function ensureFuturePreviewControls() {
@@ -2118,7 +2110,6 @@ document.getElementById('check-keyboard').addEventListener('change', (e) => {
     } else {
         kbContainer.classList.add('hidden');
     }
-    LedEngine.renderSimulator();
     positionLedCalibrationPanel();
     window.dispatchEvent(new Event('resize')); 
 });
@@ -2128,6 +2119,9 @@ document.getElementById('check-feedback').addEventListener('change', (e) => {
     setStoredBool(TRAINER_FEEDBACK_STORAGE_KEY, AppState.feedbackEnabled);
     if (!e.target.checked) {
         document.getElementById('feedback-layer').innerHTML = '';
+    }
+    if (typeof window.syncSettingsDebugVisibility === 'function') {
+        window.syncSettingsDebugVisibility();
     }
 });
 
@@ -2389,8 +2383,7 @@ window.addEventListener('resize', () => {
         if (osmd.IsReadyToRender()) {
             renderScoreAndRefreshGeometry();
         }
-        LedEngine.renderSimulator();
-        positionLedCalibrationPanel();
+            positionLedCalibrationPanel();
     }, 300);
 });
 
@@ -2518,60 +2511,114 @@ document.getElementById('practice-rh').addEventListener('change', (e) => {
     setStoredBool(TRAINER_PRACTICE_RH_STORAGE_KEY, AppState.practice.right);
 });
 
-document.getElementById('enable-staff-lh').addEventListener('change', (e) => {
-    AppState.audioEnabled.left = e.target.checked;
-    setStoredBool(TRAINER_AUDIO_LH_STORAGE_KEY, AppState.audioEnabled.left);
-});
-document.getElementById('enable-staff-rh').addEventListener('change', (e) => {
-    AppState.audioEnabled.right = e.target.checked;
-    setStoredBool(TRAINER_AUDIO_RH_STORAGE_KEY, AppState.audioEnabled.right);
-});
-document.getElementById('enable-other').addEventListener('change', (e) => {
-    AppState.audioEnabled.other = e.target.checked;
-    setStoredBool(TRAINER_AUDIO_OTHER_STORAGE_KEY, AppState.audioEnabled.other);
-});
-document.getElementById('enable-instrument').addEventListener('change', (e) => {
-    AppState.audioEnabled.instrument = e.target.checked;
-    setStoredBool(TRAINER_AUDIO_INSTRUMENT_STORAGE_KEY, AppState.audioEnabled.instrument);
-});
-document.getElementById('enable-virtual-keyboard').addEventListener('change', (e) => {
-    AppState.audioEnabled.virtual = e.target.checked;
-    setStoredBool(TRAINER_AUDIO_VIRTUAL_STORAGE_KEY, AppState.audioEnabled.virtual);
-});
-document.getElementById('enable-midiout-lh').addEventListener('change', (e) => {
-    AppState.midiOutEnabled.left = e.target.checked;
-    setStoredBool(TRAINER_MIDIOUT_LH_STORAGE_KEY, AppState.midiOutEnabled.left);
-});
-document.getElementById('enable-midiout-rh').addEventListener('change', (e) => {
-    AppState.midiOutEnabled.right = e.target.checked;
-    setStoredBool(TRAINER_MIDIOUT_RH_STORAGE_KEY, AppState.midiOutEnabled.right);
-});
-document.getElementById('enable-midiout-other').addEventListener('change', (e) => {
-    AppState.midiOutEnabled.other = e.target.checked;
-    setStoredBool(TRAINER_MIDIOUT_OTHER_STORAGE_KEY, AppState.midiOutEnabled.other);
-});
-document.getElementById('enable-midiout-instrument').addEventListener('change', (e) => {
-    AppState.midiOutEnabled.instrument = e.target.checked;
-    setStoredBool(TRAINER_MIDIOUT_INSTRUMENT_STORAGE_KEY, AppState.midiOutEnabled.instrument);
-});
-document.getElementById('enable-midiout-virtual-keyboard').addEventListener('change', (e) => {
-    AppState.midiOutEnabled.virtual = e.target.checked;
-    setStoredBool(TRAINER_MIDIOUT_VIRTUAL_STORAGE_KEY, AppState.midiOutEnabled.virtual);
-});
+const enableStaffLh = document.getElementById('enable-staff-lh');
+if (enableStaffLh) {
+    enableStaffLh.addEventListener('change', (e) => {
+        AppState.audioEnabled.left = e.target.checked;
+        setStoredBool(TRAINER_AUDIO_LH_STORAGE_KEY, AppState.audioEnabled.left);
+    });
+}
+const enableStaffRh = document.getElementById('enable-staff-rh');
+if (enableStaffRh) {
+    enableStaffRh.addEventListener('change', (e) => {
+        AppState.audioEnabled.right = e.target.checked;
+        setStoredBool(TRAINER_AUDIO_RH_STORAGE_KEY, AppState.audioEnabled.right);
+    });
+}
+const enableOther = document.getElementById('enable-other');
+if (enableOther) {
+    enableOther.addEventListener('change', (e) => {
+        AppState.audioEnabled.other = e.target.checked;
+        setStoredBool(TRAINER_AUDIO_OTHER_STORAGE_KEY, AppState.audioEnabled.other);
+    });
+}
+const enableInstrument = document.getElementById('enable-instrument');
+if (enableInstrument) {
+    enableInstrument.addEventListener('change', (e) => {
+        AppState.audioEnabled.instrument = e.target.checked;
+        setStoredBool(TRAINER_AUDIO_INSTRUMENT_STORAGE_KEY, AppState.audioEnabled.instrument);
+    });
+}
+const enableVirtualKeyboard = document.getElementById('enable-virtual-keyboard');
+if (enableVirtualKeyboard) {
+    enableVirtualKeyboard.addEventListener('change', (e) => {
+        AppState.audioEnabled.virtual = e.target.checked;
+        setStoredBool(TRAINER_AUDIO_VIRTUAL_STORAGE_KEY, AppState.audioEnabled.virtual);
+    });
+}
+const enableMidiOutLh = document.getElementById('enable-midiout-lh');
+if (enableMidiOutLh) {
+    enableMidiOutLh.addEventListener('change', (e) => {
+        AppState.midiOutEnabled.left = e.target.checked;
+        setStoredBool(TRAINER_MIDIOUT_LH_STORAGE_KEY, AppState.midiOutEnabled.left);
+    });
+}
+const enableMidiOutRh = document.getElementById('enable-midiout-rh');
+if (enableMidiOutRh) {
+    enableMidiOutRh.addEventListener('change', (e) => {
+        AppState.midiOutEnabled.right = e.target.checked;
+        setStoredBool(TRAINER_MIDIOUT_RH_STORAGE_KEY, AppState.midiOutEnabled.right);
+    });
+}
+const enableMidiOutOther = document.getElementById('enable-midiout-other');
+if (enableMidiOutOther) {
+    enableMidiOutOther.addEventListener('change', (e) => {
+        AppState.midiOutEnabled.other = e.target.checked;
+        setStoredBool(TRAINER_MIDIOUT_OTHER_STORAGE_KEY, AppState.midiOutEnabled.other);
+    });
+}
+const enableMidiOutInstrument = document.getElementById('enable-midiout-instrument');
+if (enableMidiOutInstrument) {
+    enableMidiOutInstrument.addEventListener('change', (e) => {
+        AppState.midiOutEnabled.instrument = e.target.checked;
+        setStoredBool(TRAINER_MIDIOUT_INSTRUMENT_STORAGE_KEY, AppState.midiOutEnabled.instrument);
+    });
+}
+const enableMidiOutVirtualKeyboard = document.getElementById('enable-midiout-virtual-keyboard');
+if (enableMidiOutVirtualKeyboard) {
+    enableMidiOutVirtualKeyboard.addEventListener('change', (e) => {
+        AppState.midiOutEnabled.virtual = e.target.checked;
+        setStoredBool(TRAINER_MIDIOUT_VIRTUAL_STORAGE_KEY, AppState.midiOutEnabled.virtual);
+    });
+}
 
 const loopMinSlider = document.getElementById('slider-loop-min');
 const loopMaxSlider = document.getElementById('slider-loop-max');
 const loopMinInput = document.getElementById('val-loop-min');
 const loopMaxInput = document.getElementById('val-loop-max');
 
+function syncLooperDependentUi() {
+    const looperCheckbox = document.getElementById('check-looper');
+    const loopCountInCheckbox = document.getElementById('check-loop-countin');
+    const loopCountInRow = document.getElementById('looper-countin-row');
+    const loopEnabled = !!looperCheckbox?.checked;
+
+    if (loopCountInCheckbox) {
+        loopCountInCheckbox.disabled = !loopEnabled;
+        if (!loopEnabled) {
+            loopCountInCheckbox.checked = false;
+            AppState.loopCountInEnabled = false;
+            setStoredBool(LOOP_COUNT_IN_STORAGE_KEY, false);
+        } else {
+            loopCountInCheckbox.checked = !!AppState.loopCountInEnabled;
+        }
+    }
+
+    if (loopCountInRow) {
+        loopCountInRow.classList.toggle('is-disabled', !loopEnabled);
+    }
+}
+
 document.getElementById('check-looper').addEventListener('change', () => {
     renderLooper();
     enforceLooperBounds();
+    syncLooperDependentUi();
 });
 
 const loopCountInCheckbox = document.getElementById('check-loop-countin');
 if (loopCountInCheckbox) {
     loopCountInCheckbox.addEventListener('change', (e) => {
+        if (e.target.disabled) return;
         AppState.loopCountInEnabled = e.target.checked;
         setStoredBool(LOOP_COUNT_IN_STORAGE_KEY, AppState.loopCountInEnabled);
     });
@@ -2594,9 +2641,14 @@ if (visualPulseCheckbox) {
     });
 }
 
+
+syncLooperDependentUi();
+
 const metronomeCheckbox = document.getElementById('check-metronome');
 if (metronomeCheckbox) {
     metronomeCheckbox.addEventListener('change', (e) => {
+        syncTempoMetronomeDependentUi();
+
         if (!e.target.checked) {
             clearScheduledMetronomeEvents();
             stopWaitModeMetronome();
@@ -2646,18 +2698,6 @@ function syncLooperInputIfReady(changedId) {
     if (targetInput.value === '') return;
     syncLooper('input', changedId);
 }
-
-function bringLooperThumbToFront(activeSlider) {
-    if (!loopMinSlider || !loopMaxSlider) return;
-    loopMinSlider.style.zIndex = activeSlider === loopMinSlider ? '5' : '2';
-    loopMaxSlider.style.zIndex = activeSlider === loopMaxSlider ? '5' : '3';
-}
-
-loopMinSlider.addEventListener('pointerdown', () => bringLooperThumbToFront(loopMinSlider));
-loopMaxSlider.addEventListener('pointerdown', () => bringLooperThumbToFront(loopMaxSlider));
-loopMinSlider.addEventListener('focus', () => bringLooperThumbToFront(loopMinSlider));
-loopMaxSlider.addEventListener('focus', () => bringLooperThumbToFront(loopMaxSlider));
-
 loopMinSlider.addEventListener('input', (e) => syncLooper('slider', e.target.id));
 loopMaxSlider.addEventListener('input', (e) => syncLooper('slider', e.target.id));
 loopMinInput.addEventListener('input', (e) => syncLooperInputIfReady(e.target.id));
@@ -2911,7 +2951,6 @@ initPlayerPianoTypeControl();
 initLedCountControl();
 initLedBrightnessControls();
 initLedCalibrationControls();
-initLedSimulatorToggleControl();
 window.addEventListener('pointerup', (event) => releaseActiveVirtualPointer(`pointer:${event.pointerId}`));
 window.addEventListener('pointercancel', (event) => releaseActiveVirtualPointer(`pointer:${event.pointerId}`));
 window.addEventListener('mouseup', () => releaseActiveVirtualPointer('mouse'));
@@ -2952,7 +2991,6 @@ if (typeof consumePendingFirstRunNotice === 'function' && consumePendingFirstRun
 }
 setupMIDI();
 updateLedKeyMapping();
-LedEngine.ensureSimulator();
 LedEngine.renderOutputs();
 positionLedCalibrationPanel();
 updateConnectionStatuses();

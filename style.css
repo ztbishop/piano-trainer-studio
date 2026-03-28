@@ -100,22 +100,13 @@ body {
     margin: 0 2px;
     flex: 0 0 auto;
 }
-@media (max-width: 980px) {
-    #static-menu {
-        justify-content: space-between;
-        flex-wrap: wrap;
-    }
-    .menu-center {
-        position: static;
-        transform: none;
-        order: 3;
-        width: 100%;
-        max-width: none;
-        margin-top: 8px;
-        justify-content: center;
-        flex-wrap: wrap;
+@media (max-width: 1060px) {
+    #btn-tempo.collapse-to-more,
+    #btn-looper.collapse-to-more {
+        display: none;
     }
 }
+
 
 button,
 select {
@@ -134,6 +125,12 @@ button:hover { background: rgba(255,255,255,0.96); }
     padding: 7px 13px;
     min-height: 36px;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+    flex-wrap: nowrap;
 }
 #static-menu button:hover {
     border-color: rgba(255,255,255,0.8);
@@ -262,6 +259,15 @@ fieldset label {
 }
 
 .connection-row.connection-subrow {
+    padding-left: 122px;
+}
+
+.connection-player-keys-row .connection-field.connection-field-compact {
+    grid-template-columns: 112px 96px;
+}
+
+#midi-in-config #player-piano-range-label {
+    margin-top: 2px;
     padding-left: 122px;
 }
 
@@ -674,7 +680,6 @@ fieldset {
     box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.16);
 }
 
-#fs-hand-assign { min-width: 140px; width: 140px; }
 #fs-looper { min-width: 560px; }
 
 .setting-note {
@@ -814,7 +819,11 @@ fieldset {
 .metro-volume-label { justify-self: end; }
 
 /* Practice */
-#fs-practice-popup { min-width: min(700px, calc(100vw - 32px)); }
+#fs-practice-popup {
+    width: min(640px, calc(100vw - 32px));
+    min-width: 0;
+    max-width: min(640px, calc(100vw - 32px));
+}
 .practice-rows {
     display: grid;
     gap: 10px;
@@ -1345,6 +1354,10 @@ fieldset {
 
 #options-overlay .options-grid > fieldset:first-child { order: 0; }
 #options-overlay .options-grid > fieldset:nth-child(2) { order: 1; }
+#options-overlay #fs-about-updates { order: 0; }
+#options-overlay #fs-midi-setup { order: 1; }
+#options-overlay #fs-led-setup { order: 2; }
+#options-overlay #fs-display-debug { order: 3; }
 
 .led-brightness-grid {
     display: grid;
@@ -1393,7 +1406,11 @@ fieldset {
 }
 #fs-tempo-popup input[type="range"] { width: 100%; }
 
-#fs-practice-popup { min-width: min(720px, calc(100vw - 32px)); }
+#fs-practice-popup {
+    width: min(640px, calc(100vw - 32px));
+    min-width: 0;
+    max-width: min(640px, calc(100vw - 32px));
+}
 .future-notes-row .inline-row-flex { grid-column: 2 / 4; gap: 10px; }
 .audio-groups {
     display: grid;
@@ -1612,8 +1629,33 @@ fieldset {
     align-items: start;
 }
 
+.led-setup-top-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 2px;
+}
+
+.led-setup-top-row label {
+    display: inline-grid;
+    gap: 6px;
+    max-width: 140px;
+}
+
+.led-setup-top-row .led-reverse-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-end;
+    padding-bottom: 6px;
+    max-width: none;
+}
+
 #fs-practice-popup {
-    min-width: min(720px, calc(100vw - 32px));
+    width: min(640px, calc(100vw - 32px));
+    min-width: 0;
+    max-width: min(640px, calc(100vw - 32px));
 }
 
 #fs-practice-popup .practice-row,
@@ -2133,53 +2175,17 @@ fieldset {
 }
 
 
-/* --- Top bar responsive correction patch --- */
-#static-menu {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    padding: 10px 14px;
-    column-gap: 10px;
-    row-gap: 0;
-}
 
-.menu-left,
-.menu-right {
-    min-width: 0;
-    flex: 0 0 auto;
-}
-
-.menu-left {
-    justify-content: flex-start;
-}
-
-.menu-right {
-    justify-content: flex-end;
-}
-
-.menu-center {
-    z-index: 3;
-    max-width: none;
-    min-width: 0;
-    white-space: nowrap;
-    gap: 12px;
-}
-
-@media (max-width: 1100px) {
+@media (max-width: 1060px) {
     #static-menu {
         padding-left: 10px;
         padding-right: 10px;
-        column-gap: 8px;
-    }
-}
-
-@media (max-width: 1000px) {
-    #static-menu {
-        padding-left: 6px;
-        padding-right: 6px;
-        column-gap: 6px;
+        gap: 12px;
     }
 
     .menu-center {
         gap: 10px;
+        max-width: calc(100% - 220px);
     }
 
     .menu-group,
@@ -2188,14 +2194,63 @@ fieldset {
         gap: 8px;
     }
 
+    #static-menu button {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .menu-separator {
+        margin: 0 2px;
+    }
+}
+
+@media (max-width: 1000px) {
+    #static-menu {
+        padding-left: 6px;
+        padding-right: 6px;
+        gap: 8px;
+    }
+
+    .menu-left,
+    .menu-right {
+        gap: 4px;
+    }
+
+    .menu-center {
+        gap: 8px;
+        max-width: calc(100% - 180px);
+    }
+
+    .menu-group,
+    .transport-group,
+    .toolbar-popup-launchers {
+        gap: 6px;
+    }
+
+    #static-menu button {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
     .menu-separator {
         margin: 0;
-        height: 20px;
+        height: 18px;
+    }
+}
+
+
+@media (max-width: 960px) {
+    .score-display {
+        display: none;
+    }
+
+    .menu-center {
+        max-width: calc(100% - 120px);
     }
 }
 
 /* keep intentional stacked toolbar only when it truly gets narrow */
-@media (max-width: 900px) {
+@media (max-width: 620px) {
     #static-menu {
         justify-content: space-between;
         flex-wrap: wrap;
@@ -2216,6 +2271,41 @@ fieldset {
     }
 }
 
+
+
+#fs-more-popup {
+    min-width: min(320px, calc(100vw - 32px));
+}
+
+.more-popup-grid {
+    display: grid;
+    gap: 10px;
+    min-width: 260px;
+}
+
+.more-popup-grid button {
+    justify-content: flex-start;
+    text-align: left;
+}
+
+#fs-audio-popup {
+    min-width: min(720px, calc(100vw - 32px));
+}
+
+#fs-display-popup {
+    min-width: min(560px, calc(100vw - 32px));
+}
+
+.display-popup-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.routing-readonly-note {
+    grid-column: 1 / -1;
+    font-size: 0.82rem;
+    color: #5f7082;
+}
 
 .routing-grid {
     display: grid;
@@ -2611,4 +2701,1734 @@ fieldset {
 .future1-l::before,
 .future1-r::before {
   height: clamp(10px, 14%, 18px);
+}
+
+/* tighter spacing between Practice sections */
+.practice-section-title{margin-top:6px;}
+.practice-divider{margin:10px 0;}
+
+
+/* Practice menu refinement */
+#fs-practice-popup {
+    min-width: min(760px, calc(100vw - 32px));
+}
+
+.practice-mode-group {
+    gap: 10px;
+}
+
+.practice-mode-option {
+    grid-template-columns: 20px 132px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 0;
+    padding: 12px 14px;
+}
+
+.practice-mode-title {
+    font-weight: 700;
+    line-height: 1.15;
+}
+
+.practice-mode-desc {
+    font-size: 0.92rem;
+    line-height: 1.3;
+    color: rgba(44, 62, 80, 0.82);
+}
+
+.practice-row {
+    grid-template-columns: 170px minmax(0, 1fr);
+    gap: 10px 14px;
+}
+
+.practice-row > .inline-checkboxes,
+.practice-row > .inline-row-flex,
+.practice-row > .practice-options-stack,
+.practice-row > .practice-inline-note {
+    grid-column: 2 / 3;
+}
+
+.practice-row-spacer {
+    display: none;
+}
+
+.practice-row-label {
+    align-self: start;
+    padding-top: 2px;
+}
+
+.practice-hands-row,
+.practice-playback-row {
+    align-items: center;
+}
+
+.practice-playback-row {
+    margin-top: 8px;
+}
+
+.practice-mode-status-row {
+    margin-top: -4px;
+}
+
+.practice-options-stack {
+    display: grid;
+    justify-items: start;
+    gap: 12px;
+}
+
+.practice-options-stack .inline-row-flex {
+    justify-self: start;
+}
+
+.practice-inline-note {
+    padding-top: 0;
+}
+
+#fs-practice-popup .practice-divider {
+    margin: 8px 0 10px;
+}
+
+@media (max-width: 760px) {
+    .practice-mode-option {
+        grid-template-columns: 20px 1fr;
+        align-items: start;
+    }
+
+    .practice-mode-desc {
+        grid-column: 2 / 3;
+        margin-left: 0;
+    }
+
+    .practice-row {
+        grid-template-columns: 1fr;
+    }
+
+    .practice-row > .inline-checkboxes,
+    .practice-row > .inline-row-flex,
+    .practice-row > .practice-options-stack,
+    .practice-row > .practice-inline-note {
+        grid-column: auto;
+    }
+
+    .practice-row-label {
+        padding-top: 0;
+    }
+}
+
+
+
+/* Practice menu refinement v2 */
+.practice-mode-group {
+    gap: 8px;
+}
+
+.practice-mode-option {
+    grid-template-columns: 20px 118px minmax(0, 1fr);
+    padding: 10px 12px;
+}
+
+.practice-row {
+    grid-template-columns: 150px minmax(0, 1fr);
+}
+
+.practice-row-label {
+    font-size: 0.97rem;
+}
+
+.practice-hands-row .inline-checkboxes,
+.practice-playback-row .inline-checkboxes {
+    gap: 20px;
+}
+
+.feedback-row {
+    grid-template-columns: 1fr;
+}
+
+.feedback-row > .practice-options-stack {
+    grid-column: 1 / -1;
+    justify-items: start;
+}
+
+#fs-practice-popup .practice-section-title {
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+@media (max-width: 760px) {
+    .practice-row {
+        grid-template-columns: 1fr;
+    }
+
+    .feedback-row > .practice-options-stack {
+        grid-column: auto;
+    }
+}
+
+
+/* Practice menu refinement v4 */
+#fs-practice-popup {
+    width: min(620px, calc(100vw - 32px));
+    min-width: min(620px, calc(100vw - 32px));
+    max-width: min(620px, calc(100vw - 32px));
+}
+
+.practice-mode-group {
+    gap: 2px;
+}
+
+.practice-mode-option {
+    grid-template-columns: 20px 130px minmax(0, 1fr);
+    padding: 6px 12px;
+    border: 0;
+    background: transparent;
+    border-radius: 0;
+}
+
+.practice-mode-title {
+    font-weight: 700;
+    line-height: 1.15;
+}
+
+.practice-mode-desc {
+    line-height: 1.15;
+}
+
+.practice-row {
+    grid-template-columns: 170px minmax(0, 1fr);
+    gap: 8px 14px;
+}
+
+.practice-row-label,
+.practice-section-title,
+#fs-practice-popup .practice-row-label,
+#fs-practice-popup .practice-section-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(44, 62, 80, 0.82);
+}
+
+.practice-hands-row .practice-row-label,
+.practice-playback-row .practice-row-label {
+    white-space: nowrap;
+}
+
+.practice-hands-row .inline-checkboxes,
+.practice-playback-row .inline-checkboxes {
+    display: grid;
+    grid-template-columns: 90px 90px;
+    gap: 18px;
+}
+
+.practice-playback-row {
+    margin-top: 8px;
+}
+
+.practice-mode-status-row {
+    margin-top: -8px;
+}
+
+.practice-feedback-list {
+    display: grid;
+    justify-items: start;
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    justify-content: start;
+    align-content: start;
+}
+
+.practice-feedback-list .inline-row-flex {
+    display: inline-flex;
+    justify-self: start;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+}
+
+.practice-feedback-list input[type="checkbox"] {
+    margin: 0;
+}
+
+#fs-practice-popup .practice-divider {
+    margin: 6px 0 8px;
+}
+
+@media (max-width: 760px) {
+    .practice-mode-option {
+        grid-template-columns: 20px 1fr;
+        padding: 7px 10px;
+    }
+
+    .practice-row {
+        grid-template-columns: 1fr;
+    }
+
+    .practice-feedback-list {
+    display: grid;
+    justify-items: start;
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    justify-content: start;
+    align-content: start;
+}
+}
+
+
+.practice-panel {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+
+#practice-popup {
+    width: min(672px, calc(100vw - 32px));
+    max-width: min(672px, calc(100vw - 32px));
+}
+
+
+/* Display popup cleanup */
+#fs-display-popup {
+    width: min(620px, calc(100vw - 32px));
+    min-width: 0;
+    max-width: min(620px, calc(100vw - 32px));
+}
+
+.display-popup-grid {
+    gap: 14px;
+}
+
+.display-zoom-row {
+    grid-template-columns: 72px minmax(260px, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+}
+
+.display-zoom-row .display-zoom-value {
+    justify-self: end;
+}
+
+.display-zoom-row .num-input {
+    width: 62px;
+}
+
+.display-toggle-row {
+    padding-left: 84px;
+    grid-template-columns: repeat(2, max-content);
+    justify-content: start;
+    gap: 18px 28px;
+}
+
+@media (max-width: 700px) {
+    #fs-display-popup {
+        width: min(96vw, calc(100vw - 20px));
+        max-width: min(96vw, calc(100vw - 20px));
+    }
+
+    .display-zoom-row,
+    .display-toggle-row {
+        grid-template-columns: 1fr;
+    }
+
+    .display-toggle-row {
+        padding-left: 0;
+        gap: 10px;
+    }
+}
+
+
+/* alignment fixes */
+.settings-row, .practice-row, .zoom-row { display:flex; align-items:center; gap:12px; }
+.settings-row .row-label, .practice-row .row-label, .zoom-row .row-label { min-width:90px; font-weight:600; }
+.zoom-slider, .volume-slider { flex:1; }
+.zoom-input, .volume-input { width:60px; text-align:center; }
+.transpose-actions { display:flex; justify-content:flex-end; gap:10px; }
+
+
+/* Panel alignment polish */
+.display-zoom-row .practice-row-label.inline-label,
+.routing-volume-row .practice-row-label.inline-label {
+    align-self: center;
+    padding-top: 0;
+    display: flex;
+    align-items: center;
+    line-height: 1;
+}
+
+.transpose-actions {
+    justify-content: flex-end;
+}
+
+.transpose-actions #btn-transpose-apply {
+    order: 2;
+}
+
+.transpose-actions #btn-transpose-reset {
+    order: 1;
+}
+
+
+.display-zoom-row {
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+#display-zoom-slider {
+  flex:1;
+}
+
+#display-zoom-value {
+  width:70px;
+  text-align:center;
+}
+
+
+/* Force Display zoom row: Zoom | slider | numeric input */
+.display-zoom-row {
+    grid-template-columns: 72px minmax(260px, 1fr) auto !important;
+}
+
+.display-zoom-row #slider-zoom {
+    grid-column: 2;
+    width: 100%;
+}
+
+.display-zoom-row .display-zoom-value {
+    grid-column: 3;
+    justify-self: end;
+}
+
+.display-zoom-row #val-zoom {
+    width: 62px;
+}
+
+
+
+/* Slight visual grouping for metronome children */
+.metro-volume-label {
+    margin-left: 8px;
+}
+
+.tempo-accented-downbeat-row,
+.tempo-visual-pulse-row {
+    opacity: 0.75;
+}
+
+
+
+/* globally tighten rows */
+.tempo-popup-grid {
+    row-gap: 6px;
+}
+
+/* kill excess vertical spacing */
+.tempo-row {
+    margin: 0;
+    padding: 2px 0;
+}
+
+/* BPM tighter */
+.bpm-row {
+    margin-bottom: 2px;
+}
+
+/* Speed tighter */
+.speed-row {
+    margin-top: 0;
+    margin-bottom: 4px;
+}
+
+/* Divider tighter */
+.tempo-divider {
+    margin: 6px 0 4px 0;
+}
+
+/* Metronome block tight */
+.metro-row {
+    margin: 0;
+    padding: 2px 0;
+}
+
+/* children tight + slight indent */
+.tempo-accented-downbeat-row,
+.tempo-visual-pulse-row {
+    margin: 0;
+    padding: 1px 0;
+}
+
+.tempo-accented-downbeat-toggle,
+.tempo-visual-pulse-toggle {
+    margin-left: 16px;
+}
+
+/* reduce label vertical space */
+.tempo-label {
+    line-height: 1.2;
+}
+
+/* tighten slider vertical footprint */
+input[type="range"] {
+    margin: 0;
+}
+
+/* tighten number input vertical */
+.num-input {
+    margin: 0;
+}
+
+/* --- Tempo menu micro polish override --- */
+.tempo-popup-grid {
+    row-gap: 2px !important;
+}
+
+.tempo-row {
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+}
+
+.bpm-row {
+    margin: 0 0 2px 0 !important;
+    padding: 0 !important;
+    grid-template-columns: 100px auto !important;
+    column-gap: 8px !important;
+}
+
+.speed-row {
+    margin: 0 !important;
+    padding: 0 !important;
+    grid-template-columns: 100px minmax(0, 1fr) auto !important;
+    column-gap: 8px !important;
+}
+
+.tempo-divider {
+    height: 1px !important;
+    background: rgba(0,0,0,0.14) !important;
+    margin: 4px 0 3px 0 !important;
+}
+
+.metro-row {
+    margin: 0 !important;
+    padding: 0 !important;
+    grid-template-columns: auto 66px minmax(0, 1fr) auto !important;
+    column-gap: 8px !important;
+}
+
+.tempo-accented-downbeat-row,
+.tempo-visual-pulse-row {
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+}
+
+.tempo-accented-downbeat-row {
+    margin-top: 1px !important;
+}
+
+.tempo-visual-pulse-row {
+    margin-top: 0 !important;
+}
+
+.tempo-accented-downbeat-toggle,
+.tempo-visual-pulse-toggle {
+    margin-left: 14px !important;
+    line-height: 1.1 !important;
+}
+
+.tempo-label {
+    line-height: 1.1 !important;
+    font-weight: 500 !important;
+}
+
+.metro-volume-label {
+    margin-left: 6px !important;
+}
+
+.speed-row input[type="range"],
+.metro-row input[type="range"] {
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+.bpm-row .num-input,
+.speed-row .num-input,
+.metro-row .num-input,
+.value-suffix-group,
+input[type="range"] {
+    margin: 0 !important;
+}
+
+.tempo-popup-grid .tempo-row-spacer {
+    height: 0 !important;
+    min-height: 0 !important;
+}
+
+
+/* --- Tempo metronome dependent controls unified state --- */
+#fs-tempo-popup:has(#check-metronome:not(:checked)) .metro-volume-label,
+#fs-tempo-popup:has(#check-metronome:not(:checked)) .tempo-accented-downbeat-toggle,
+#fs-tempo-popup:has(#check-metronome:not(:checked)) .tempo-visual-pulse-toggle {
+    color: rgba(44, 62, 80, 0.42) !important;
+}
+
+#fs-tempo-popup:has(#check-metronome:not(:checked)) #slider-metro-vol,
+#fs-tempo-popup:has(#check-metronome:not(:checked)) #val-metro-vol {
+    opacity: 0.55;
+}
+
+/* --- Loop menu real fix --- */
+.loop-countin-row {
+    margin-left: 14px;
+    margin-top: 4px;
+}
+
+#check-looper:not(:checked) ~ .loop-countin-row .loop-countin-label {
+    color: rgba(44,62,80,0.42);
+}
+
+#check-looper:not(:checked) ~ .loop-countin-row input {
+    opacity: 0.6;
+}
+
+/* --- Audio / Routing volume surgical fix --- */
+.practice-row.value-row.routing-volume-row {
+    margin-top: 0 !important;
+    margin-bottom: 2px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    align-items: center !important;
+}
+
+.practice-row.value-row.routing-volume-row + .routing-section {
+    margin-top: 2px !important;
+}
+
+.routing-card .routing-copy + .practice-row.value-row.routing-volume-row {
+    margin-top: 2px !important;
+}
+
+.practice-row.value-row.routing-volume-row .practice-label {
+    text-transform: none !important;
+    letter-spacing: 0.01em !important;
+}
+
+.practice-row.value-row.routing-volume-row input[type="range"] {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.practice-row.value-row.routing-volume-row .num-input {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* --- Display menu final real fix --- */
+#fs-display-popup {
+    width: min(620px, calc(100vw - 32px)) !important;
+    min-width: 0 !important;
+    max-width: min(620px, calc(100vw - 32px)) !important;
+}
+
+.display-popup-grid {
+    display: grid !important;
+    gap: 8px !important;
+}
+
+.display-zoom-row {
+    display: grid !important;
+    grid-template-columns: 72px minmax(260px, 1fr) auto !important;
+    align-items: center !important;
+    gap: 12px !important;
+    margin: 0 !important;
+}
+
+.display-zoom-row .display-zoom-label {
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    color: rgba(44, 62, 80, 0.82) !important;
+    line-height: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.display-zoom-row .display-zoom-value {
+    justify-self: end !important;
+}
+
+.display-zoom-row .num-input {
+    width: 62px !important;
+}
+
+.display-toggle-row {
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    gap: 22px !important;
+    padding-left: 72px !important;
+    margin: 0 !important;
+    flex-wrap: wrap !important;
+}
+
+.display-toggle-row label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin: 0 !important;
+}
+
+@media (max-width: 700px) {
+    #fs-display-popup {
+        width: min(96vw, calc(100vw - 20px)) !important;
+        max-width: min(96vw, calc(100vw - 20px)) !important;
+    }
+
+    .display-zoom-row {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+    }
+
+    .display-toggle-row {
+        padding-left: 0 !important;
+        gap: 10px !important;
+    }
+}
+
+/* Settings menu re-organization polish */
+#fs-about-updates .about-update-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.about-update-note {
+    color: rgba(65, 82, 99, 0.86);
+}
+
+#fs-led-setup,
+#fs-display-debug,
+#fs-about-updates,
+#fs-hand-assign {
+    scroll-margin-top: 12px;
+}
+
+.connection-subgroup-card {
+    margin-top: 2px;
+    padding-top: 10px;
+    padding-bottom: 2px;
+    border-top: 1px dashed rgba(120, 136, 152, 0.40);
+}
+
+#options-overlay #wled-settings,
+#options-overlay #midi-lights-row,
+#options-overlay #midi-led-test-settings {
+    gap: 6px;
+}
+
+#options-overlay #wled-settings .setting-subgroup,
+#options-overlay #midi-lights-row .setting-subgroup,
+#options-overlay #midi-led-test-settings .setting-subgroup,
+#options-overlay #fs-led-setup .setting-subgroup {
+    background: rgba(255,255,255,0.16);
+    border-top-style: solid;
+    border-top-color: rgba(140, 156, 173, 0.26);
+    border-radius: 8px;
+    padding: 10px 10px 8px;
+}
+
+#options-overlay #fs-led-setup > label,
+#options-overlay #fs-display-debug > label {
+    margin-bottom: 2px;
+}
+
+#options-overlay .compact-led-grid {
+    gap: 4px;
+    margin-top: 2px;
+}
+
+#options-overlay .compact-led-grid .led-brightness-subtitle {
+    margin-top: 0;
+    font-size: 0.8rem;
+}
+
+#options-overlay .compact-led-grid .brightness-row {
+    min-height: 32px;
+    gap: 8px;
+}
+
+#options-overlay .compact-led-grid input[type="range"] {
+    margin: 0;
+}
+
+#options-overlay .update-check-row {
+    margin-top: 0;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#options-overlay .update-check-meta {
+    min-width: 0;
+    flex: 1 1 220px;
+}
+
+#options-overlay .update-check-row button {
+    white-space: nowrap;
+}
+
+#options-overlay .connection-inline-controls {
+    gap: 8px;
+}
+
+#options-overlay .connection-inline-controls button {
+    min-width: 114px;
+}
+
+#options-overlay fieldset > .setting-note:last-child {
+    margin-bottom: 0;
+}
+
+@media (max-width: 700px) {
+  #options-overlay .update-check-row {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  #options-overlay .compact-led-grid .brightness-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+}
+
+
+#practice-popup {
+    overflow-x: visible;
+    overflow-y: visible;
+}
+
+#practice-popup > fieldset,
+#fs-practice-popup,
+#fs-practice-popup .practice-rows {
+    overflow: visible;
+}
+
+.practice-hand-staff-row {
+    display: grid;
+    grid-template-columns: 170px max-content;
+    align-items: start;
+    column-gap: 10px;
+}
+
+.practice-hand-staff-row .practice-row-label {
+    margin: 0;
+    padding-top: 11px;
+    line-height: 1.1;
+}
+
+.practice-hand-staff-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 18px;
+    min-width: 0;
+}
+
+.practice-hand-staff-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    margin: 0;
+}
+
+.practice-hand-staff-control select {
+    min-width: 94px;
+}
+
+@media (max-width: 760px) {
+    .practice-hand-staff-row {
+        grid-template-columns: 1fr;
+        row-gap: 8px;
+    }
+
+    .practice-hand-staff-controls {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .practice-hand-staff-row .practice-row-label {
+        padding-top: 0;
+    }
+
+    .practice-hand-staff-control select {
+        min-width: 96px;
+    }
+}
+
+
+/* Settings restructure: MIDI + LED grouping */
+#fs-midi-setup {
+    scroll-margin-top: 12px;
+}
+
+#fs-midi-setup .connection-stack,
+#fs-led-setup .led-setup-connection-stack {
+    gap: 10px;
+}
+
+#fs-midi-setup .connection-subgroup-card {
+    margin-top: 0;
+    padding: 10px 12px 8px;
+    border-top-style: solid;
+    border-top-color: rgba(140, 156, 173, 0.26);
+    background: rgba(255,255,255,0.16);
+    border-radius: 8px;
+}
+
+#fs-midi-setup #midi-in-config {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+}
+
+#fs-midi-setup .connection-row.connection-subrow {
+    padding-left: 112px;
+}
+
+#fs-midi-setup #player-piano-range-label {
+    padding-left: 112px;
+}
+
+#fs-midi-setup .connection-field.connection-field-compact {
+    grid-template-columns: 92px auto;
+}
+
+#fs-led-setup .led-setup-top-row {
+    margin-top: 2px;
+}
+
+#fs-led-setup > .connection-subgroup.hidden,
+#fs-led-setup > .connection-stack .hidden {
+    display: none;
+}
+
+
+/* Settings ordering + MIDI sub-area polish */
+#options-overlay #fs-about-updates { order: 0; }
+#options-overlay #fs-midi-setup { order: 1; }
+#options-overlay #fs-led-setup { order: 2; }
+#options-overlay #fs-display-debug { order: 3; }
+
+#fs-midi-setup {
+    display: flex;
+    flex-direction: column;
+}
+
+#fs-midi-setup .connection-stack {
+    gap: 10px;
+}
+
+#fs-midi-setup .midi-input-card {
+    gap: 8px;
+    padding: 10px 12px 10px;
+}
+
+#fs-midi-setup .midi-input-card .setting-subgroup-title {
+    margin-bottom: 2px;
+}
+
+#fs-midi-setup .midi-input-card .connection-row.connection-subrow {
+    padding-left: 0;
+}
+
+#fs-midi-setup .midi-input-card .connection-field.connection-field-compact {
+    grid-template-columns: 104px 96px;
+    justify-content: start;
+}
+
+#fs-midi-setup .midi-input-card .connection-row {
+    justify-content: flex-start;
+}
+
+#fs-midi-setup .midi-input-card .connection-field select {
+    width: 96px;
+}
+
+#fs-midi-setup #player-piano-range-label {
+    padding-left: 104px;
+    margin-top: -2px;
+}
+
+#fs-midi-setup #midi-out-channel-row {
+    padding-left: 122px;
+}
+
+@media (max-width: 700px) {
+  #fs-midi-setup .midi-input-card .connection-row.connection-subrow,
+  #fs-midi-setup #midi-out-channel-row {
+    padding-left: 0;
+  }
+  #fs-midi-setup #player-piano-range-label {
+    padding-left: 0;
+  }
+}
+
+
+/* MIDI Setup polish: simplify dependent rows */
+#fs-midi-setup .connection-subgroup {
+    border-top: 0;
+    padding-top: 0;
+    margin-top: 2px;
+    gap: 6px;
+}
+
+#fs-midi-setup .connection-subgroup-card {
+    margin-top: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+#fs-midi-setup .midi-input-card {
+    gap: 6px;
+    padding: 0;
+}
+
+#fs-midi-setup .midi-input-card .setting-subgroup-title {
+    display: none;
+}
+
+#fs-midi-setup .connection-row.connection-subrow,
+#fs-midi-setup .midi-input-card .connection-row.connection-subrow,
+#fs-midi-setup #midi-out-channel-row {
+    padding-left: 122px;
+}
+
+#fs-midi-setup .midi-input-card .connection-field.connection-field-compact,
+#fs-midi-setup #midi-out-channel-row .connection-field.connection-field-compact {
+    grid-template-columns: 92px 96px;
+}
+
+#fs-midi-setup .midi-input-card .connection-row,
+#fs-midi-setup #midi-out-channel-row {
+    justify-content: flex-start;
+}
+
+#fs-midi-setup .midi-input-card .connection-field select,
+#fs-midi-setup #midi-out-channel-row .connection-field select {
+    width: 96px;
+}
+
+#fs-midi-setup #player-piano-range-label {
+    display: none !important;
+}
+
+@media (max-width: 700px) {
+  #fs-midi-setup .connection-row.connection-subrow,
+  #fs-midi-setup .midi-input-card .connection-row.connection-subrow,
+  #fs-midi-setup #midi-out-channel-row {
+    padding-left: 0;
+  }
+}
+
+
+/* MIDI Setup inline alignment fix */
+#fs-midi-setup #midi-in-config {
+  margin-top: 0;
+}
+
+#fs-midi-setup .midi-inline-controls {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding-left: 122px;
+  flex-wrap: wrap;
+}
+
+#fs-midi-setup .midi-inline-item,
+#fs-midi-setup .midi-out-inline-row {
+  margin: 0;
+  padding: 0;
+}
+
+#fs-midi-setup .midi-inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+#fs-midi-setup .midi-inline-field .connection-label {
+  min-width: 68px;
+}
+
+#fs-midi-setup .midi-inline-field select {
+  width: 96px;
+  min-width: 96px;
+}
+
+#fs-midi-setup #midi-out-channel-row {
+  padding-left: 122px;
+  justify-content: flex-start;
+}
+
+#fs-midi-setup #player-piano-range-label {
+  display: none !important;
+}
+
+@media (max-width: 700px) {
+  #fs-midi-setup .midi-inline-controls,
+  #fs-midi-setup #midi-out-channel-row {
+    padding-left: 0;
+  }
+  #fs-midi-setup .midi-inline-controls {
+    gap: 12px;
+  }
+}
+
+
+/* Final MIDI Setup alignment fix */
+#fs-midi-setup #midi-in-config {
+  margin-top: 2px;
+}
+
+#fs-midi-setup .midi-inline-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 18px;
+  padding-left: 122px;
+  flex-wrap: wrap;
+}
+
+#fs-midi-setup .midi-inline-item,
+#fs-midi-setup #midi-out-channel-row {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0 0 0 122px;
+  justify-content: flex-start;
+}
+
+#fs-midi-setup .midi-inline-item.hidden,
+#fs-midi-setup #midi-out-channel-row.hidden {
+  display: none;
+}
+
+#fs-midi-setup .midi-inline-controls #midi-in-channel-row,
+#fs-midi-setup .midi-inline-controls #midi-in-keys-row {
+  padding-left: 0;
+}
+
+#fs-midi-setup .midi-inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+#fs-midi-setup .midi-inline-field .connection-label {
+  min-width: auto;
+  width: auto;
+}
+
+#fs-midi-setup .midi-inline-field select {
+  width: 96px;
+  min-width: 96px;
+}
+
+#fs-midi-setup #player-piano-range-label {
+  display: none !important;
+}
+
+@media (max-width: 700px) {
+  #fs-midi-setup .midi-inline-controls,
+  #fs-midi-setup .midi-inline-item,
+  #fs-midi-setup #midi-out-channel-row {
+    padding-left: 0;
+  }
+}
+
+
+/* MIDI setup row structure fix */
+#fs-midi-setup #midi-in-config,
+#fs-midi-setup #midi-out-channel-row {
+  padding-left: 122px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+}
+
+#fs-midi-setup #midi-in-config.hidden,
+#fs-midi-setup #midi-out-channel-row.hidden,
+#fs-midi-setup #midi-in-config .hidden {
+  display: none !important;
+}
+
+#fs-midi-setup #midi-in-config {
+  flex-wrap: wrap;
+}
+
+#fs-midi-setup #midi-in-config .midi-inline-item,
+#fs-midi-setup #midi-out-channel-row .midi-inline-field {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+}
+
+#fs-midi-setup #midi-in-config .midi-inline-field,
+#fs-midi-setup #midi-out-channel-row .midi-inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+#fs-midi-setup #midi-in-config .midi-inline-field .connection-label,
+#fs-midi-setup #midi-out-channel-row .midi-inline-field .connection-label {
+  min-width: auto;
+  width: auto;
+}
+
+#fs-midi-setup #midi-in-channel,
+#fs-midi-setup #midi-out-channel,
+#fs-midi-setup #select-player-piano-type {
+  width: 96px;
+  min-width: 96px;
+}
+
+#fs-midi-setup #player-piano-range-label {
+  display: none !important;
+}
+
+@media (max-width: 700px) {
+  #fs-midi-setup #midi-in-config,
+  #fs-midi-setup #midi-out-channel-row {
+    padding-left: 0;
+  }
+}
+
+/* MIDI setup label-aligned subrows */
+#fs-midi-setup {
+  --midi-subrow-indent: 16px;
+  --midi-subrow-gap: 20px;
+}
+
+#fs-midi-setup #midi-in-config,
+#fs-midi-setup #midi-out-channel-row {
+  padding-left: var(--midi-subrow-indent);
+  justify-content: flex-start;
+  gap: var(--midi-subrow-gap);
+}
+
+#fs-midi-setup #midi-in-config {
+  flex-wrap: wrap;
+}
+
+#fs-midi-setup #midi-in-config .midi-inline-item,
+#fs-midi-setup #midi-out-channel-row {
+  margin: 0;
+}
+
+#fs-midi-setup #midi-in-config .midi-inline-field,
+#fs-midi-setup #midi-out-channel-row .midi-inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#fs-midi-setup #midi-in-config .midi-inline-field .connection-label,
+#fs-midi-setup #midi-out-channel-row .midi-inline-field .connection-label {
+  min-width: 60px;
+}
+
+@media (max-width: 700px) {
+  #fs-midi-setup #midi-in-config,
+  #fs-midi-setup #midi-out-channel-row {
+    padding-left: 0;
+    gap: 12px;
+  }
+}
+
+
+/* LED MIDI Output inline alignment */
+#fs-led-setup #midi-lights-channel-row.midi-led-inline-row {
+    justify-content: flex-start;
+    align-items: center;
+    gap: 22px;
+    padding-left: 18px;
+    flex-wrap: wrap;
+}
+
+#fs-led-setup .midi-led-channel-field.connection-field.connection-field-compact {
+    grid-template-columns: auto 96px;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+#fs-led-setup .midi-led-channel-field.connection-field.connection-field-compact .connection-label {
+    justify-self: start;
+}
+
+#fs-led-setup .midi-led-channel-field select {
+    width: 96px;
+}
+
+#fs-led-setup .midi-led-low-velocity-inline {
+    flex: 0 0 auto;
+    margin: 0;
+    white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  #fs-led-setup #midi-lights-channel-row.midi-led-inline-row {
+    padding-left: 0;
+    gap: 14px;
+  }
+}
+
+
+/* --- LED Setup cleanup (v10) --- */
+
+#fs-led-setup #select-led-lights {
+    width: 75%;
+    max-width: 520px;
+}
+
+#fs-led-setup #midi-lights-channel-row.midi-led-inline-row {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    flex-wrap: nowrap;
+    padding-left: 18px;
+}
+
+#fs-led-setup .midi-led-channel-field.connection-field.connection-field-compact {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    flex: 0 0 auto;
+    max-width: none;
+    grid-template-columns: none;
+}
+
+#fs-led-setup .midi-led-channel-field.connection-field.connection-field-compact .connection-label {
+    min-width: auto;
+    width: auto;
+    white-space: nowrap;
+}
+
+#fs-led-setup .midi-led-channel-field select,
+#fs-led-setup #midi-lights-channel {
+    width: 96px !important;
+    min-width: 96px !important;
+    max-width: 96px !important;
+    margin-left: 0 !important;
+}
+
+#fs-led-setup .midi-led-low-velocity-inline {
+    flex: 0 0 auto;
+    margin: 0;
+    white-space: nowrap;
+}
+
+
+/* --- MIDI Setup Keys spacing tweak (v11) --- */
+
+#fs-midi-setup .midi-inline-field .connection-label.keys-label {
+    margin-left: 5px;
+}
+
+#fs-midi-setup .midi-inline-field .connection-field.keys-field {
+    margin-left: -5px;
+}
+
+
+/* --- MIDI Setup keys row exact spacing fix (v12) --- */
+#fs-midi-setup #midi-in-keys-row .midi-inline-field {
+  gap: 5px !important;
+}
+
+#fs-midi-setup #midi-in-keys-row .connection-label {
+  margin-left: 5px !important;
+}
+
+#fs-midi-setup #midi-in-keys-row select,
+#fs-midi-setup #select-player-piano-type {
+  margin-left: 0 !important;
+}
+
+
+/* --- MIDI Keys tighter spacing (v13) --- */
+#fs-midi-setup #midi-in-keys-row .connection-field {
+  margin-left: -6px !important;
+}
+
+
+/* --- MIDI Keys final tighten (v14) --- */
+#fs-midi-setup #midi-in-keys-row .connection-field {
+  margin-left: -10px !important;
+}
+
+#fs-midi-setup #midi-in-keys-row .connection-label {
+  margin-right: -4px !important;
+}
+
+
+/* --- LED brightness spacing polish (v15) --- */
+#fs-led-setup .compact-led-grid {
+  row-gap: 16px;
+}
+
+#fs-led-setup .compact-led-grid .setting-subgroup-title,
+#fs-led-setup .compact-led-grid .brightness-heading {
+  margin-bottom: 6px;
+}
+
+#fs-led-setup .compact-led-grid .setting-subgroup-subtitle,
+#fs-led-setup .compact-led-grid .brightness-subheading {
+  margin-top: 6px;
+  margin-bottom: 2px;
+}
+
+#fs-led-setup .compact-led-grid .value-row,
+#fs-led-setup .compact-led-grid .brightness-row {
+  margin-top: 0;
+  margin-bottom: 2px;
+}
+
+
+/* --- LED brightness aggressive spacing reduction (v16) --- */
+
+/* tighten section padding */
+#fs-led-setup .compact-led-grid {
+  row-gap: 8px !important;
+}
+
+/* kill extra spacing around headings */
+#fs-led-setup .compact-led-grid .setting-subgroup-title,
+#fs-led-setup .compact-led-grid .brightness-heading {
+  margin-top: 0 !important;
+  margin-bottom: 4px !important;
+}
+
+/* subheading tighter */
+#fs-led-setup .compact-led-grid .setting-subgroup-subtitle,
+#fs-led-setup .compact-led-grid .brightness-subheading {
+  margin-top: 4px !important;
+  margin-bottom: 0px !important;
+}
+
+/* slider rows tight */
+#fs-led-setup .compact-led-grid .value-row,
+#fs-led-setup .compact-led-grid .brightness-row {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+
+/* specifically target Master + Future rows tighter */
+#fs-led-setup .compact-led-grid .value-row:first-of-type {
+  margin-bottom: 2px !important;
+}
+
+#fs-led-setup .compact-led-grid .value-row:last-of-type {
+  margin-top: 2px !important;
+}
+
+
+/* --- LED brightness ultra-compact (v17) --- */
+
+/* reduce container padding */
+#fs-led-setup .compact-led-grid {
+  padding-top: 4px !important;
+  padding-bottom: 2px !important;
+  row-gap: 6px !important;
+}
+
+/* kill bottom space after Future row */
+#fs-led-setup .compact-led-grid .value-row:last-of-type {
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* reduce space before Calibration section */
+#fs-led-setup .setting-subgroup + .setting-subgroup {
+  margin-top: 8px !important;
+}
+
+/* tighten heading spacing more */
+#fs-led-setup .compact-led-grid .setting-subgroup-title {
+  margin-bottom: 2px !important;
+}
+
+/* tighten subheading further */
+#fs-led-setup .compact-led-grid .setting-subgroup-subtitle {
+  margin-top: 2px !important;
+  margin-bottom: 0 !important;
+}
+
+
+/* --- LED brightness ACTUAL compression (v18) --- */
+
+/* crush inner card padding */
+#fs-led-setup .setting-subgroup {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+/* kill big gaps between rows */
+#fs-led-setup .value-row {
+  margin: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* bring Future section up */
+#fs-led-setup .setting-subgroup-subtitle {
+  margin-top: 4px !important;
+  margin-bottom: -2px !important;
+}
+
+/* tighten heading */
+#fs-led-setup .setting-subgroup-title {
+  margin-bottom: 6px !important;
+}
+
+/* reduce spacing before calibration block */
+#fs-led-setup .setting-subgroup + .setting-subgroup {
+  margin-top: 6px !important;
+}
+
+/* remove extra bottom gap under Future slider specifically */
+#fs-led-setup .value-row:last-of-type {
+  margin-bottom: -4px !important;
+}
+
+
+/* --- LED brightness REAL selector fix (v19) --- */
+#options-overlay #led-brightness-settings.setting-subgroup {
+  padding-top: 6px !important;
+  padding-bottom: 4px !important;
+}
+
+#options-overlay #led-brightness-settings .setting-subgroup-title {
+  margin-bottom: 2px !important;
+}
+
+#options-overlay #led-brightness-settings .led-brightness-grid {
+  gap: 2px !important;
+  margin-top: 0 !important;
+}
+
+#options-overlay #led-brightness-settings .led-brightness-subtitle {
+  margin-top: -2px !important;
+  margin-bottom: -4px !important;
+  line-height: 1.05 !important;
+}
+
+#options-overlay #led-brightness-settings .brightness-row {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 8px !important;
+}
+
+#options-overlay #led-calibration-settings.setting-subgroup {
+  margin-top: 4px !important;
+}
+
+
+/* --- Touch-friendly checkbox hit area (v25) --- */
+
+/* expand clickable area */
+label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+/* increase checkbox size slightly */
+input[type="checkbox"] {
+  transform: scale(1.3);
+  cursor: pointer;
+}
+
+/* improve tap feedback */
+label:has(input[type="checkbox"]):active {
+  background: rgba(255,255,255,0.08);
+}
+
+
+/* --- Keep practice hand/audio emoji inline with labels (v26) --- */
+#fs-practice-popup .practice-hand-toggle label,
+#fs-practice-popup .practice-audio-toggle label,
+#fs-practice-popup .practice-hand-toggle .toggle-inline,
+#fs-practice-popup .practice-audio-toggle .toggle-inline,
+#fs-practice-popup .practice-hands-row label,
+#fs-practice-popup .playback-audio-row label {
+  display: inline-flex !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+  gap: 10px !important;
+}
+
+#fs-practice-popup .practice-hand-toggle label span,
+#fs-practice-popup .practice-audio-toggle label span,
+#fs-practice-popup .practice-hands-row label span,
+#fs-practice-popup .playback-audio-row label span {
+  white-space: nowrap !important;
+}
+
+
+/* --- Fix Playback Audio emoji wrapping (v27) --- */
+#fs-practice-popup .playback-audio-row label,
+#fs-practice-popup .playback-audio-row .toggle-inline {
+  display: inline-flex !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+}
+
+#fs-practice-popup .playback-audio-row label span {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+}
+
+
+/* --- Fix actual Practice Playback row emoji wrapping (v28) --- */
+#fs-practice-popup .practice-playback-row .inline-checkboxes,
+#fs-practice-popup .practice-hands-row .inline-checkboxes {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 18px !important;
+}
+
+#fs-practice-popup .practice-playback-row .inline-checkboxes label,
+#fs-practice-popup .practice-hands-row .inline-checkboxes label {
+  display: inline-flex !important;
+  align-items: center !important;
+  white-space: nowrap !important;
+  flex-wrap: nowrap !important;
+  gap: 10px !important;
+  line-height: 1 !important;
+}
+
+#fs-practice-popup .practice-playback-row .inline-checkboxes label input[type="checkbox"],
+#fs-practice-popup .practice-hands-row .inline-checkboxes label input[type="checkbox"] {
+  flex: 0 0 auto !important;
+}
+
+#fs-practice-popup .practice-playback-row .inline-checkboxes label br,
+#fs-practice-popup .practice-hands-row .inline-checkboxes label br {
+  display: none !important;
+}
+
+
+/* --- Global touch-friendly slider hit area (v29) --- */
+input[type="range"] {
+  min-height: 38px !important;
+  height: 38px !important;
+  touch-action: pan-y !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.toolbar-popup input[type="range"],
+#settings-popup input[type="range"],
+#options-overlay input[type="range"],
+#led-calibration-panel input[type="range"] {
+  min-height: 38px !important;
+  height: 38px !important;
+}
+
+
+/* --- Looper polish: separate begin/end sliders (v30) --- */
+.loop-range-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.loop-range-row {
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr) 92px;
+    align-items: center;
+    gap: 14px;
+}
+
+.loop-range-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #46586c;
+    white-space: nowrap;
+}
+
+.loop-range-row input[type="range"] {
+    width: 100%;
+    min-width: 0;
+}
+
+.loop-range-input {
+    width: 92px;
+    text-align: center;
+}
+
+@media (max-width: 900px) {
+    .loop-range-row {
+        grid-template-columns: 1fr 88px;
+        grid-template-areas:
+            "label label"
+            "slider input";
+        gap: 8px 12px;
+    }
+    .loop-range-label { grid-area: label; }
+    .loop-range-row input[type="range"] { grid-area: slider; }
+    .loop-range-input { grid-area: input; width: 88px; }
+}
+
+
+/* --- Looper spacing + dependent Loop Count-in state (v31) --- */
+#fs-looper-popup .looper-option-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 4px 6px;
+}
+
+#fs-looper-popup .looper-option-row + .looper-option-row {
+  margin-top: 6px;
+}
+
+#fs-looper-popup .loop-range-group {
+  margin-top: 4px;
+  gap: 10px;
+}
+
+#fs-looper-popup .looper-option-row.is-disabled {
+  opacity: 0.48;
+}
+
+#fs-looper-popup .looper-option-row.is-disabled input[type="checkbox"] {
+  cursor: default;
 }

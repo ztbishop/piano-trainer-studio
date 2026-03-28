@@ -6,7 +6,7 @@
 // ==========================================
 // STATE MANAGEMENT
 // ==========================================
-const APP_VERSION = '1.0.8';
+const APP_VERSION = '1.0.9';
 const APP_REPO_SLUG = 'ztbishop/piano-trainer-studio';
 const UPDATE_MANIFEST_URL = 'https://ztbishop.github.io/piano-trainer-studio/version.json';
 const UPDATE_MANIFEST_URL_STORAGE_KEY = 'pt_updateManifestUrl';
@@ -47,7 +47,6 @@ const AppState = {
     debugStickyFrameLimit: 30,
     debugFrameSeq: 0,
     debugAnchorHistory: [],
-    ledSimulatorVisible: false,
     futurePreviewEnabled: true,
     futurePreviewDepth: 1,
     correctHighlightEnabled: false,
@@ -66,9 +65,11 @@ const AppState = {
     playerRange: null,
     outOfRangeCurrentNotes: [],
     ledOutputMode: 'none',
+    midiInChannel: 0,
     midiOutChannel: 1,
     midiLightsChannel: 1,
     midiLedLowVelocity: false,
+    ledReverse: false,
     wledIp: '',
     wledTransport: 'http-json',
     wledActiveTransport: 'http-json',
@@ -120,6 +121,7 @@ const MIDI_LIGHTS_NAME_STORAGE_KEY = 'pt_savedMidiLightsName';
 
 const LED_COUNT_STORAGE_KEY = 'pt_ledCount';
 const LED_OUTPUT_MODE_STORAGE_KEY = 'pt_ledOutputMode';
+const LED_REVERSE_STORAGE_KEY = 'pt_ledReverse';
 const WLED_IP_STORAGE_KEY = 'pt_wledIp';
 const WLED_TRANSPORT_STORAGE_KEY = 'pt_wledTransport';
 const WLED_TRANSPORT_WARNING_ACCEPTED_STORAGE_KEY = 'pt_wledTransportWarningAccepted';
@@ -154,10 +156,10 @@ const TRAINER_ZOOM_STORAGE_KEY = 'pt_trainerZoom';
 const TRAINER_AUTOSCROLL_STORAGE_KEY = 'pt_autoScroll';
 const TRAINER_KEYBOARD_STORAGE_KEY = 'pt_virtualKeyboardVisible';
 const SETTINGS_DEBUG_STORAGE_KEY = 'pt_debugEnabled';
-const SETTINGS_LED_SIM_STORAGE_KEY = 'pt_virtualLedsVisible';
 const MIDI_IN_ID_STORAGE_KEY = 'pt_savedMidiIn';
 const MIDI_OUT_ID_STORAGE_KEY = 'pt_savedMidiOut';
 const MIDI_LIGHTS_ID_STORAGE_KEY = 'pt_savedMidiLights';
+const MIDI_IN_CHANNEL_STORAGE_KEY = 'pt_savedMidiInChannel';
 const MIDI_OUT_CHANNEL_STORAGE_KEY = 'pt_savedMidiOutChannel';
 const MIDI_LIGHTS_CHANNEL_STORAGE_KEY = 'pt_savedMidiLightsChannel';
 const MIDI_LED_LOW_VELOCITY_STORAGE_KEY = 'pt_midiLedLowVelocity';
@@ -215,6 +217,7 @@ const RESETTABLE_PREFERENCE_KEYS = [
     MIDI_OUT_NAME_STORAGE_KEY,
     MIDI_LIGHTS_NAME_STORAGE_KEY,
     MIDI_IN_ID_STORAGE_KEY,
+    MIDI_IN_CHANNEL_STORAGE_KEY,
     MIDI_OUT_ID_STORAGE_KEY,
     MIDI_LIGHTS_ID_STORAGE_KEY,
     MIDI_OUT_CHANNEL_STORAGE_KEY,
@@ -222,6 +225,7 @@ const RESETTABLE_PREFERENCE_KEYS = [
     MIDI_LED_LOW_VELOCITY_STORAGE_KEY,
     LED_COUNT_STORAGE_KEY,
     LED_OUTPUT_MODE_STORAGE_KEY,
+    LED_REVERSE_STORAGE_KEY,
     WLED_IP_STORAGE_KEY,
     WLED_TRANSPORT_STORAGE_KEY,
     WLED_TRANSPORT_WARNING_ACCEPTED_STORAGE_KEY,
@@ -254,7 +258,6 @@ const RESETTABLE_PREFERENCE_KEYS = [
     TRAINER_AUTOSCROLL_STORAGE_KEY,
     TRAINER_KEYBOARD_STORAGE_KEY,
     SETTINGS_DEBUG_STORAGE_KEY,
-    SETTINGS_LED_SIM_STORAGE_KEY,
     VISUAL_PULSE_STORAGE_KEY,
     LOOP_COUNT_IN_STORAGE_KEY,
     METRONOME_VOL_STORAGE_KEY,
@@ -399,12 +402,21 @@ function normalizeMidiChannel(value, fallback = 1) {
     return Math.max(1, Math.min(16, Math.round(numericValue)));
 }
 
+function normalizeMidiInputChannel(value, fallback = 0) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return fallback;
+    if (numericValue <= 0) return 0;
+    return Math.max(1, Math.min(16, Math.round(numericValue)));
+}
+
 seedFirstRunDefaults();
 
+AppState.midiInChannel = normalizeMidiInputChannel(localStorage.getItem(MIDI_IN_CHANNEL_STORAGE_KEY), 0);
 AppState.midiOutChannel = normalizeMidiChannel(localStorage.getItem(MIDI_OUT_CHANNEL_STORAGE_KEY), 1);
 AppState.midiLightsChannel = normalizeMidiChannel(localStorage.getItem(MIDI_LIGHTS_CHANNEL_STORAGE_KEY), 1);
 
 AppState.midiLedLowVelocity = getStoredBool(MIDI_LED_LOW_VELOCITY_STORAGE_KEY, false);
+AppState.ledReverse = getStoredBool(LED_REVERSE_STORAGE_KEY, false);
 AppState.inputVelocityEnabled = true;
 AppState.liveLowLatencyMonitoringEnabled = true;
 setStoredBool(TRAINER_INPUT_VELOCITY_STORAGE_KEY, true);

@@ -397,7 +397,6 @@ function setLedCount(value, { save = true } = {}) {
 
     syncLedCountControl();
     updateLedKeyMapping();
-    LedEngine.ensureSimulator();
     WLEDController.clearLastSignature();
     LedEngine.renderOutputs();
 }
@@ -724,6 +723,7 @@ function syncWledTransportControls() {
     const runtimeNote = document.getElementById('wled-transport-runtime');
     const helperNote = document.getElementById('wled-helper-status');
     const ddpDebugCheckbox = document.getElementById('check-wled-ddp-debug');
+    const ddpDebugRow = document.getElementById('row-wled-ddp-debug');
 
     const selectedTransport = normalizeWledTransport(AppState.wledTransport);
     const activeTransport = normalizeWledTransport(AppState.wledActiveTransport || 'http-json');
@@ -734,6 +734,27 @@ function syncWledTransportControls() {
         ddpDebugCheckbox.checked = !!AppState.wledDdpDebugEnabled;
         ddpDebugCheckbox.disabled = selectedTransport !== 'ddp';
     }
+    if (ddpDebugRow) {
+        const showDdpDebug = AppState.ledOutputMode === 'wled' && selectedTransport === 'ddp';
+        ddpDebugRow.classList.toggle('hidden', !showDdpDebug);
+    }
+
+    const debugFieldset = document.getElementById('fs-display-debug');
+    const debugNoteCheckbox = document.getElementById('check-debug');
+
+    const staveFeedbackEnabled = AppState?.feedbackEnabled !== false;
+    const ddpActive = AppState.ledOutputMode === 'wled' && selectedTransport === 'ddp';
+
+    if (debugNoteCheckbox) {
+        const showNoteDebug = !!staveFeedbackEnabled;
+        debugNoteCheckbox.parentElement.classList.toggle('hidden', !showNoteDebug);
+    }
+
+    if (debugFieldset) {
+        const showDebugSection = (staveFeedbackEnabled || ddpActive);
+        debugFieldset.classList.toggle('hidden', !showDebugSection);
+    }
+
 
     if (transportHint) {
         transportHint.textContent = selectedTransport === 'ddp'
@@ -833,6 +854,8 @@ function confirmAndSetWledTransport(value) {
     return true;
 }
 
+window.syncSettingsDebugVisibility = syncWledTransportControls;
+
 function syncWledStatus() {
     const status = document.getElementById('wled-status');
     if (status) status.textContent = AppState.wledStatus || 'WLED idle.';
@@ -920,16 +943,26 @@ function refreshConnectionStatuses() {
 function syncLedOutputModeControls() {
     const modeSelect = document.getElementById('led-output-mode');
     const midiRow = document.getElementById('midi-lights-row');
-    const midiTestSettings = document.getElementById('midi-led-test-settings');
     const wledSettings = document.getElementById('wled-settings');
+    const ledCountRow = document.getElementById('led-count-row');
+    const brightnessSettings = document.getElementById('led-brightness-settings');
+    const calibrationSettings = document.getElementById('led-calibration-settings');
     const ipInput = document.getElementById('input-wled-ip');
+    const reverseCheckbox = document.getElementById('check-led-reverse');
 
     if (modeSelect) modeSelect.value = AppState.ledOutputMode;
     if (ipInput) ipInput.value = AppState.wledIp || '';
-    if (midiRow) midiRow.classList.toggle('hidden', AppState.ledOutputMode !== 'midi');
-    if (midiTestSettings) midiTestSettings.classList.toggle('hidden', AppState.ledOutputMode !== 'midi');
-    if (wledSettings) wledSettings.classList.toggle('hidden', AppState.ledOutputMode !== 'wled');
-    if (AppState.ledOutputMode !== 'wled') clearWledPermissionHelp();
+    if (reverseCheckbox) reverseCheckbox.checked = !!AppState.ledReverse;
+
+    const showMidiSettings = AppState.ledOutputMode === 'midi';
+    const showWledSettings = AppState.ledOutputMode === 'wled';
+
+    if (midiRow) midiRow.classList.toggle('hidden', !showMidiSettings);
+    if (wledSettings) wledSettings.classList.toggle('hidden', !showWledSettings);
+    if (ledCountRow) ledCountRow.classList.toggle('hidden', !showWledSettings);
+    if (brightnessSettings) brightnessSettings.classList.toggle('hidden', !showWledSettings);
+    if (calibrationSettings) calibrationSettings.classList.toggle('hidden', !showWledSettings);
+    if (!showWledSettings) clearWledPermissionHelp();
 
     if (window.MidiLedTestController && typeof window.MidiLedTestController.syncControls === 'function') {
         window.MidiLedTestController.syncControls();
@@ -1000,6 +1033,26 @@ function setLedOutputMode(value, { save = true } = {}) {
     renderVirtualKeyboard();
 }
 
+function setLedReverse(value, { save = true } = {}) {
+    AppState.ledReverse = !!value;
+    if (save) {
+        setStoredBool(LED_REVERSE_STORAGE_KEY, AppState.ledReverse);
+    }
+    updateLedKeyMapping();
+    WLEDController.clearLastSignature();
+    LedEngine.renderOutputs();
+}
+
+function buildChromaticTestNotes() {
+    const range = typeof getPlayerPlayableRange === 'function'
+        ? getPlayerPlayableRange()
+        : { minMidi: 21, maxMidi: 108 };
+    const notes = [];
+    for (let note = range.minMidi; note <= range.maxMidi; note++) notes.push(note);
+    for (let note = range.maxMidi - 1; note > range.minMidi; note--) notes.push(note);
+    return notes;
+}
+
 function setWledIp(value, { save = true } = {}) {
     AppState.wledIp = String(value || '').trim();
     if (save) localStorage.setItem(WLED_IP_STORAGE_KEY, AppState.wledIp);
@@ -1035,6 +1088,7 @@ function initLedOutputControls() {
     const modeSelect = document.getElementById('led-output-mode');
     const ipInput = document.getElementById('input-wled-ip');
     const transportSelect = document.getElementById('wled-transport');
+    const reverseCheckbox = document.getElementById('check-led-reverse');
     const ddpDebugCheckbox = document.getElementById('check-wled-ddp-debug');
     const testBtn = document.getElementById('btn-test-wled');
     const resendBtn = document.getElementById('btn-resend-wled');
@@ -1056,6 +1110,14 @@ function initLedOutputControls() {
             if (!changed) {
                 transportSelect.value = normalizeWledTransport(AppState.wledTransport);
             }
+        });
+    }
+
+    if (reverseCheckbox && !reverseCheckbox.dataset.boundLedReverse) {
+        reverseCheckbox.dataset.boundLedReverse = 'true';
+        reverseCheckbox.checked = !!AppState.ledReverse;
+        reverseCheckbox.addEventListener('change', (e) => {
+            setLedReverse(e.target.checked);
         });
     }
 
@@ -1145,7 +1207,8 @@ function getMidiKeyPosition01(midi) {
 
 function keyPosition01ToLedIndex(position01) {
     const clamped = Math.max(0, Math.min(1, position01));
-    return Math.round(clamped * Math.max(0, LedEngine.config.ledCount - 1));
+    const normalizedPosition = AppState.ledReverse ? (1 - clamped) : clamped;
+    return Math.round(normalizedPosition * Math.max(0, LedEngine.config.ledCount - 1));
 }
 
 function updateLedKeyMapping() {
@@ -1189,7 +1252,6 @@ function refreshPlayerRangeDependentState() {
         }
     });
     updateLedKeyMapping();
-    LedEngine.ensureSimulator();
     WLEDController.clearLastSignature();
     LedEngine.renderOutputs();
 }
@@ -1384,85 +1446,7 @@ const LedEngine = {
   },
 
   ensureSimulator() {
-    let panel = document.getElementById('led-simulator-panel');
-    if (!panel) {
-      panel = document.createElement('div');
-      panel.id = 'led-simulator-panel';
-      panel.className = 'hidden';
-      panel.style.marginTop = '10px';
-      panel.style.padding = '8px 10px';
-      panel.style.border = '1px solid #444';
-      panel.style.borderRadius = '8px';
-      panel.style.background = '#111';
-
-      const title = document.createElement('div');
-      title.id = 'led-simulator-title';
-      title.style.fontSize = '12px';
-      title.style.color = '#bbb';
-      title.style.marginBottom = '6px';
-      panel.appendChild(title);
-
-      const viewport = document.createElement('div');
-      viewport.id = 'led-simulator-viewport';
-      viewport.style.position = 'relative';
-      viewport.style.width = '100%';
-      viewport.style.height = '14px';
-      viewport.style.paddingBottom = '2px';
-      panel.appendChild(viewport);
-
-      const row = document.createElement('div');
-      row.id = 'led-simulator-row';
-      row.style.position = 'absolute';
-      row.style.left = '0';
-      row.style.top = '0';
-      row.style.height = '14px';
-      row.style.display = 'flex';
-      row.style.flexWrap = 'nowrap';
-      row.style.gap = '1px';
-      row.style.alignItems = 'center';
-      viewport.appendChild(row);
-
-      const host =
-        document.getElementById('led-simulator-host') ||
-        document.getElementById('virtual-keyboard-container') ||
-        document.getElementById('music-area') ||
-        document.getElementById('canvas-wrapper') ||
-        document.body;
-
-      if (host.id === 'led-simulator-host') {
-        host.appendChild(panel);
-      } else {
-        host.insertAdjacentElement('afterend', panel);
-      }
-    }
-
-    const title = document.getElementById('led-simulator-title');
-    if (title) {
-      title.textContent = `Virtual LED Strip (${this.config.ledCount} LEDs)`;
-    }
-
-    const row = document.getElementById('led-simulator-row');
-    if (!row) return;
-
-    if (row.children.length !== this.config.ledCount) {
-      row.innerHTML = '';
-      for (let i = 0; i < this.config.ledCount; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'led-sim-cell';
-        cell.dataset.led = String(i);
-        cell.title = `LED ${i + 1}`;
-        cell.style.height = '14px';
-        cell.style.background = '#222';
-        cell.style.border = '1px solid #2a2a2a';
-        cell.style.boxSizing = 'border-box';
-        cell.style.width = 'auto';
-        cell.style.flex = '1 1 0';
-        cell.style.minWidth = '0';
-        row.appendChild(cell);
-      }
-    }
-
-    this.applyPlayableRangeLayout();
+    return;
   },
 
   applyPlayableRangeLayout() {
@@ -1497,32 +1481,13 @@ const LedEngine = {
   },
 
   renderOutputs() {
-    this.renderSimulator();
-
     if (AppState.ledOutputMode === 'wled') {
       WLEDController.queueFrame(this.frame);
     }
   },
 
   renderSimulator() {
-    this.ensureSimulator();
-
-    const panel = document.getElementById('led-simulator-panel');
-    const row = document.getElementById('led-simulator-row');
-    if (!panel || !row) return;
-
-    this.applyPlayableRangeLayout();
-
-    panel.classList.toggle('hidden', !AppState.ledSimulatorVisible);
-    panel.style.display = AppState.ledSimulatorVisible ? '' : 'none';
-    if (!AppState.ledSimulatorVisible) return;
-
-    for (let i = 0; i < this.frame.length; i++) {
-      const cell = row.children[i];
-      if (!cell) continue;
-      const [r, g, b] = this.frame[i];
-      cell.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
-    }
+    return;
   }
 
 };
@@ -2128,22 +2093,18 @@ const WLEDController = {
             return;
         }
 
+        const notes = buildChromaticTestNotes();
         const ledCount = Math.max(0, Number(LedEngine.frame.length) || 0);
-        if (!ledCount) {
-            setWledStatus('No LEDs configured to test.');
+        if (!ledCount || !notes.length) {
+            setWledStatus('No playable LEDs configured to test.');
             return;
         }
-
-        const blockSize = Math.min(5, ledCount);
-        const maxStart = Math.max(0, ledCount - blockSize);
-        const positions = [];
-        for (let start = 0; start <= maxStart; start += 1) positions.push(start);
-        for (let start = Math.max(0, maxStart - 1); start >= 1; start -= 1) positions.push(start);
 
         const original = LedEngine.frame.map(rgb => [...rgb]);
         const originalSignature = this.frameSignature(original);
         const runToken = ++this.testPatternToken;
-        const targetStepMs = 35;
+        const stepMs = 45;
+        const statusEvery = 8;
         this.testPatternRunning = true;
         this.setTestButtonState(true);
 
@@ -2154,37 +2115,36 @@ const WLEDController = {
                 return;
             }
 
-            setWledStatus('Running WLED strip test…');
+            setWledStatus('Running WLED note test…');
 
-            for (let pass = 0; pass < 2; pass += 1) {
-                for (let index = 0; index < positions.length; index += 1) {
-                    const start = positions[index];
-                    if (!this.testPatternRunning || this.testPatternToken !== runToken) return;
+            for (let index = 0; index < notes.length; index += 1) {
+                const note = notes[index];
+                if (!this.testPatternRunning || this.testPatternToken !== runToken) return;
 
-                    const stepStartedAt = performance.now();
-                    const frame = Array.from({ length: ledCount }, (_, frameIndex) => {
-                        const isLit = frameIndex >= start && frameIndex < start + blockSize;
-                        return isLit ? '666666' : '000000';
-                    });
+                const ledIndex = LedEngine.keyToLed.get(note);
+                const frame = Array.from({ length: ledCount }, () => '000000');
+                if (Number.isInteger(ledIndex) && ledIndex >= 0 && ledIndex < ledCount) {
+                    frame[ledIndex] = '666666';
+                }
 
-                    await this.sendHexFrame(frame);
-                    this.lastFrameSignature = '';
-                    this.pendingFrameSignature = '';
-                    this.pendingHexFrame = null;
+                const stepStartedAt = performance.now();
+                await this.sendHexFrame(frame);
+                this.lastFrameSignature = '';
+                this.pendingFrameSignature = '';
+                this.pendingHexFrame = null;
 
-                    if (index === 0 || index === positions.length - 1 || index % 8 === 0) {
-                        this.markConnected(`WLED test: LEDs ${start + 1}-${Math.min(ledCount, start + blockSize)}.`);
-                    }
+                if (index === 0 || index === notes.length - 1 || index % statusEvery === 0) {
+                    this.markConnected(`WLED test note ${note} (${index + 1}/${notes.length}).`);
+                }
 
-                    const elapsedMs = performance.now() - stepStartedAt;
-                    const remainingDelayMs = Math.max(0, targetStepMs - elapsedMs);
-                    if (remainingDelayMs > 0) {
-                        await new Promise(resolve => setTimeout(resolve, remainingDelayMs));
-                    }
+                const totalElapsedMs = performance.now() - stepStartedAt;
+                const remainingDelayMs = Math.max(0, stepMs - totalElapsedMs);
+                if (remainingDelayMs > 0) {
+                    await new Promise(resolve => setTimeout(resolve, remainingDelayMs));
                 }
             }
 
-            setWledStatus('WLED strip test complete.');
+            setWledStatus('WLED note test complete.');
         } catch (err) {
             console.warn('WLED test error', err);
             setWledStatus('WLED test failed.');

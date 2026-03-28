@@ -13,18 +13,20 @@ const optionsOverlay = document.getElementById('options-overlay');
 const tempoPopup = document.getElementById('tempo-popup');
 const practicePopup = document.getElementById('practice-popup');
 const looperPopup = document.getElementById('looper-popup');
+const morePopup = document.getElementById('more-popup');
+const audioPopup = document.getElementById('audio-popup');
+const displayPopup = document.getElementById('display-popup');
 const transposePopup = document.getElementById('transpose-popup');
 const helpOverlay = document.getElementById('help-overlay');
-const popupPanels = [scoresPanel, optionsOverlay, tempoPopup, transposePopup, practicePopup, looperPopup, helpOverlay].filter(Boolean);
+const popupPanels = [scoresPanel, optionsOverlay, tempoPopup, practicePopup, looperPopup, morePopup, audioPopup, displayPopup, transposePopup, helpOverlay].filter(Boolean);
 const POPUP_ANIMATION_MS = 180;
 const panelButtonMap = new Map([
     [scoresPanel, document.getElementById('btn-scores')],
     [optionsOverlay, document.getElementById('btn-options')],
-    [helpOverlay, document.getElementById('btn-help')],
     [tempoPopup, document.getElementById('btn-tempo')],
-    [transposePopup, document.getElementById('btn-transpose')],
     [practicePopup, document.getElementById('btn-practice')],
-    [looperPopup, document.getElementById('btn-looper')]
+    [looperPopup, document.getElementById('btn-looper')],
+    [morePopup, document.getElementById('btn-more')]
 ].filter(([panel, button]) => panel && button));
 
 function syncToolbarButtonStates() {
@@ -112,14 +114,6 @@ document.getElementById('btn-options').addEventListener('click', (e) => {
     toggleToolbarPanel(optionsOverlay);
 });
 
-const btnHelp = document.getElementById('btn-help');
-if (btnHelp && helpOverlay) {
-    btnHelp.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleToolbarPanel(helpOverlay);
-    });
-}
-
 const btnHelpClose = document.getElementById('btn-help-close');
 if (btnHelpClose && helpOverlay) {
     btnHelpClose.addEventListener('click', () => closeToolbarPanel(helpOverlay));
@@ -139,13 +133,6 @@ if (btnTempo && tempoPopup) {
 }
 
 
-const btnTranspose = document.getElementById('btn-transpose');
-if (btnTranspose && transposePopup) {
-    btnTranspose.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleToolbarPanel(transposePopup);
-    });
-}
 
 const btnPractice = document.getElementById('btn-practice');
 if (btnPractice && practicePopup) {
@@ -163,6 +150,68 @@ if (btnLooper && looperPopup) {
     });
 }
 
+const btnMore = document.getElementById('btn-more');
+if (btnMore && morePopup) {
+    btnMore.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleToolbarPanel(morePopup);
+    });
+}
+
+function launchFromMore(targetPanel) {
+    closeToolbarPanel(morePopup, true);
+    if (!targetPanel) return;
+    showToolbarPanel(targetPanel);
+}
+
+const btnMoreTempo = document.getElementById('btn-more-tempo');
+if (btnMoreTempo && tempoPopup) {
+    btnMoreTempo.addEventListener('click', (e) => {
+        e.stopPropagation();
+        launchFromMore(tempoPopup);
+    });
+}
+
+const btnMoreLoop = document.getElementById('btn-more-loop');
+if (btnMoreLoop && looperPopup) {
+    btnMoreLoop.addEventListener('click', (e) => {
+        e.stopPropagation();
+        launchFromMore(looperPopup);
+    });
+}
+
+const btnMoreAudio = document.getElementById('btn-more-audio');
+if (btnMoreAudio && audioPopup) {
+    btnMoreAudio.addEventListener('click', (e) => {
+        e.stopPropagation();
+        launchFromMore(audioPopup);
+    });
+}
+
+const btnMoreDisplay = document.getElementById('btn-more-display');
+if (btnMoreDisplay && displayPopup) {
+    btnMoreDisplay.addEventListener('click', (e) => {
+        e.stopPropagation();
+        launchFromMore(displayPopup);
+    });
+}
+
+const btnMoreTranspose = document.getElementById('btn-more-transpose');
+if (btnMoreTranspose && transposePopup) {
+    btnMoreTranspose.addEventListener('click', (e) => {
+        e.stopPropagation();
+        launchFromMore(transposePopup);
+    });
+}
+
+const btnMoreHelp = document.getElementById('btn-more-help');
+if (btnMoreHelp && helpOverlay) {
+    btnMoreHelp.addEventListener('click', (e) => {
+        e.stopPropagation();
+        launchFromMore(helpOverlay);
+    });
+}
+
 function isAnyToolbarPanelOpen() {
     return popupPanels.some(panel => !panel.classList.contains('hidden'));
 }
@@ -176,6 +225,9 @@ document.addEventListener('click', (e) => {
         e.target.closest('#transpose-popup') ||
         e.target.closest('#practice-popup') ||
         e.target.closest('#looper-popup') ||
+        e.target.closest('#more-popup') ||
+        e.target.closest('#audio-popup') ||
+        e.target.closest('#display-popup') ||
         e.target.closest('#help-overlay') ||
         e.target.closest('#first-run-overlay') ||
         e.target.closest('#led-calibration-panel') ||

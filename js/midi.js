@@ -10,11 +10,20 @@
 let midiAccess = null;
 let activeMidiInput = null;
 
-function populateMidiChannelSelect(selectId, selectedValue = 1) {
+function populateMidiChannelSelect(selectId, selectedValue = 1, { includeAny = false } = {}) {
     const select = document.getElementById(selectId);
     if (!select) return;
-    const safeValue = normalizeMidiChannel(selectedValue, 1);
+    const safeValue = includeAny
+        ? normalizeMidiInputChannel(selectedValue, 0)
+        : normalizeMidiChannel(selectedValue, 1);
     select.innerHTML = '';
+    if (includeAny) {
+        const anyOption = document.createElement('option');
+        anyOption.value = '0';
+        anyOption.textContent = 'Any';
+        if (safeValue === 0) anyOption.selected = true;
+        select.appendChild(anyOption);
+    }
     for (let channel = 1; channel <= 16; channel++) {
         const option = document.createElement('option');
         option.value = String(channel);
@@ -24,10 +33,23 @@ function populateMidiChannelSelect(selectId, selectedValue = 1) {
     }
 }
 
+function syncMidiInputConfigVisibility() {
+    const midiInSelect = document.getElementById('midi-in');
+    const midiInConfig = document.getElementById('midi-in-config');
+    const midiInChannelRow = document.getElementById('midi-in-channel-row');
+    const midiInKeysRow = document.getElementById('midi-in-keys-row');
+    const playerRangeLabel = document.getElementById('player-piano-range-label');
+    if (!midiInSelect || !midiInConfig) return;
+    const hasMidiIn = midiInSelect.value && midiInSelect.value !== 'none';
+    midiInConfig.classList.toggle('hidden', !hasMidiIn);
+    if (midiInChannelRow) midiInChannelRow.classList.toggle('hidden', !hasMidiIn);
+    if (midiInKeysRow) midiInKeysRow.classList.toggle('hidden', !hasMidiIn);
+    if (playerRangeLabel) playerRangeLabel.classList.add('hidden');
+}
 
 function syncMidiOutChannelVisibility() {
     const midiOutSelect = document.getElementById('midi-out');
-    const channelRow = document.querySelector('.connection-channel-row');
+    const channelRow = document.getElementById('midi-out-channel-row');
     if (!channelRow || !midiOutSelect) return;
     const hasMidiOut = midiOutSelect.value && midiOutSelect.value !== 'none';
     channelRow.classList.toggle('hidden', !hasMidiOut);
@@ -39,6 +61,10 @@ function getSelectedMidiOutChannel() {
 
 function getSelectedMidiLightsChannel() {
     return normalizeMidiChannel(document.getElementById('midi-lights-channel')?.value, AppState.midiLightsChannel || 1);
+}
+
+function getSelectedMidiInChannel() {
+    return normalizeMidiInputChannel(document.getElementById('midi-in-channel')?.value, AppState.midiInChannel || 0);
 }
 
 function getSelectedMidiOutOutput() {
@@ -104,17 +130,20 @@ async function setupMIDI() {
         try {
             midiAccess = await navigator.requestMIDIAccess();
             if (typeof clearMidiPermissionHelp === 'function') clearMidiPermissionHelp();
+            populateMidiChannelSelect('midi-in-channel', AppState.midiInChannel || 0, { includeAny: true });
             populateMidiChannelSelect('midi-out-channel', AppState.midiOutChannel || 1);
             populateMidiChannelSelect('midi-lights-channel', AppState.midiLightsChannel || 1);
             populateMIDIDevices();
             refreshConnectionStatuses();
+            syncMidiInputConfigVisibility();
             syncMidiOutChannelVisibility();
             midiAccess.onstatechange = () => {
                 populateMIDIDevices();
                 refreshConnectionStatuses();
+                syncMidiInputConfigVisibility();
                 syncMidiOutChannelVisibility();
                 if (typeof syncTrainerRoutingUiState === 'function') syncTrainerRoutingUiState();
-            }; 
+            };
         } catch (err) {
             console.warn("MIDI Access Denied", err);
             if (typeof showMidiPermissionHelp === 'function') showMidiPermissionHelp(getMidiPermissionHelpText());
@@ -131,6 +160,7 @@ function populateMIDIDevices() {
     const savedOut = localStorage.getItem(MIDI_OUT_ID_STORAGE_KEY);
     const savedLights = localStorage.getItem(MIDI_LIGHTS_ID_STORAGE_KEY);
 
+    populateMidiChannelSelect('midi-in-channel', AppState.midiInChannel || 0, { includeAny: true });
     populateMidiChannelSelect('midi-out-channel', AppState.midiOutChannel || 1);
     populateMidiChannelSelect('midi-lights-channel', AppState.midiLightsChannel || 1);
 
@@ -140,6 +170,7 @@ function populateMIDIDevices() {
 
     if (!midiAccess) {
         updateConnectionStatuses();
+        syncMidiInputConfigVisibility();
         syncMidiOutChannelVisibility();
         return;
     }
@@ -176,6 +207,7 @@ function populateMIDIDevices() {
     }
 
     updateConnectionStatuses();
+    syncMidiInputConfigVisibility();
     syncMidiOutChannelVisibility();
     if (typeof syncTrainerRoutingUiState === 'function') syncTrainerRoutingUiState();
     if (window.MidiLedTestController && typeof window.MidiLedTestController.syncControls === 'function') {
@@ -204,6 +236,12 @@ document.getElementById('midi-in').addEventListener('change', (e) => {
                 return;
             }
 
+            const selectedChannel = getSelectedMidiInChannel();
+            const messageChannel = (status & 0x0F) + 1;
+            if (selectedChannel > 0 && messageChannel !== selectedChannel) {
+                return;
+            }
+
             const cmd = status & 0xF0;
             if (cmd === 0x90 && vel > 0) triggerVirtualKey(note, true, 'midi', vel);
             else if (cmd === 0x80 || (cmd === 0x90 && vel === 0)) triggerVirtualKey(note, false, 'midi', vel);
@@ -211,7 +249,15 @@ document.getElementById('midi-in').addEventListener('change', (e) => {
     } else {
         activeMidiInput = null;
     }
+    syncMidiInputConfigVisibility();
     updateConnectionStatuses();
+});
+
+document.getElementById('midi-in-channel').addEventListener('change', (e) => {
+    const nextChannel = normalizeMidiInputChannel(e.target.value, 0);
+    e.target.value = String(nextChannel);
+    AppState.midiInChannel = nextChannel;
+    localStorage.setItem(MIDI_IN_CHANNEL_STORAGE_KEY, String(nextChannel));
 });
 
 document.getElementById('midi-out').addEventListener('change', (e) => {
@@ -378,12 +424,17 @@ const MidiLedTestController = {
             return;
         }
 
-        const range = typeof getPlayerPlayableRange === 'function'
-            ? getPlayerPlayableRange()
-            : { minMidi: 21, maxMidi: 108 };
-        const notes = [];
-        for (let note = range.minMidi; note <= range.maxMidi; note++) notes.push(note);
-        for (let note = range.maxMidi - 1; note > range.minMidi; note--) notes.push(note);
+        const notes = typeof buildChromaticTestNotes === 'function'
+            ? buildChromaticTestNotes()
+            : (() => {
+                const fallback = [];
+                const range = typeof getPlayerPlayableRange === 'function'
+                    ? getPlayerPlayableRange()
+                    : { minMidi: 21, maxMidi: 108 };
+                for (let note = range.minMidi; note <= range.maxMidi; note++) fallback.push(note);
+                for (let note = range.maxMidi - 1; note > range.minMidi; note--) fallback.push(note);
+                return fallback;
+            })();
 
         if (!notes.length) {
             this.setStatus('No playable keys available for MIDI LED test.');

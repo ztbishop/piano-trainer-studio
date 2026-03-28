@@ -612,19 +612,18 @@ v1.0.7
 * Fixed first time library for web version
 
 v1.0.8
-Fix Zoom slider to show correct value on load. 
-Change default LED brightness from 40/10 to 25/1. 
-Fixed play/pause toggle on end-song
-Song auto resets upon loading
-Improved 'future' notes of virtual keyboard
-Synced looper slider with numeric inputs
-Improved slider options for ipad: larger thumb + larger touch area
-Fixed metronome latency
-Changing practice mode pauses song
-Improved wording on practice modes
-Removed 'Live Input Behavior' settings from trainer menu, defaulted code to use midi input velocity, and low-latency for live monitoring. 
+* Bug fixes
 
-
+v1.0.9
+* Overhauled top menu - more compatible with small tablets
+* Overhauled all menus - re-arranged for ease of use
+* Increased slider thumb sizes for touch screens
+* Upon song load, metronome speed resets to 100%
+* Darkened top menu bar background
+* Added reverse wled mode
+* Removed virtual LED strip debug
+* Hide debug menu when no options enabled that use it
+* Todo - overhaul Scores menu
 
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
 //----------------------------------------------------------------------------------------------------------//
@@ -632,6 +631,7 @@ VERSION CONTROL - you MUST update the version in version.json and trainer-state.
 
 version.json
   "version": 
+  "downloadUrl"
 
 trainer-state.js
 const APP_VERSION = 
