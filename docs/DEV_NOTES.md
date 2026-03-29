@@ -632,6 +632,13 @@ v1.1.0
 * Cleaned Scores menu
 * Clearned Starter Scores library
 
+v1.1.1
+* Menu tweaks (more Score menu cleanup)
+* Help / About edits
+* Updated readme
+* Fixed app version sync with JS files (should auto refresh if web version outdated). 
+
+
 
 
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
@@ -644,4 +651,7 @@ version.json
 
 trainer-state.js
 const APP_VERSION = 
+
+index.html
+const FALLBACK_ASSET_VERSION = '1.1.0';
 //----------------------------------------------------------------------------------------------------------//

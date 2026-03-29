@@ -2446,6 +2446,34 @@ fieldset {
   margin: 0;
 }
 
+.settings-doc-link {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(120, 136, 152, 0.34);
+  background: rgba(255,255,255,0.28);
+  color: #294055;
+  text-decoration: none;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.settings-doc-link:hover {
+  background: rgba(255,255,255,0.40);
+}
+.settings-doc-link:focus-visible {
+  outline: 2px solid rgba(98, 168, 255, 0.75);
+  outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  .settings-doc-link {
+    margin-left: 0;
+  }
+}
+
 
 #help-overlay {
     position: fixed;
@@ -4519,3 +4547,221 @@ input[type="range"] {
         transform: scale(0.985);
     }
 }
+
+
+
+
+
+/* --- Scores menu polish: compact top area without hurting touch usability --- */
+.scores-drawer-header {
+    padding: 0 !important;
+    min-height: 0 !important;
+}
+
+.scores-drawer-body {
+    gap: 8px !important;
+    padding: 6px 14px 12px !important;
+}
+
+.scores-section {
+    gap: 4px !important;
+}
+
+.scores-actions .scores-section-label {
+    display: none !important;
+}
+
+.scores-action-toolbar {
+    gap: 8px 14px !important;
+}
+
+.scores-action-group {
+    gap: 6px !important;
+}
+
+.scores-action-group button,
+.scores-action-toolbar > button,
+#btn-scores-open-file,
+#btn-scores-save-current,
+#btn-scores-export-library,
+#btn-scores-import-library {
+    min-height: 48px !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+}
+
+.scores-library > .scores-section-label {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+.scores-list-box {
+    padding-top: 6px !important;
+}
+
+.scores-split-pane-header {
+    margin-bottom: 4px !important;
+    padding-bottom: 4px !important;
+}
+
+.scores-library-toolbar {
+    padding: 0 0 6px !important;
+    min-height: 0 !important;
+}
+
+.scores-library-toolbar-info {
+    display: none !important;
+}
+
+
+
+
+
+
+.scores-split-scores .scores-library-toolbar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    width: 100% !important;
+    margin: 0 0 12px !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    flex: 0 0 auto !important;
+}
+
+.scores-split-scores .scores-library-toolbar-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    width: auto !important;
+    margin-left: auto !important;
+    gap: 8px !important;
+}
+
+.scores-split-scores .scores-library-toolbar-info {
+    display: none !important;
+}
+
+.scores-split-scores .scores-toolbar-button {
+    flex: 0 0 auto !important;
+}
+
+.scores-split-scores .scores-library-toolbar + .scores-item-button,
+.scores-split-scores .scores-library-toolbar + .scores-manage-row-button,
+.scores-split-scores .scores-library-toolbar + .scores-folder-empty {
+    margin-top: 0 !important;
+}
+
+
+/* --- FINAL Scores toolbar fix (no overlap, proper flow) --- */
+
+/* Ensure toolbar is in normal document flow */
+.scores-library-toolbar{
+    position: relative !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    margin-bottom: 14px !important; /* THIS is key spacing */
+    padding: 0 !important;
+    gap: 8px !important;
+    z-index: 1 !important;
+}
+
+/* Prevent wrapping weirdness */
+.scores-library-toolbar-actions{
+    display:flex !important;
+    gap:8px !important;
+    flex-wrap:nowrap !important;
+}
+
+/* Push score list down cleanly */
+.scores-item-button:first-of-type,
+.scores-manage-row-button:first-of-type{
+    margin-top: 0 !important;
+}
+
+/* Ensure list container respects spacing */
+.scores-split-list{
+    padding-top: 0 !important;
+}
+
+
+
+/* --- Scores menu symmetry / alignment pass --- */
+.scores-split-folders .scores-library-toolbar,
+.scores-split-scores .scores-library-toolbar {
+    min-height: 46px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.scores-split-folders .scores-library-toolbar {
+    justify-content: flex-start !important;
+    margin-top: 2px !important;
+    margin-bottom: 12px !important;
+    gap: 10px !important;
+}
+
+.scores-split-scores .scores-library-toolbar {
+    justify-content: flex-end !important;
+    margin-top: 0 !important;
+    margin-bottom: 12px !important;
+    gap: 10px !important;
+}
+
+.scores-split-folders .scores-library-toolbar-actions,
+.scores-split-scores .scores-library-toolbar-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    flex-wrap: nowrap !important;
+}
+
+.scores-split-folders .scores-toolbar-button,
+.scores-split-scores .scores-toolbar-button,
+.scores-split-folders .scores-library-toolbar button,
+.scores-split-scores .scores-library-toolbar button {
+    min-height: 44px !important;
+}
+
+.scores-split-scores .scores-library-toolbar {
+    padding-top: 2px !important;
+}
+
+.scores-split-folders .scores-library-toolbar {
+    padding-top: 2px !important;
+}
+
+
+/* --- FINAL micro polish (visual alignment + spacing balance) --- */
+
+/* Align left/right header rows perfectly */
+.scores-split-folders .scores-library-toolbar,
+.scores-split-scores .scores-library-toolbar {
+    min-height: 42px !important;
+    margin-bottom: 10px !important;
+}
+
+/* Slightly tighten right header spacing */
+.scores-split-scores .scores-library-toolbar {
+    margin-top: -2px !important;
+}
+
+/* Nudge left buttons down for symmetry */
+.scores-split-folders .scores-library-toolbar {
+    margin-top: 2px !important;
+}
+
+/* Reduce gap between header and first item */
+.scores-split-scores .scores-library-toolbar + * {
+    margin-top: 6px !important;
+}
+
+/* Slightly tighten folder list spacing */
+.scores-split-folders .scores-item-button {
+    margin-bottom: 8px !important;
+}
+

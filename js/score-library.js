@@ -370,3 +370,5 @@ function getScoreLibraryFolderLabel(folderId, folders) {
 
 
 window.ScoreLibrary = ScoreLibrary;
+
+

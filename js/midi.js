@@ -485,3 +485,5 @@ if (midiLedTestBtn && !midiLedTestBtn.dataset.boundMidiLedTest) {
 }
 
 MidiLedTestController.syncControls();
+
+

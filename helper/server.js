@@ -252,3 +252,38 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, HOST, () => {
   console.log(`Piano Trainer WLED helper listening on http://${HOST}:${PORT}`);
 });
+
+
+// Merge scores count + selected folder into one line (non-destructive)
+function updateScoresHeaderLine(){
+  try{
+    const countEl = document.querySelector('.scores-count, #scoresCount');
+    const folderEl = document.querySelector('.selected-folder, #selectedFolderLabel');
+    if(!countEl || !folderEl) return;
+
+    // create wrapper if not exists
+    let wrapper = countEl.parentElement.querySelector('.scores-header-line');
+    if(!wrapper){
+      wrapper = document.createElement('div');
+      wrapper.className = 'scores-header-line';
+      countEl.parentElement.insertBefore(wrapper, countEl);
+      wrapper.appendChild(countEl);
+      wrapper.appendChild(folderEl);
+    }
+
+    // ensure text clean
+    const folderName = folderEl.textContent.replace(/Selected folder:\s*/i,'').trim();
+    folderEl.textContent = folderName;
+
+    // add separator if missing
+    if(!wrapper.querySelector('.scores-separator')){
+      const sep = document.createElement('span');
+      sep.className='scores-separator';
+      sep.textContent='•';
+      wrapper.insertBefore(sep, folderEl);
+    }
+  }catch(e){}
+}
+
+// run once after load
+setTimeout(updateScoresHeaderLine, 0);

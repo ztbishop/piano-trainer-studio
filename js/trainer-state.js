@@ -6,7 +6,7 @@
 // ==========================================
 // STATE MANAGEMENT
 // ==========================================
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 const APP_REPO_SLUG = 'ztbishop/piano-trainer-studio';
 const UPDATE_MANIFEST_URL = 'https://ztbishop.github.io/piano-trainer-studio/version.json';
 const UPDATE_MANIFEST_URL_STORAGE_KEY = 'pt_updateManifestUrl';
@@ -421,3 +421,5 @@ AppState.inputVelocityEnabled = true;
 AppState.liveLowLatencyMonitoringEnabled = true;
 setStoredBool(TRAINER_INPUT_VELOCITY_STORAGE_KEY, true);
 setStoredBool(TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY, true);
+
+

@@ -425,8 +425,8 @@ function shouldShowScoreFileName(title, fileName) {
 
 function formatScorePaneSummary(folderId, folders, scoreCount) {
     const countLabel = `${scoreCount} score${scoreCount === 1 ? '' : 's'}`;
-    if (folderId === '__all__') return countLabel;
-    return `${getScoreLibraryFolderLabel(folderId, folders)} · ${countLabel}`;
+    const folderLabel = getScoreLibraryFolderLabel(folderId, folders);
+    return `${countLabel} • ${folderLabel}`;
 }
 
 function getScoreLibrarySelectionSet() {
@@ -483,7 +483,7 @@ function createScoresLibraryToolbar({ filteredScores = [], folders = [], activeF
     const selectedCount = selectedSet.size;
 
     if (!manageMode) {
-        info.textContent = `Selected folder: ${getScoreLibraryFolderLabel(activeFolderId, folders)}`;
+        info.textContent = '';
 
         const addFilesBtn = document.createElement('button');
         addFilesBtn.type = 'button';
@@ -1161,3 +1161,5 @@ window.ScoresUI = {
     closeScoresDrawer,
     updateScoresActionButtonsState
 };
+
+
