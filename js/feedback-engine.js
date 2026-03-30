@@ -863,7 +863,7 @@ function getCombinedTieLength(note) {
     return total || (note.Length?.RealValue ?? 0);
 }
 
-function buildExpectedNotesFromEntries(entries, currentMeasureIdx) {
+function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimestamp = null) {
     AppState.expectedNotes = [];
     AppState.visualNotesToStart = [];
     AppState.outOfRangeCurrentNotes = [];
@@ -912,8 +912,9 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx) {
                         const durationMs = noteDurationSeconds * 1000;
 
                         let visualDurationMs = durationMs * 0.85;
-                        if (n.NoteTie && n.NoteTie.StartNote === n) {
-                            visualDurationMs = durationMs * 1.05;
+                        let visualEndTimestamp = null;
+                        if (AppState.mode === 'wait' && Number.isFinite(currentTimestamp)) {
+                            visualEndTimestamp = currentTimestamp + (combinedLength * 0.85);
                         }
 
                         const staffIdx = sid - 1;
@@ -949,10 +950,16 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx) {
                                 midi,
                                 staffId: sid,
                                 durationMs: visualDurationMs,
+                                endTimestamp: visualEndTimestamp,
                                 mIdx: currentMeasureIdx
                             });
                         } else {
                             existingVisual.durationMs = Math.max(existingVisual.durationMs, visualDurationMs);
+                            if (Number.isFinite(visualEndTimestamp)) {
+                                existingVisual.endTimestamp = Number.isFinite(existingVisual.endTimestamp)
+                                    ? Math.max(existingVisual.endTimestamp, visualEndTimestamp)
+                                    : visualEndTimestamp;
+                            }
                         }
                     }
                 }

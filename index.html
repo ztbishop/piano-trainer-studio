@@ -9,7 +9,7 @@
     <title>Piano Trainer Studio</title>
     <script>
         (function () {
-            const FALLBACK_ASSET_VERSION = '1.1.1';
+            const FALLBACK_ASSET_VERSION = '1.1.2';
             const OVERRIDE_KEY = 'pt_assetVersionOverride';
             const VERSION_JSON_PATH = 'version.json';
             let assetVersion = FALLBACK_ASSET_VERSION;
@@ -130,14 +130,24 @@
             <div class="info-panel-header">
                 <div>
                     <div class="info-panel-kicker">Piano Trainer</div>
-                    <h2>Help / About</h2>
+                    <h2>Welcome / Quick Start</h2>
                 </div>
                 <button type="button" id="btn-help-close" class="info-panel-close" aria-label="Close help">✕</button>
             </div>
 
             <div class="info-panel-body">
                 <section class="info-panel-section">
-                    <p><strong>More in-depth help:</strong> <a href="https://ztbishop.github.io/piano-trainer-studio/README.html" target="_blank" rel="noopener noreferrer">Full Setup Guide / README</a></p>
+                    <p><strong>Advanced setup (LEDs, iPad, hardware):</strong> <a href="README.html" target="_blank" rel="noopener noreferrer">Full Setup Guide / README</a></p>
+                </section>
+
+                <section class="info-panel-section">
+                    <h3>Practice Modes</h3>
+                    <ul>
+                        <li><strong>Realtime</strong> — Play continuously at the set tempo.</li>
+                        <li><strong>Wait for Me</strong> — Waits for correct notes before continuing.</li>
+                        <li><strong>Follow Me</strong> — Waits for correct notes and can play the other hand in time.</li>
+                    </ul>
+                    <p><strong>Tip:</strong> Start with <em>Wait for Me</em> to learn notes, then try <em>Follow Me</em> to practice with timing.</p>
                 </section>
 
                 <section class="info-panel-section">
@@ -186,7 +196,7 @@
                             <div id="app-version-display" class="setting-note">Version: --</div>
                             <div id="update-status" class="setting-note">Update status: not checked yet.</div>
                         </div>
-                        <a class="settings-doc-link" href="https://ztbishop.github.io/piano-trainer-studio/README.html" target="_blank" rel="noopener noreferrer">📘 Help / Docs</a>
+                        <a class="settings-doc-link" href="README.html" target="_blank" rel="noopener noreferrer">📘 Full Setup Guide</a>
                     </div>
                 </div>
             </fieldset>
@@ -373,7 +383,7 @@
                 <button type="button" id="btn-more-audio">🎚 Audio / Routing</button>
                 <button type="button" id="btn-more-display">🖥 Display</button>
                 <button type="button" id="btn-more-transpose">↕ Transpose</button>
-                <button type="button" id="btn-more-help">ℹ Help</button>
+                <button type="button" id="btn-more-help">ℹ Help &amp; Guide</button>
             </div>
         </fieldset>
     </div>
@@ -560,6 +570,12 @@
                         <span class="practice-mode-title">Wait for Me</span>
                         <span class="practice-mode-desc">Waits for correct notes before continuing.</span>
                     </label>
+
+                    <label class="practice-mode-option">
+                        <input type="radio" name="practice-mode" id="mode-follow" value="follow">
+                        <span class="practice-mode-title">Follow Me</span>
+                        <span class="practice-mode-desc">Waits for correct notes and can play the other hand in time.</span>
+                    </label>
                 </div>
 
                 <div class="practice-divider"></div>
@@ -592,7 +608,7 @@
                 <div class="practice-feedback-list">
                     <label class="inline-row-flex"><input type="checkbox" id="check-feedback" checked> Show correct / incorrect notes (on Stave)</label>
                     <label class="inline-row-flex"><input type="checkbox" id="check-future-preview" checked> Highlight future notes (keyboard)</label>
-                    <label class="inline-row-flex"><input type="checkbox" id="check-correct-highlight"> Highlight correct notes (keyboard)</label>
+                    <label class="inline-row-flex"><input type="checkbox" id="check-correct-highlight"> Show correct-note feedback (keyboard)</label>
                 </div>
 
                 <div class="practice-divider"></div>

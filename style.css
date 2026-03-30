@@ -3491,8 +3491,10 @@ input[type="range"] {
 
 #options-overlay .update-check-row {
     margin-top: 0;
-    align-items: center;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 10px;
 }
 
 #options-overlay .update-check-meta {
@@ -3502,6 +3504,11 @@ input[type="range"] {
 
 #options-overlay .update-check-row button {
     white-space: nowrap;
+}
+
+#options-overlay .settings-doc-link {
+    margin-left: 0;
+    align-self: start;
 }
 
 #options-overlay .connection-inline-controls {
@@ -3518,6 +3525,7 @@ input[type="range"] {
 
 @media (max-width: 700px) {
   #options-overlay .update-check-row {
+    display: flex;
     align-items: flex-start;
     justify-content: flex-start;
   }

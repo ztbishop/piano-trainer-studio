@@ -1,8 +1,9 @@
 # 🎹 Piano Trainer Studio
 Practice piano with real-time MIDI feedback, scoring, and optional LED guidance.
 
-App: https://ztbishop.github.io/piano-trainer-studio/
-Github repositore: https://github.com/ztbishop/piano-trainer-studio
+App: [[https://ztbishop.github.io/piano-trainer-studio/](https://ztbishop.github.io/piano-trainer-studio/](https://ztbishop.github.io/piano-trainer-studio/](https://ztbishop.github.io/piano-trainer-studio/))
+
+GitHub repository: [[https://github.com/ztbishop/piano-trainer-studio](https://github.com/ztbishop/piano-trainer-studio](https://github.com/ztbishop/piano-trainer-studio](https://github.com/ztbishop/piano-trainer-studio))
 
 👉 New here?
 - Start with **Quick Start**
@@ -17,11 +18,17 @@ Github repositore: https://github.com/ztbishop/piano-trainer-studio
 - 🎼 Load and play **MusicXML / MXL** piano scores  
 - 🔄 Import **MIDI, MuseScore, and Guitar Pro files** (auto-converted to MusicXML)  
 - 🎹 Real-time **MIDI keyboard feedback**  
-- ⏱️ Wait Mode and Realtime Mode  
 - 💡 Optional **LED visualization (WLED or MIDI LED devices)**  
 - 🌐 Runs in your browser — no install required  
 - 📱 iPad/iPhone support via MIDIWeb  
+- ⏱️ Various Trainer Modes
 
+## Practice Modes
+- Realtime — Play continuously at the set tempo.
+- Wait for Me — Waits for correct notes before continuing.
+- Follow Me — Waits for correct notes and can play the other hand in time.
+  * Tip: Start with Wait for Me to learn notes, then try Follow Me to practice with timing.
+  
 ---
 
 ## ⚡ Quick Start (Desktop)
@@ -62,10 +69,10 @@ iOS browsers do not support MIDI.
 ### ✅ Solution: MIDIWeb
 
 1. Install **TestFlight**  
-   https://apps.apple.com/us/app/testflight/id899247664  
+   [TestFlight on the App Store](https://apps.apple.com/us/app/testflight/id899247664)  
 
 2. Install **MIDIWeb**  
-   https://midiweb.cc  
+   [[https://midiweb.cc](https://midiweb.cc](https://midiweb.cc](https://midiweb.cc))  
 
 3. Open MIDIWeb
 
@@ -214,20 +221,20 @@ Songs are stored in your browser (IndexedDB).
 
 ### Where can I find MusicXML songs? 
 
-- **Musetrainer**  https://musetrainer.github.io/library
+- **Musetrainer**  [https://musetrainer.github.io/library](https://musetrainer.github.io/library)
   - Public domain MusicXML Library (69 popular songs formatted for piano)
 
-- **Openscore**  https://fourscoreandmore.org/openscore/lieder/
+- **Openscore**  [https://fourscoreandmore.org/openscore/lieder/](https://fourscoreandmore.org/openscore/lieder/)
   - 19th-centurey classical art songs for voice and piano
 
-- **Musescore**  https://musescore.com/
+- **Musescore**  [https://musescore.com/](https://musescore.com/)
   - Large collection of music.  Use a FREE account.
   - Decline any promotional pop-ups or screens asking you to upgrade to MuseScore PRO or start a 7-day free trial. **You only need the basic, free account.**
   - When searching, filter for public domain & original to bypass paywalls.  Filter for Piano / Solo.
   - Under DOWNLOAD section, choose mxl / musicxml 
   - If you are prompted to pay, ensure you are logged in, and search for anything that is **NOT** 'official score'.  Some 'Pro' scores can be downloaded if logged into a free account. 
 
-- **Github** https://github.com/
+- **Github** [https://github.com/](https://github.com/)
 - Can be used to find musicxml (may find mixed results)
   - Search this within github with your song name:  extension:mxl OR extension:musicxml piano
   - Search this within google with your song name:  filetype:mxl OR filetype:musicxml "piano"

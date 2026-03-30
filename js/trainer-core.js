@@ -46,7 +46,7 @@ function applyPersistedTrainerAndSettingsPreferences() {
     AppState.feedbackEnabled = getStoredBool(TRAINER_FEEDBACK_STORAGE_KEY, true);
     AppState.futurePreviewEnabled = getStoredBool(TRAINER_FUTURE_PREVIEW_STORAGE_KEY, true);
     AppState.futurePreviewDepth = 1;
-    AppState.correctHighlightEnabled = getStoredBool(TRAINER_CORRECT_HIGHLIGHT_STORAGE_KEY, false);
+    AppState.correctHighlightEnabled = getStoredBool(TRAINER_CORRECT_HIGHLIGHT_STORAGE_KEY, true);
     AppState.practice.left = getStoredBool(TRAINER_PRACTICE_LH_STORAGE_KEY, true);
     AppState.practice.right = getStoredBool(TRAINER_PRACTICE_RH_STORAGE_KEY, true);
     AppState.audioEnabled.left = getStoredBool(TRAINER_AUDIO_LH_STORAGE_KEY, true);
@@ -69,8 +69,11 @@ function applyPersistedTrainerAndSettingsPreferences() {
 
     const realtimeRadio = document.getElementById('mode-realtime');
     const waitRadio = document.getElementById('mode-wait');
+    const followRadio = document.getElementById('mode-follow');
     if (AppState.mode === 'wait') {
         if (waitRadio) waitRadio.checked = true;
+    } else if (AppState.mode === 'follow') {
+        if (followRadio) followRadio.checked = true;
     } else {
         if (realtimeRadio) realtimeRadio.checked = true;
     }
@@ -173,9 +176,9 @@ function restoreDefaultPreferences({ reloadDevices = true } = {}) {
     const futurePreviewCheckbox = document.getElementById('check-future-preview');
     if (futurePreviewCheckbox) futurePreviewCheckbox.checked = true;
 
-    AppState.correctHighlightEnabled = false;
+    AppState.correctHighlightEnabled = true;
     const correctHighlightCheckbox = document.getElementById('check-correct-highlight');
-    if (correctHighlightCheckbox) correctHighlightCheckbox.checked = false;
+    if (correctHighlightCheckbox) correctHighlightCheckbox.checked = true;
 
     AppState.futurePreviewDepth = 1;
 
@@ -970,7 +973,7 @@ function syncHandAssignmentFromControls({ refreshCurrentFrame = false } = {}) {
     const currentTimestamp = osmd.cursor.Iterator.currentTimeStamp?.RealValue ?? null;
 
     if (entries.length > 0 && currentMeasureIdx != null) {
-        buildExpectedNotesFromEntries(entries, currentMeasureIdx);
+        buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimestamp);
         renderVirtualKeyboard(entries, currentMeasureIdx, currentTimestamp);
     } else {
         AppState.expectedNotes = [];
@@ -1427,6 +1430,21 @@ function applyInlineKeyVisual(el, state) {
     el.style.transform = '';
 }
 
+function findSatisfiedOrSustainedMatchForMidi(midi) {
+    const alreadyHit = AppState.expectedNotes.find(n => n.midi === midi && n.hit);
+    if (alreadyHit) {
+        return { midi, staffId: alreadyHit.staffId, mIdx: alreadyHit.mIdx, source: 'already-hit' };
+    }
+
+    const sustained = AppState.sustainedVisuals.find(n => n.midi === midi)
+        || AppState.visualNotesToStart.find(n => n.midi === midi);
+    if (sustained) {
+        return { midi, staffId: sustained.staffId, mIdx: sustained.mIdx ?? null, source: 'sustained-visual' };
+    }
+
+    return null;
+}
+
 function renderVirtualKeyboard(currentEntries = null, currentMeasureIdx = null, currentTimestamp = null) {
     const desiredStates = new Map();
     const previewStateMap = new Map();
@@ -1451,6 +1469,12 @@ function renderVirtualKeyboard(currentEntries = null, currentMeasureIdx = null, 
         }
 
         return;
+    }
+
+    if ((AppState.mode === 'wait' || AppState.mode === 'follow') && Number.isFinite(currentTimestamp)) {
+        AppState.sustainedVisuals = AppState.sustainedVisuals.filter(n => {
+            return !Number.isFinite(n.endTimestamp) || currentTimestamp < n.endTimestamp;
+        });
     }
 
     AppState.sustainedVisuals.forEach(n => {
@@ -1512,10 +1536,21 @@ function renderVirtualKeyboard(currentEntries = null, currentMeasureIdx = null, 
         } else if (previewState === 'future1-l' || previewState === 'future1-r') {
             desiredStates.set(midi, previewState);
         } else if (AppState.heldCorrectNotes.has(midi)) {
-            if (AppState.correctHighlightEnabled) {
-                const staffId = AppState.heldCorrectNotes.get(midi);
-                desiredStates.set(midi, getAssignedHandRoleForStaff(staffId) === 'left' ? 'pressed-l' : 'pressed-r');
+            const hasActiveSustainForMidi = AppState.sustainedVisuals.some(v => v.midi === midi)
+                || AppState.visualNotesToStart.some(v => v.midi === midi)
+                || AppState.expectedNotes.some(n => n.midi === midi);
+
+            if (hasActiveSustainForMidi) {
+                if (AppState.correctHighlightEnabled) {
+                    const staffId = AppState.heldCorrectNotes.get(midi);
+                    desiredStates.set(midi, getAssignedHandRoleForStaff(staffId) === 'left' ? 'pressed-l' : 'pressed-r');
+                } else {
+                    desiredStates.delete(midi);
+                }
             } else {
+                // Ignore keys that remain physically held after their musical/visual
+                // lifespan has ended. They should not stay amber, but they also
+                // should not fall through to wrong/red while still held.
                 desiredStates.delete(midi);
             }
         } else {
@@ -1566,19 +1601,21 @@ function startVisualSustains() {
     AppState.visualNotesToStart = [];
 
     const startOneVisual = (n) => {
-        const vis = { midi: n.midi, staffId: n.staffId, mIdx: n.mIdx };
+        const vis = { midi: n.midi, staffId: n.staffId, mIdx: n.mIdx, endTimestamp: n.endTimestamp };
         AppState.sustainedVisuals.push(vis);
         renderVirtualKeyboard();
 
-        const tId = setTimeout(() => {
-            const idx = AppState.sustainedVisuals.indexOf(vis);
-            if (idx > -1) {
-                AppState.sustainedVisuals.splice(idx, 1);
-                renderVirtualKeyboard();
-            }
-        }, n.durationMs);
+        if (!((AppState.mode === 'wait' || AppState.mode === 'follow') && Number.isFinite(n.endTimestamp))) {
+            const tId = setTimeout(() => {
+                const idx = AppState.sustainedVisuals.indexOf(vis);
+                if (idx > -1) {
+                    AppState.sustainedVisuals.splice(idx, 1);
+                    renderVirtualKeyboard();
+                }
+            }, n.durationMs);
 
-        AppState.activeTimeouts.push(tId);
+            AppState.activeTimeouts.push(tId);
+        }
     };
 
     pendingVisuals.forEach(n => {
@@ -1627,6 +1664,7 @@ function clearVisuals() {
     AppState.preExpectedHeldNotes.clear();
     AppState.lastLedPreviewEvents = [];
     AppState.ledPreviewTraversalIndex = -1;
+    AppState.followAdvanceInfo = null;
     wipeHardwareLEDs(); 
     renderVirtualKeyboard();
 }
@@ -1917,8 +1955,10 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
         
         if (AppState.isPlaying) {
             const expectedMatch = findExpectedMatchForMidi(midi);
+            const sustainMatch = !expectedMatch ? findSatisfiedOrSustainedMatchForMidi(midi) : null;
             const isCorrect = !!expectedMatch;
-            const targetStaffId = expectedMatch ? expectedMatch.staffId : null;
+            const isAcceptedRepeat = !expectedMatch && !!sustainMatch;
+            const targetStaffId = expectedMatch ? expectedMatch.staffId : (sustainMatch ? sustainMatch.staffId : null);
             
             if (AppState.practice.left || AppState.practice.right) {
                 const forceMIdx = expectedMatch ? expectedMatch.mIdx : null;
@@ -1927,8 +1967,15 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
                 debugLogEvent('KEY_PRESS_MATCH_RESULT', {
                     midi,
                     isCorrect,
+                    isAcceptedRepeat,
                     targetStaffId,
                     forceMIdx,
+                    sustainMatch: sustainMatch ? {
+                        midi: sustainMatch.midi,
+                        staffId: sustainMatch.staffId,
+                        mIdx: sustainMatch.mIdx,
+                        source: sustainMatch.source
+                    } : null,
                     anchor: anchor ? { x: anchor.x, y: anchor.y } : null,
                     expectedMatch: expectedMatch ? {
                         midi: expectedMatch.midi,
@@ -1938,20 +1985,23 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
                     } : null
                 });
 
-                drawFeedbackNote(midi, isCorrect, targetStaffId, forceMIdx, anchor);
-
                 if (isCorrect) {
+                    drawFeedbackNote(midi, true, targetStaffId, forceMIdx, anchor);
                     AppState.score.correct++;
                     AppState.heldCorrectNotes.set(midi, targetStaffId);
+                    updateScoreDisplay();
+                } else if (isAcceptedRepeat) {
+                    AppState.heldCorrectNotes.set(midi, targetStaffId);
                 } else {
+                    drawFeedbackNote(midi, false, targetStaffId, forceMIdx, anchor);
                     AppState.score.wrong++;
+                    updateScoreDisplay();
                 }
-                updateScoreDisplay();
             }
 
             if (isCorrect) {
                 expectedMatch.hit = true;
-                if (AppState.mode === 'wait') {
+                if (AppState.mode === 'wait' || AppState.mode === 'follow') {
                     checkWaitModeAdvance();
                 }
             }
@@ -1982,7 +2032,7 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
 // ===== Trainer mode flow =====
 
 function checkWaitModeAdvance() {
-    if (!AppState.isPlaying || AppState.mode !== 'wait' || !AppState.isAudioBusy) return;
+    if (!AppState.isPlaying || (AppState.mode !== 'wait' && AppState.mode !== 'follow') || !AppState.isAudioBusy) return;
 
     if (AppState.expectedNotes.length === 0) return; 
 
@@ -1996,14 +2046,32 @@ function checkWaitModeAdvance() {
         });
         AppState.pendingAudio = []; 
 
-        AppState.visualNotesToStart = AppState.visualNotesToStart.filter(n => {
-            const handRole = getAssignedHandRoleForStaff(n.staffId);
-            const isPracticingThisHand = (handRole === 'right' && AppState.practice.right) || 
-                                         (handRole === 'left' && AppState.practice.left);
-            return !isPracticingThisHand;
-        });
-
+        // Keep practicing-hand sustain visuals active in wait/follow modes so notes that
+        // legitimately ring across later beats remain visible until their visual
+        // duration ends. We only clear stale held-correct states when a note is no
+        // longer expected or visually sustained.
         startVisualSustains();
+
+        const followInfo = AppState.followAdvanceInfo || null;
+        const shouldFollow = AppState.mode === 'follow' && followInfo && Number.isFinite(followInfo.waitSeconds);
+        if (shouldFollow) {
+            scheduleMetronomeForPlaybackWindow(
+                Tone.now(),
+                followInfo.currentMeasureIdx,
+                followInfo.currentTimestamp,
+                followInfo.waitSeconds,
+                followInfo.beatsToWait
+            );
+            const delayMs = Math.max(0, Math.round(followInfo.waitSeconds * 1000));
+            setTimeout(() => {
+                if (AppState.isPlaying && AppState.mode === 'follow') {
+                    osmd.cursor.update(); 
+                    handleAutoScroll();
+                    playbackLoop();
+                }
+            }, delayMs);
+            return;
+        }
 
         setTimeout(() => {
             if (AppState.isPlaying && AppState.mode === 'wait') {
@@ -2021,6 +2089,7 @@ function checkWaitModeAdvance() {
 // ==========================================
 function applyModeSettings() {
     const isWait = AppState.mode === 'wait';
+    const isFollow = AppState.mode === 'follow';
 
     const lhAudioToggle = document.getElementById('enable-staff-lh');
     const rhAudioToggle = document.getElementById('enable-staff-rh');
@@ -2041,10 +2110,10 @@ function applyModeSettings() {
         AppState.midiOutEnabled.left = false;
         AppState.midiOutEnabled.right = false;
     } else {
-        lhAudioToggle.checked = true;
-        rhAudioToggle.checked = true;
-        AppState.audioEnabled.left = true;
-        AppState.audioEnabled.right = true;
+        lhAudioToggle.checked = getStoredBool(TRAINER_AUDIO_LH_STORAGE_KEY, true);
+        rhAudioToggle.checked = getStoredBool(TRAINER_AUDIO_RH_STORAGE_KEY, true);
+        AppState.audioEnabled.left = lhAudioToggle.checked;
+        AppState.audioEnabled.right = rhAudioToggle.checked;
         if (midiOutLhToggle) midiOutLhToggle.checked = getStoredBool(TRAINER_MIDIOUT_LH_STORAGE_KEY, false);
         if (midiOutRhToggle) midiOutRhToggle.checked = getStoredBool(TRAINER_MIDIOUT_RH_STORAGE_KEY, false);
         AppState.midiOutEnabled.left = getStoredBool(TRAINER_MIDIOUT_LH_STORAGE_KEY, false);
@@ -2358,6 +2427,7 @@ document.getElementById('btn-reset').onclick = () => {
     
     GeometryEngine.clearSvgFeedback(); 
     AppState.pendingAudio = []; 
+    AppState.followAdvanceInfo = null;
     AppState.score.correct = 0;
     AppState.score.wrong = 0;
     updateScoreDisplay();
@@ -2432,6 +2502,26 @@ zoomInput.addEventListener('change', (e) => applyZoom(e.target.value));
 const speedSlider = document.getElementById('slider-speed');
 const speedInput = document.getElementById('val-speed');
 const bpmInput = document.getElementById('val-bpm');
+
+function syncTempoMetronomeDependentUi() {
+    const metronomeEnabled = !!document.getElementById('check-metronome')?.checked;
+    const metroVolumeLabel = document.getElementById('tempo-metro-volume-label');
+    const metroControls = [
+        document.getElementById('slider-metro-vol'),
+        document.getElementById('val-metro-vol'),
+        document.getElementById('check-accented-downbeat'),
+        document.getElementById('check-visual-pulse')
+    ];
+
+    if (metroVolumeLabel) {
+        metroVolumeLabel.setAttribute('aria-disabled', metronomeEnabled ? 'false' : 'true');
+    }
+
+    for (const control of metroControls) {
+        if (!control) continue;
+        control.disabled = !metronomeEnabled;
+    }
+}
 
 function syncTempoPreviewFromPercent(value) {
     const baseBpm = AppState.baseBpm || 120;
@@ -2668,6 +2758,8 @@ if (metronomeCheckbox) {
     });
 }
 
+syncTempoMetronomeDependentUi();
+
 function syncLooper(source, changedId) {
     let minVal = parseInt(loopMinInput.value, 10);
     let maxVal = parseInt(loopMaxInput.value, 10);
@@ -2834,7 +2926,7 @@ function playbackLoop() {
         updateTempo('percent', AppState.speedPercent * 100); 
     }
 
-    buildExpectedNotesFromEntries(entries, currentMeasureIdx);
+    buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimestamp);
 
     renderVirtualKeyboard(entries, currentMeasureIdx, currentTimestamp);
 
@@ -2867,7 +2959,7 @@ function playbackLoop() {
                         const noteDurationSeconds = (combinedLength * 4) * (60 / (AppState.baseBpm * AppState.speedPercent));
                         const durationMs = (noteDurationSeconds * 1000) * 0.9;
                         
-                        if (AppState.mode === 'wait' && AppState.expectedNotes.length > 0 && !isPracticingThisHand) {
+                        if ((AppState.mode === 'wait' || AppState.mode === 'follow') && AppState.expectedNotes.length > 0 && !isPracticingThisHand) {
                             AppState.pendingAudio.push({ midi: m, durationMs: durationMs, velocity: 100, toLocalAudio: routeToLocalAudio, toMidiOut: routeToMidiOut });
                         } else {
                             schedulePlaybackForDestinations(m, durationMs, 100, { toLocalAudio: routeToLocalAudio, toMidiOut: routeToMidiOut });
@@ -2903,15 +2995,21 @@ function playbackLoop() {
 
     const currentRunningBpm = AppState.baseBpm * AppState.speedPercent;
     const waitSeconds = beatsToWait * (60 / currentRunningBpm);
-    const playbackWindowStartSec = AppState.mode === 'wait' ? Tone.now() : AppState.anchorTime;
+    const playbackWindowStartSec = (AppState.mode === 'wait' || AppState.mode === 'follow') ? Tone.now() : AppState.anchorTime;
 
-    scheduleMetronomeForPlaybackWindow(
-        playbackWindowStartSec,
-        currentMeasureIdx,
-        currentTimestamp,
-        waitSeconds,
-        beatsToWait
-    );
+    const shouldDeferFollowScheduling = AppState.mode === 'follow' && AppState.expectedNotes.length > 0;
+    if (!shouldDeferFollowScheduling) {
+        scheduleMetronomeForPlaybackWindow(
+            playbackWindowStartSec,
+            currentMeasureIdx,
+            currentTimestamp,
+            waitSeconds,
+            beatsToWait
+        );
+    } else {
+        clearScheduledMetronomeEvents();
+        clearTempoVisualPulse();
+    }
 
     let timeToWaitMs = waitSeconds * 1000;
     
@@ -2958,7 +3056,7 @@ function playbackLoop() {
         return; 
     }
 
-    if (AppState.mode === 'wait') {
+    if (AppState.mode === 'wait' || AppState.mode === 'follow') {
         AppState.anchorTime = Tone.now() + waitSeconds;
     } else {
         AppState.anchorTime += waitSeconds;
@@ -2968,26 +3066,42 @@ function playbackLoop() {
     
     if (timeToWaitMs < 0) {
         timeToWaitMs = 0; 
-        if (AppState.mode === 'wait') {
+        if (AppState.mode === 'wait' || AppState.mode === 'follow') {
             AppState.anchorTime = Tone.now(); 
         }
     }
 
-    if (AppState.mode === 'wait') {
+    if (AppState.mode === 'wait' || AppState.mode === 'follow') {
         AppState.isAudioBusy = true;
+        AppState.followAdvanceInfo = AppState.mode === 'follow' ? {
+            currentMeasureIdx,
+            currentTimestamp,
+            waitSeconds,
+            beatsToWait
+        } : null;
         
         if (AppState.expectedNotes.length > 0) {
             // Engine waits for user input
         } else {
             startVisualSustains();
+            const advanceDelayMs = AppState.mode === 'follow' ? Math.max(0, timeToWaitMs) : 10;
+            if (AppState.mode === 'follow') {
+                scheduleMetronomeForPlaybackWindow(
+                    playbackWindowStartSec,
+                    currentMeasureIdx,
+                    currentTimestamp,
+                    waitSeconds,
+                    beatsToWait
+                );
+            }
             setTimeout(() => {
-                if (AppState.isPlaying) {
+                if (AppState.isPlaying && (AppState.mode === 'wait' || AppState.mode === 'follow')) {
                     processMissedNotes();
                     osmd.cursor.update(); 
                     handleAutoScroll();
                     playbackLoop();
                 }
-            }, 10); 
+            }, advanceDelayMs); 
         }
     } else {
         startVisualSustains(); 

@@ -2,60 +2,36 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Piano Trainer - Full Setup Guide</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Piano Trainer Studio – Setup Guide</title>
 
-  <!-- Markdown parser -->
+  <!-- Markdown renderer -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
   <style>
     body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       margin: 0;
-      padding: 40px;
-      background: #111;
-      color: #eee;
-      line-height: 1.6;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: #eef3f9;
+      color: #243241;
     }
-
-    .container {
-      max-width: 900px;
-      margin: auto;
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 18px 48px;
     }
-
-    h1, h2, h3 {
-      color: #fff;
-      margin-top: 1.5em;
+    .panel {
+      background: rgba(255,255,255,0.9);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 18px 40px rgba(28,42,56,0.12);
     }
-
-    code {
-      background: #222;
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-
-    pre {
-      background: #222;
-      padding: 12px;
-      overflow-x: auto;
-      border-radius: 6px;
-    }
-
-    a {
-      color: #4da3ff;
-    }
-
-    hr {
-      border: none;
-      border-top: 1px solid #333;
-      margin: 30px 0;
-    }
+    a { color: #2d8fd5; }
   </style>
 </head>
-
 <body>
-  <div class="container" id="content">
-    Loading guide...
+  <div class="wrap">
+    <div class="panel" id="content">Loading...</div>
   </div>
 
   <script>
@@ -65,8 +41,7 @@
         document.getElementById('content').innerHTML = marked.parse(md);
       })
       .catch(err => {
-        document.getElementById('content').innerHTML =
-          '<p style="color:red;">Failed to load README.md</p>';
+        document.getElementById('content').innerText = 'Failed to load README.md';
         console.error(err);
       });
   </script>

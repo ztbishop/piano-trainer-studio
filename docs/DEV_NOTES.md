@@ -634,9 +634,26 @@ v1.1.0
 
 v1.1.1
 * Menu tweaks (more Score menu cleanup)
-* Help / About edits
+* Welcome / Quick Start edits
 * Updated readme
 * Fixed app version sync with JS files (should auto refresh if web version outdated). 
+
+v1.1.2
+* Made readme a relative link
+* adjusted readme menus (general vs full guide)
+* In wait mode, wrong red feedback for the current cursor block now shows only while the wrong key is held
+* When the cursor advances, those temporary wrong red markers are committed back onto the score
+* Re-pressing a note that was already correctly hit in the current wait-mode chord/block no longer marks it red or increments wrong score
+*WLED / Virtual Keyboard color & light behavior improvements: 
+-fixes the expected-over-correct-held carryover case when future notes are off
+-keeps the held correct → expected on release behavior consistent for WLED and virtual keys
+-when the cursor advances, any still-held note that was only showing correct/amber from the previous block now turns off
+-if that same pitch is still expected in the new block, it continues to behave as expected guidance
+-the virtual keyboard now matches the same rule
+* Improved button sizes of LED calibration tool
+* LED calibrtion tool allows to HOLD the left/right arrows for quicker calibration. 
+* Improved LED and Virtual Keyboard rendering behaviors to prevent sensory overload. Highlights turn off after note's value, regardless if player holds the key afterward.  
+* Added new practice mode: "Follow Me" - hybrid between real-time and wait modes.  Player cannot RUSH past the set tempo without penalty (suggest using metronome). Good for 'wait' behavior while allowing the app to playback the other hand and promote tempo awareness. 
 
 
 

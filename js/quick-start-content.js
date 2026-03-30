@@ -1,5 +1,5 @@
 // quick-start-content.js
-// Editable Help / About Quick Start content.
+// Editable Welcome / Quick Start content.
 // Keep this content-only so it is easy to update without touching index.html.
 
 window.PT_QUICK_START_HTML = `
