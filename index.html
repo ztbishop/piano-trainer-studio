@@ -9,35 +9,52 @@
     <title>Piano Trainer Studio</title>
     <script>
         (function () {
-            const FALLBACK_ASSET_VERSION = '1.1.1';
-            const OVERRIDE_KEY = 'pt_assetVersionOverride';
+            const DEFAULT_ASSET_VERSION = '0.0.0';
             const VERSION_JSON_PATH = 'version.json';
-            let assetVersion = FALLBACK_ASSET_VERSION;
+            const VERSION_CACHE_KEY = 'pt_lastKnownVersion';
+            const OVERRIDE_KEY = 'pt_assetVersionOverride';
+            let assetVersion = DEFAULT_ASSET_VERSION;
+
+            try {
+                const storedKnownVersion = String(localStorage.getItem(VERSION_CACHE_KEY) || '').trim();
+                if (storedKnownVersion) assetVersion = storedKnownVersion;
+            } catch (_) {}
 
             try {
                 const url = new URL(window.location.href);
                 const requestedVersion = String(url.searchParams.get('appv') || '').trim();
-                const storedVersion = String(localStorage.getItem(OVERRIDE_KEY) || '').trim();
-                assetVersion = requestedVersion || storedVersion || assetVersion;
+                const storedOverride = String(localStorage.getItem(OVERRIDE_KEY) || '').trim();
+                assetVersion = requestedVersion || storedOverride || assetVersion;
             } catch (_) {}
 
             try {
                 const request = new XMLHttpRequest();
-                request.open('GET', VERSION_JSON_PATH, false);
-                request.setRequestHeader('Cache-Control', 'no-cache');
+                request.open('GET', VERSION_JSON_PATH + '?t=' + Date.now(), false);
+                request.setRequestHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                request.setRequestHeader('Pragma', 'no-cache');
                 request.send(null);
 
                 if (request.status >= 200 && request.status < 300) {
                     const payload = JSON.parse(request.responseText || '{}');
                     const jsonVersion = String(payload.version || '').trim();
-                    const hasOverride = assetVersion && assetVersion !== FALLBACK_ASSET_VERSION;
-                    if (jsonVersion && !hasOverride) {
-                        assetVersion = jsonVersion;
+                    const hasOverride = (() => {
+                        try {
+                            const url = new URL(window.location.href);
+                            return !!String(url.searchParams.get('appv') || '').trim() || !!String(localStorage.getItem(OVERRIDE_KEY) || '').trim();
+                        } catch (_) {
+                            return !!String(localStorage.getItem(OVERRIDE_KEY) || '').trim();
+                        }
+                    })();
+                    if (jsonVersion) {
+                        try { localStorage.setItem(VERSION_CACHE_KEY, jsonVersion); } catch (_) {}
+                        window.__PT_MANIFEST_VERSION__ = jsonVersion;
+                        if (!hasOverride) assetVersion = jsonVersion;
                     }
                 }
             } catch (_) {}
 
             window.__PT_ASSET_VERSION__ = assetVersion;
+            window.__PT_APP_VERSION__ = window.__PT_MANIFEST_VERSION__ || assetVersion || DEFAULT_ASSET_VERSION;
 
             function writeStyle(href) {
                 document.write('<link rel="stylesheet" href="' + href + '?v=' + encodeURIComponent(assetVersion) + '">');

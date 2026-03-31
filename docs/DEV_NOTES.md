@@ -655,23 +655,23 @@ v1.1.2
 * Improved LED and Virtual Keyboard rendering behaviors to prevent sensory overload. Highlights turn off after note's value, regardless if player holds the key afterward.  
 * Added new practice mode: "Follow Me" - hybrid between real-time and wait modes.  Player cannot RUSH past the set tempo without penalty (suggest using metronome). Good for 'wait' behavior while allowing the app to playback the other hand and promote tempo awareness. 
 
-v1.1.3
+v1.1.4
 * Fixed MIDI OUT routing for L/R staff playback.
 * Improved 'Follow me' and "real time' scorring to allow for some 'early' playing grace. - this makes the scoring MUCH easier to use. 
-
-
+* Improved auto updating (online version should flush oudated cache) 
+* Updated OSMD from 1.8.8 to 1.9.7
 
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
 //----------------------------------------------------------------------------------------------------------//
 VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!
+update version.json → "version": "x.y.z"
 
 version.json
   "version": 
-  "downloadUrl"
+  "downloadUrl
+"
 
-trainer-state.js
-const APP_VERSION = 
-
-index.html
-const FALLBACK_ASSET_VERSION = '1.1.0';
+version.json
+index.html → FALLBACK_ASSET_VERSION
+js/trainer-state.js → APP_VERSION
 //----------------------------------------------------------------------------------------------------------//
