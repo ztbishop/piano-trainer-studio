@@ -971,6 +971,10 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
     AppState.visualNotesToStart = Array.from(mergedVisuals.values());
     AppState.outOfRangeCurrentNotes = Array.from(mergedOutOfRange.values());
 
+    if (typeof window.applyPendingEarlyGraceMatches === 'function') {
+        window.applyPendingEarlyGraceMatches();
+    }
+
     window.FeedbackDebug?.pushStickyDebugFrame?.({
         kind: 'expected',
         measureIndex: currentMeasureIdx,

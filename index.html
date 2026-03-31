@@ -9,7 +9,7 @@
     <title>Piano Trainer Studio</title>
     <script>
         (function () {
-            const FALLBACK_ASSET_VERSION = '1.1.2';
+            const FALLBACK_ASSET_VERSION = '1.1.1';
             const OVERRIDE_KEY = 'pt_assetVersionOverride';
             const VERSION_JSON_PATH = 'version.json';
             let assetVersion = FALLBACK_ASSET_VERSION;
@@ -408,7 +408,8 @@
                         <div class="routing-source-group">
                             <div class="routing-source-group-label">Score Playback</div>
                             <div class="routing-source-grid routing-source-grid-score">
-                                <label class="routing-readonly-note">Hands playback is controlled in Practice.</label>
+                                <label class="routing-readonly-note">Uses the Left / Right selections in Practice.</label>
+                                <label><input type="checkbox" id="enable-hand-staves" checked> Hand Staves</label>
                                 <label><input type="checkbox" id="enable-other"> Other Staves</label>
                             </div>
                         </div>
@@ -431,7 +432,8 @@
                         <div class="routing-source-group">
                             <div class="routing-source-group-label">Score Playback</div>
                             <div class="routing-source-grid routing-source-grid-score">
-                                <label class="routing-readonly-note">Hands playback is controlled in Practice.</label>
+                                <label class="routing-readonly-note">Uses the Left / Right selections in Practice.</label>
+                                <label><input type="checkbox" id="enable-midiout-hand-staves"> Hand Staves</label>
                                 <label><input type="checkbox" id="enable-midiout-other"> Other Staves</label>
                             </div>
                         </div>
@@ -589,7 +591,7 @@
                 </div>
 
                 <div class="practice-row practice-playback-row">
-                    <div class="practice-row-label">Playback audio</div>
+                    <div class="practice-row-label">Hands playback</div>
                     <div class="inline-checkboxes compact-checkboxes">
                         <label><input type="checkbox" id="enable-staff-lh" checked> Left ✋</label>
                         <label><input type="checkbox" id="enable-staff-rh" checked> Right 🤚</label>
@@ -676,19 +678,21 @@
     </div>
 
     <div id="led-calibration-panel" class="hidden">
-        <div id="led-calibration-panel-title">LED Calibration</div>
+        <div class="led-calibration-header">
+            <div id="led-calibration-panel-title">LED Calibration</div>
+            <button type="button" id="btn-led-calibration-done" class="led-calibration-close" aria-label="Close LED calibration">✕</button>
+        </div>
         <div id="led-calibration-current">No key selected</div>
         <div id="led-calibration-hint">Press any piano key or click a virtual key to select it.</div>
-        <div class="sync-inputs calibration-buttons">
+        <div class="sync-inputs calibration-buttons calibration-nudge-row">
             <button type="button" id="btn-led-calibration-left">← Move Left</button>
             <button type="button" id="btn-led-calibration-right">Move Right →</button>
         </div>
-        <div class="sync-inputs calibration-buttons">
+        <div class="sync-inputs calibration-buttons calibration-reset-row">
             <button type="button" id="btn-led-calibration-reset-key">Reset Selected Key</button>
             <button type="button" id="btn-led-calibration-reset-all">Reset All Calibration</button>
-            <button type="button" id="btn-led-calibration-done">Done</button>
         </div>
-        <div class="sync-inputs calibration-buttons">
+        <div class="sync-inputs calibration-buttons calibration-io-row">
             <button type="button" id="btn-led-calibration-export">Export Calibration</button>
             <button type="button" id="btn-led-calibration-import">Import Calibration</button>
         </div>

@@ -655,6 +655,9 @@ v1.1.2
 * Improved LED and Virtual Keyboard rendering behaviors to prevent sensory overload. Highlights turn off after note's value, regardless if player holds the key afterward.  
 * Added new practice mode: "Follow Me" - hybrid between real-time and wait modes.  Player cannot RUSH past the set tempo without penalty (suggest using metronome). Good for 'wait' behavior while allowing the app to playback the other hand and promote tempo awareness. 
 
+v1.1.3
+* Fixed MIDI OUT routing for L/R staff playback.
+* Improved 'Follow me' and "real time' scorring to allow for some 'early' playing grace. - this makes the scoring MUCH easier to use. 
 
 
 

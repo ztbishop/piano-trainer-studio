@@ -25,12 +25,13 @@ const AppState = {
     looper: { enabled: false, min: 1, max: 100 },
     hands: { left: 2, right: 1 },
     practice: { left: true, right: true },
-    audioEnabled: { left: false, right: false, other: false, instrument: false, virtual: true }, 
-    midiOutEnabled: { left: false, right: false, other: false, instrument: false, virtual: false }, 
+    audioEnabled: { hands: true, other: false, instrument: false, virtual: true }, 
+    midiOutEnabled: { hands: false, other: false, instrument: false, virtual: false }, 
     expectedNotes: [], 
     pressedKeys: new Set(), 
     heldCorrectNotes: new Map(), 
     preExpectedHeldNotes: new Set(), 
+    pendingEarlyGraceNotes: new Map(), 
     pendingAudio: [], 
     feedbackEnabled: true,
     anchorTime: 0,
@@ -140,13 +141,13 @@ const TRAINER_FUTURE_DEPTH_STORAGE_KEY = 'pt_futurePreviewDepth';
 const TRAINER_CORRECT_HIGHLIGHT_STORAGE_KEY = 'pt_correctHighlightEnabled';
 const TRAINER_PRACTICE_LH_STORAGE_KEY = 'pt_practiceLeft';
 const TRAINER_PRACTICE_RH_STORAGE_KEY = 'pt_practiceRight';
-const TRAINER_AUDIO_LH_STORAGE_KEY = 'pt_audioLeft';
-const TRAINER_AUDIO_RH_STORAGE_KEY = 'pt_audioRight';
+const TRAINER_PLAYBACK_LH_STORAGE_KEY = 'pt_audioLeft';
+const TRAINER_PLAYBACK_RH_STORAGE_KEY = 'pt_audioRight';
+const TRAINER_AUDIO_HANDS_STORAGE_KEY = 'pt_audioHands';
 const TRAINER_AUDIO_OTHER_STORAGE_KEY = 'pt_audioOther';
 const TRAINER_AUDIO_INSTRUMENT_STORAGE_KEY = 'pt_audioInstrument';
 const TRAINER_AUDIO_VIRTUAL_STORAGE_KEY = 'pt_audioVirtualKeyboard';
-const TRAINER_MIDIOUT_LH_STORAGE_KEY = 'pt_midiOutLeft';
-const TRAINER_MIDIOUT_RH_STORAGE_KEY = 'pt_midiOutRight';
+const TRAINER_MIDIOUT_HANDS_STORAGE_KEY = 'pt_midiOutHands';
 const TRAINER_MIDIOUT_OTHER_STORAGE_KEY = 'pt_midiOutOther';
 const TRAINER_MIDIOUT_INSTRUMENT_STORAGE_KEY = 'pt_midiOutInstrument';
 const TRAINER_MIDIOUT_VIRTUAL_STORAGE_KEY = 'pt_midiOutVirtualKeyboard';
@@ -242,13 +243,13 @@ const RESETTABLE_PREFERENCE_KEYS = [
     TRAINER_CORRECT_HIGHLIGHT_STORAGE_KEY,
     TRAINER_PRACTICE_LH_STORAGE_KEY,
     TRAINER_PRACTICE_RH_STORAGE_KEY,
-    TRAINER_AUDIO_LH_STORAGE_KEY,
-    TRAINER_AUDIO_RH_STORAGE_KEY,
+    TRAINER_PLAYBACK_LH_STORAGE_KEY,
+    TRAINER_PLAYBACK_RH_STORAGE_KEY,
+    TRAINER_AUDIO_HANDS_STORAGE_KEY,
     TRAINER_AUDIO_OTHER_STORAGE_KEY,
     TRAINER_AUDIO_INSTRUMENT_STORAGE_KEY,
     TRAINER_AUDIO_VIRTUAL_STORAGE_KEY,
-    TRAINER_MIDIOUT_LH_STORAGE_KEY,
-    TRAINER_MIDIOUT_RH_STORAGE_KEY,
+    TRAINER_MIDIOUT_HANDS_STORAGE_KEY,
     TRAINER_MIDIOUT_OTHER_STORAGE_KEY,
     TRAINER_MIDIOUT_INSTRUMENT_STORAGE_KEY,
     TRAINER_MIDIOUT_VIRTUAL_STORAGE_KEY,

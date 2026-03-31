@@ -297,6 +297,72 @@ function handleLedCalibrationImportFile(file) {
     reader.readAsText(file);
 }
 
+function bindLedCalibrationNudgeButton(button, delta, boundDatasetKey) {
+    if (!button || button.dataset[boundDatasetKey]) return;
+    button.dataset[boundDatasetKey] = 'true';
+
+    const initialDelayMs = 320;
+    const repeatDelayMs = 150;
+    let repeatTimeoutId = null;
+    let repeatIntervalId = null;
+    let activePointerId = null;
+    let suppressClickUntil = 0;
+
+    const clearRepeat = () => {
+        if (repeatTimeoutId != null) {
+            window.clearTimeout(repeatTimeoutId);
+            repeatTimeoutId = null;
+        }
+        if (repeatIntervalId != null) {
+            window.clearInterval(repeatIntervalId);
+            repeatIntervalId = null;
+        }
+        activePointerId = null;
+    };
+
+    const startRepeat = () => {
+        nudgeLedCalibration(delta);
+        repeatTimeoutId = window.setTimeout(() => {
+            repeatIntervalId = window.setInterval(() => {
+                nudgeLedCalibration(delta);
+            }, repeatDelayMs);
+        }, initialDelayMs);
+    };
+
+    button.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        e.preventDefault();
+        suppressClickUntil = Date.now() + 450;
+        clearRepeat();
+        activePointerId = e.pointerId;
+        if (typeof button.setPointerCapture === 'function') {
+            try { button.setPointerCapture(e.pointerId); } catch (_) {}
+        }
+        startRepeat();
+    });
+
+    const stopFromPointer = (e) => {
+        if (activePointerId == null || e.pointerId !== activePointerId) return;
+        suppressClickUntil = Date.now() + 450;
+        clearRepeat();
+    };
+
+    button.addEventListener('pointerup', stopFromPointer);
+    button.addEventListener('pointercancel', stopFromPointer);
+    button.addEventListener('lostpointercapture', stopFromPointer);
+    button.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    });
+
+    button.addEventListener('click', (e) => {
+        if (Date.now() < suppressClickUntil) {
+            e.preventDefault();
+            return;
+        }
+        nudgeLedCalibration(delta);
+    });
+}
+
 function initLedCalibrationControls() {
     loadLedCalibration();
 
@@ -317,15 +383,8 @@ function initLedCalibrationControls() {
         });
     }
 
-    if (leftButton && !leftButton.dataset.boundLedCalibrationLeft) {
-        leftButton.dataset.boundLedCalibrationLeft = 'true';
-        leftButton.addEventListener('click', () => nudgeLedCalibration(-1));
-    }
-
-    if (rightButton && !rightButton.dataset.boundLedCalibrationRight) {
-        rightButton.dataset.boundLedCalibrationRight = 'true';
-        rightButton.addEventListener('click', () => nudgeLedCalibration(1));
-    }
+    bindLedCalibrationNudgeButton(leftButton, -1, 'boundLedCalibrationLeft');
+    bindLedCalibrationNudgeButton(rightButton, 1, 'boundLedCalibrationRight');
 
     if (resetButton && !resetButton.dataset.boundLedCalibrationResetKey) {
         resetButton.dataset.boundLedCalibrationResetKey = 'true';
