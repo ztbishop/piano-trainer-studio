@@ -1,0 +1,107 @@
+Follow Me Mode – Behavior (Current)
+Hybrid mode: waits for correct input but stays loosely aligned to tempo
+Designed primarily for one-hand practice with other-hand playback
+Cursor advances when:
+current practiced-hand notes are satisfied, and
+remaining beat time (with small minimum delay) allows progression
+Allows early grace:
+if current practiced-hand notes are satisfied
+user may play the next practiced-hand note slightly early
+note is accepted if held into the correct cursor position
+In one-hand mode:
+early-grace targeting uses practiced-hand timeline, not full combined cursor timeline
+Playback behavior:
+adapts to user timing
+may slightly compress or delay playback notes to stay aligned
+prioritizes usability over strict tempo fidelity
+Follow Me – Key Changes Made
+1. Timing / Cursor Progression Fix
+Previously: full note duration restarted after user input → required playing under tempo
+Now: uses remaining scheduled time for progression
+Added minimum delay floor to prevent playback bursts
+2. One-Hand Early-Grace Logic
+Early grace now:
+only applies when exactly one practice hand is active
+targets next practiced-hand event, not global cursor event
+Fixes false “early/wrong” notes caused by inactive-hand timeline interference
+3. Rest / Inactive-Hand Handling
+Events with no practiced-hand notes treated as implicitly satisfied
+Prevents blocking or false errors during gaps
+4. Deadlock Fix
+If early-grace note already satisfies next event:
+engine now auto-advances
+prevents cursor getting stuck waiting for input already given
+5. Wrong-Note Leakage Fix
+Notes already:
+matched
+repeated correctly
+or reserved via early-grace
+are suppressed from being reclassified as wrong in next cursor slot
+6. Event Boundary Alignment Fix
+Tightened timing so input is matched against the correct event window
+Prevents notes being interpreted as belonging to the previous beat
+Realtime Mode – Behavior (Current)
+Strict tempo mode:
+cursor advances continuously at set BPM
+Requires user to play in time with cursor
+No waiting for user input
+Realtime – Key Changes Made
+Added early grace support (lightweight):
+allows slight early input for next note
+accepted if held into correct cursor position
+No changes to core tempo enforcement
+Shares early-grace and wrong-note suppression improvements with Follow Me
+Known Trade-offs (Current State)
+Follow Me:
+more forgiving and usable
+may slightly rush or compress playback in dense passages
+Realtime:
+stable and strict
+minor early-grace improves feel without affecting timing
+Summary
+Follow Me evolved from strict wait model → adaptive tempo-aware model
+Major focus:
+eliminate false errors
+prevent deadlocks
+support one-hand practice correctly
+Current version favors:
+musical usability over perfect playback timing
+
+===============
+
+🎹 Follow Me Mode Improvements
+
+Follow Me mode has been significantly improved to make one-hand practice smoother and more natural.
+
+✅ What’s better
+No more getting stuck
+Fixed cases where the app would stop progressing even after playing correctly
+More forgiving timing
+You can play slightly early without being marked wrong
+Helps especially during fast passages
+Better one-hand practice
+When practicing one hand, the app now correctly follows that hand’s timing
+Prevents false mistakes caused by the other (non-practiced) hand
+Improved note detection
+Notes you already played correctly will no longer be incorrectly marked as wrong in the next beat
+Smoother playback
+The app adapts more naturally to your timing instead of forcing you to play under tempo
+⚠️ What to expect
+Follow Me is designed to be flexible, not perfectly strict
+When your timing varies slightly:
+the playback hand may adjust or slightly compress notes to stay in sync
+
+This is intentional and helps keep practice flowing without interruptions.
+
+⏱️ Realtime Mode Update
+Realtime mode now allows slightly early notes
+Improves feel without affecting strict tempo playback
+🧠 Summary
+
+These updates make the app:
+
+more forgiving
+less frustrating
+better suited for real practice
+
+Especially when practicing one hand while the app plays the other.

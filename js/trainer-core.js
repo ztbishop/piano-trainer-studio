@@ -41,14 +41,63 @@ function getAssignedHandRoleForStaff(staffId) {
     return null;
 }
 
+function cloneModeRoutingState(state, fallback) {
+    return {
+        left: state?.left ?? fallback.left,
+        right: state?.right ?? fallback.right
+    };
+}
+
+function normalizeFollowModeSettings() {
+    const follow = AppState.modeSettings.follow;
+    const left = !!follow.practice.left;
+    const right = !!follow.practice.right;
+    const useLeft = left && !right;
+    const useRight = !useLeft;
+    follow.practice.left = useLeft;
+    follow.practice.right = useRight;
+    follow.playback.left = !useLeft;
+    follow.playback.right = useLeft;
+}
+
+function getCurrentModeSettings() {
+    const modeKey = AppState.mode === 'wait' ? 'wait' : (AppState.mode === 'follow' ? 'follow' : 'realtime');
+    if (!AppState.modeSettings[modeKey]) {
+        AppState.modeSettings[modeKey] = {
+            practice: { left: true, right: true },
+            playback: { left: true, right: true }
+        };
+    }
+    if (modeKey === 'follow') normalizeFollowModeSettings();
+    return AppState.modeSettings[modeKey];
+}
+
+function syncActiveHandStateFromMode() {
+    const settings = getCurrentModeSettings();
+    AppState.practice.left = !!settings.practice.left;
+    AppState.practice.right = !!settings.practice.right;
+    AppState.playback.left = !!settings.playback.left;
+    AppState.playback.right = !!settings.playback.right;
+}
+
+function setFollowPracticeHand(hand) {
+    const follow = AppState.modeSettings.follow;
+    const useLeft = hand === 'left';
+    follow.practice.left = useLeft;
+    follow.practice.right = !useLeft;
+    follow.playback.left = !useLeft;
+    follow.playback.right = useLeft;
+    if (AppState.mode === 'follow') syncActiveHandStateFromMode();
+}
+
+
 function applyPersistedTrainerAndSettingsPreferences() {
     AppState.mode = localStorage.getItem(TRAINER_MODE_STORAGE_KEY) || 'realtime';
     AppState.feedbackEnabled = getStoredBool(TRAINER_FEEDBACK_STORAGE_KEY, true);
     AppState.futurePreviewEnabled = getStoredBool(TRAINER_FUTURE_PREVIEW_STORAGE_KEY, true);
     AppState.futurePreviewDepth = 1;
     AppState.correctHighlightEnabled = getStoredBool(TRAINER_CORRECT_HIGHLIGHT_STORAGE_KEY, true);
-    AppState.practice.left = getStoredBool(TRAINER_PRACTICE_LH_STORAGE_KEY, true);
-    AppState.practice.right = getStoredBool(TRAINER_PRACTICE_RH_STORAGE_KEY, true);
+    syncActiveHandStateFromMode();
     AppState.audioEnabled.hands = getStoredBool(TRAINER_AUDIO_HANDS_STORAGE_KEY, true);
     AppState.audioEnabled.other = getStoredBool(TRAINER_AUDIO_OTHER_STORAGE_KEY, false);
     AppState.audioEnabled.instrument = getStoredBool(TRAINER_AUDIO_INSTRUMENT_STORAGE_KEY, false);
@@ -57,6 +106,8 @@ function applyPersistedTrainerAndSettingsPreferences() {
     AppState.midiOutEnabled.other = getStoredBool(TRAINER_MIDIOUT_OTHER_STORAGE_KEY, false);
     AppState.midiOutEnabled.instrument = getStoredBool(TRAINER_MIDIOUT_INSTRUMENT_STORAGE_KEY, false);
     AppState.midiOutEnabled.virtual = getStoredBool(TRAINER_MIDIOUT_VIRTUAL_STORAGE_KEY, false);
+    AppState.midiOutVolume = getClampedNumber(TRAINER_MIDIOUT_VOL_STORAGE_KEY, 0, 100, 65);
+    AppState.midiInBoost = getClampedNumber(TRAINER_MIDIIN_BOOST_STORAGE_KEY, 50, 200, 100);
     AppState.inputVelocityEnabled = true;
     AppState.liveLowLatencyMonitoringEnabled = true;
     setStoredBool(TRAINER_INPUT_VELOCITY_STORAGE_KEY, true);
@@ -92,10 +143,10 @@ function applyPersistedTrainerAndSettingsPreferences() {
     if (practiceRightCheckbox) practiceRightCheckbox.checked = AppState.practice.right;
 
     const playbackLeftCheckbox = document.getElementById('enable-staff-lh');
-    if (playbackLeftCheckbox) playbackLeftCheckbox.checked = getStoredBool(TRAINER_PLAYBACK_LH_STORAGE_KEY, true);
+    if (playbackLeftCheckbox) playbackLeftCheckbox.checked = AppState.playback.left;
 
     const playbackRightCheckbox = document.getElementById('enable-staff-rh');
-    if (playbackRightCheckbox) playbackRightCheckbox.checked = getStoredBool(TRAINER_PLAYBACK_RH_STORAGE_KEY, true);
+    if (playbackRightCheckbox) playbackRightCheckbox.checked = AppState.playback.right;
 
     const audioHandsCheckbox = document.getElementById('enable-hand-staves');
     if (audioHandsCheckbox) audioHandsCheckbox.checked = AppState.audioEnabled.hands;
@@ -105,6 +156,7 @@ function applyPersistedTrainerAndSettingsPreferences() {
 
     const audioInstrumentCheckbox = document.getElementById('enable-instrument');
     if (audioInstrumentCheckbox) audioInstrumentCheckbox.checked = AppState.audioEnabled.instrument;
+    syncMidiInBoostUi();
 
     const audioVirtualCheckbox = document.getElementById('enable-virtual-keyboard');
     if (audioVirtualCheckbox) audioVirtualCheckbox.checked = AppState.audioEnabled.virtual;
@@ -125,6 +177,12 @@ function applyPersistedTrainerAndSettingsPreferences() {
     const pianoVolume = getClampedNumber(TRAINER_PIANO_VOL_STORAGE_KEY, 0, 100, 80);
     updatePianoVolume(pianoVolume);
 
+    const midiOutVolume = getClampedNumber(TRAINER_MIDIOUT_VOL_STORAGE_KEY, 0, 100, 65);
+    updateMidiOutVolume(midiOutVolume, { save: false });
+
+    const midiInBoost = getClampedNumber(TRAINER_MIDIIN_BOOST_STORAGE_KEY, 50, 200, 100);
+    updateMidiInBoost(midiInBoost, { save: false });
+
     const zoomPercent = getClampedNumber(TRAINER_ZOOM_STORAGE_KEY, 50, 150, 100);
     if (localStorage.getItem(TRAINER_ZOOM_STORAGE_KEY) === null || localStorage.getItem(TRAINER_ZOOM_STORAGE_KEY) === '') {
         localStorage.setItem(TRAINER_ZOOM_STORAGE_KEY, String(zoomPercent));
@@ -140,6 +198,11 @@ function applyPersistedTrainerAndSettingsPreferences() {
     if (keyboardCheckbox) keyboardCheckbox.checked = keyboardVisible;
     const keyboardContainer = document.getElementById('virtual-keyboard-container');
     if (keyboardContainer) keyboardContainer.classList.toggle('hidden', !keyboardVisible);
+
+    AppState.fullscreenOnPlay = getStoredBool(TRAINER_FULLSCREEN_ON_PLAY_STORAGE_KEY, false);
+    const fullscreenOnPlayCheckbox = document.getElementById('check-fullscreen-on-play');
+    if (fullscreenOnPlayCheckbox) fullscreenOnPlayCheckbox.checked = AppState.fullscreenOnPlay;
+    syncFullscreenUi();
 
     const debugEnabled = getStoredBool(SETTINGS_DEBUG_STORAGE_KEY, false);
     setDebugEnabled(debugEnabled, { clearHistory: !debugEnabled, logChange: false, reason: 'startup-persisted' });
@@ -180,8 +243,10 @@ function restoreDefaultPreferences({ reloadDevices = true } = {}) {
 
     AppState.futurePreviewDepth = 1;
 
-    AppState.practice.left = true;
-    AppState.practice.right = true;
+    AppState.modeSettings.realtime = { practice: { left: true, right: true }, playback: { left: true, right: true } };
+    AppState.modeSettings.wait = { practice: { left: true, right: true }, playback: { left: false, right: false } };
+    AppState.modeSettings.follow = { practice: { left: false, right: true }, playback: { left: true, right: false } };
+    syncActiveHandStateFromMode();
     const practiceLeftCheckbox = document.getElementById('practice-lh');
     if (practiceLeftCheckbox) practiceLeftCheckbox.checked = true;
     const practiceRightCheckbox = document.getElementById('practice-rh');
@@ -192,9 +257,9 @@ function restoreDefaultPreferences({ reloadDevices = true } = {}) {
     AppState.audioEnabled.instrument = false;
     AppState.audioEnabled.virtual = true;
     const playbackLeftCheckbox = document.getElementById('enable-staff-lh');
-    if (playbackLeftCheckbox) playbackLeftCheckbox.checked = true;
+    if (playbackLeftCheckbox) playbackLeftCheckbox.checked = AppState.playback.left;
     const playbackRightCheckbox = document.getElementById('enable-staff-rh');
-    if (playbackRightCheckbox) playbackRightCheckbox.checked = true;
+    if (playbackRightCheckbox) playbackRightCheckbox.checked = AppState.playback.right;
     const audioHandsCheckbox = document.getElementById('enable-hand-staves');
     if (audioHandsCheckbox) audioHandsCheckbox.checked = true;
     const audioOtherCheckbox = document.getElementById('enable-other');
@@ -203,6 +268,8 @@ function restoreDefaultPreferences({ reloadDevices = true } = {}) {
     if (audioInstrumentCheckbox) audioInstrumentCheckbox.checked = false;
     const audioVirtualCheckbox = document.getElementById('enable-virtual-keyboard');
     if (audioVirtualCheckbox) audioVirtualCheckbox.checked = true;
+    updateMidiInBoost(getClampedNumber(TRAINER_MIDIIN_BOOST_STORAGE_KEY, 50, 200, 100));
+    syncMidiInBoostUi();
 
     AppState.midiOutEnabled.hands = false;
     AppState.midiOutEnabled.other = false;
@@ -1058,6 +1125,75 @@ function isPracticeHandEnabledForStaff(staffId) {
     return (handRole === 'right' && AppState.practice.right) || (handRole === 'left' && AppState.practice.left);
 }
 
+function getSinglePracticedHandRole() {
+    const left = !!AppState.practice.left;
+    const right = !!AppState.practice.right;
+    if (left === right) return null;
+    return left ? 'left' : 'right';
+}
+
+function getRenderableNotesForHandFromTimelineEvent(event, handRole) {
+    if (!event?.notes?.length || !handRole) return [];
+    return event.notes.filter(note => getAssignedHandRoleForStaff(note.staffId) === handRole);
+}
+
+function findNextSingleHandPracticeTimelineEvent() {
+    const handRole = getSinglePracticedHandRole();
+    const ctx = AppState.currentExpectedContext;
+    if (!handRole || !ctx) return null;
+
+    const timeline = ensureLedPreviewTimelineBuilt();
+    if (!Array.isArray(timeline) || timeline.length === 0) return null;
+
+    const currentIndex = findMatchingLedPreviewTimelineIndex(
+        timeline,
+        ctx.measureIndex,
+        ctx.timestamp,
+        ctx.signature,
+        0
+    );
+    if (currentIndex < 0) return null;
+
+    for (let i = currentIndex + 1; i < timeline.length; i++) {
+        const event = timeline[i];
+        const notes = getRenderableNotesForHandFromTimelineEvent(event, handRole);
+        if (notes.length > 0) {
+            return {
+                measureIndex: event.measureIndex,
+                timestamp: event.timestamp,
+                notes
+            };
+        }
+    }
+
+    return null;
+}
+
+function tryReserveSingleHandEarlyGrace(midi) {
+    if (!AppState.isPlaying) return null;
+    if (AppState.mode !== 'follow' && AppState.mode !== 'realtime') return null;
+    if (!getSinglePracticedHandRole()) return null;
+    if (AppState.expectedNotes.length > 0 && !AppState.expectedNotes.every(n => n.hit)) return null;
+
+    const nextEvent = findNextSingleHandPracticeTimelineEvent();
+    if (!nextEvent) return null;
+
+    const matched = nextEvent.notes.find(note => note.midi === midi);
+    if (!matched) return null;
+
+    const reservation = {
+        midi,
+        staffId: matched.staffId,
+        measureIndex: nextEvent.measureIndex,
+        timestamp: nextEvent.timestamp
+    };
+
+    AppState.earlyGraceReservations.set(midi, reservation);
+    AppState.heldCorrectNotes.set(midi, matched.staffId);
+    AppState.preExpectedHeldNotes.add(midi);
+    return reservation;
+}
+
 function getFuturePreviewDepth() {
     if (!AppState.futurePreviewEnabled) return 0;
     return AppState.futurePreviewEnabled ? 1 : 0;
@@ -1441,62 +1577,6 @@ function findSatisfiedOrSustainedMatchForMidi(midi) {
     return null;
 }
 
-function getImmediateNextEarlyGraceMatch(midi) {
-    if (!AppState.isPlaying) return null;
-    if (!(AppState.mode === 'realtime' || AppState.mode === 'follow')) return null;
-    if (!Array.isArray(AppState.expectedNotes) || AppState.expectedNotes.length === 0) return null;
-    if (!AppState.expectedNotes.every(note => note.hit)) return null;
-
-    const nextEvent = Array.isArray(AppState.lastLedPreviewEvents) ? AppState.lastLedPreviewEvents[0] : null;
-    if (!nextEvent || !Array.isArray(nextEvent.notes) || nextEvent.notes.length === 0) return null;
-
-    const nextMatch = nextEvent.notes.find(note => note.midi === midi);
-    if (!nextMatch) return null;
-
-    return {
-        midi,
-        staffId: nextMatch.staffId ?? null,
-        targetMeasureIdx: nextEvent.measureIndex ?? null,
-        targetTimestamp: nextEvent.timestamp ?? null,
-        source: 'immediate-next-preview'
-    };
-}
-
-function applyPendingEarlyGraceMatches() {
-    if (!AppState.pendingEarlyGraceNotes.size || !AppState.expectedNotes.length) return;
-
-    let matchedAny = false;
-
-    AppState.expectedNotes.forEach((note) => {
-        if (note.hit) return;
-        if (!AppState.pressedKeys.has(note.midi)) return;
-
-        const pending = AppState.pendingEarlyGraceNotes.get(note.midi);
-        if (!pending) return;
-
-        const sameMeasure = pending.targetMeasureIdx == null || note.mIdx === pending.targetMeasureIdx;
-        const sameStaff = pending.staffId == null || note.staffId === pending.staffId;
-        if (!sameMeasure || !sameStaff) return;
-
-        note.hit = true;
-        matchedAny = true;
-        AppState.score.correct++;
-        AppState.heldCorrectNotes.set(note.midi, note.staffId);
-        drawFeedbackNote(note.midi, true, note.staffId, note.mIdx, note.anchor);
-        AppState.pendingEarlyGraceNotes.delete(note.midi);
-    });
-
-    if (!matchedAny) return;
-
-    updateScoreDisplay();
-
-    if ((AppState.mode === 'wait' || AppState.mode === 'follow') && AppState.isAudioBusy) {
-        checkWaitModeAdvance();
-    }
-}
-
-window.applyPendingEarlyGraceMatches = applyPendingEarlyGraceMatches;
-
 function renderVirtualKeyboard(currentEntries = null, currentMeasureIdx = null, currentTimestamp = null) {
     const desiredStates = new Map();
     const previewStateMap = new Map();
@@ -1605,12 +1685,6 @@ function renderVirtualKeyboard(currentEntries = null, currentMeasureIdx = null, 
                 // should not fall through to wrong/red while still held.
                 desiredStates.delete(midi);
             }
-        } else if (AppState.pendingEarlyGraceNotes.has(midi)) {
-            if (previewState === 'future1-l' || previewState === 'future1-r') {
-                desiredStates.set(midi, previewState);
-            } else {
-                desiredStates.delete(midi);
-            }
         } else {
             desiredStates.set(midi, AppState.isPlaying ? 'wrong' : 'active');
         }
@@ -1710,20 +1784,36 @@ function startVisualSustains() {
     });
 }
 
-function clearVisuals() {
+function clearFeedbackVisualStatePreserveScoring() {
     GeometryEngine.clearSvgFeedback();
+    AppState.activeHeldIncorrectFeedback.clear();
+    AppState.releasedIncorrectFeedback = [];
+    AppState.correctFeedbackHistory = [];
+    AppState.realtimeWrongPressInCurrentContext = false;
+    if (typeof window.clearStickyDebug === 'function') {
+        window.clearStickyDebug();
+    }
+}
+
+function clearVisuals() {
+    clearFeedbackVisualStatePreserveScoring();
     AppState.activeTimeouts.forEach(id => clearTimeout(id));
     AppState.activeTimeouts = [];
     AppState.sustainedVisuals = [];
     AppState.visualNotesToStart = [];
     AppState.expectedNotes = [];
     AppState.outOfRangeCurrentNotes = [];
+    AppState.activeHeldIncorrectFeedback.clear();
+    AppState.releasedIncorrectFeedback = [];
+    AppState.correctFeedbackHistory = [];
+    AppState.realtimeWrongPressInCurrentContext = false;
     AppState.heldCorrectNotes.clear(); 
     AppState.preExpectedHeldNotes.clear();
-    AppState.pendingEarlyGraceNotes.clear();
     AppState.lastLedPreviewEvents = [];
     AppState.ledPreviewTraversalIndex = -1;
     AppState.followAdvanceInfo = null;
+    AppState.currentExpectedContext = null;
+    AppState.earlyGraceReservations.clear();
     wipeHardwareLEDs(); 
     renderVirtualKeyboard();
 }
@@ -1881,6 +1971,12 @@ function normalizeLiveVelocity(velocity) {
     };
 }
 
+function getLiveMonitoringVelocity(source, velocity = 100) {
+    if (source !== 'midi') return velocity;
+    const boostPercent = Math.max(50, Math.min(200, Number(AppState.midiInBoost) || 100));
+    return Math.max(1, Math.min(127, Math.round((Number(velocity) || 100) * (boostPercent / 100))));
+}
+
 function playLocalPianoNote(midi, velocity = 100, durationMs = null, options = {}) {
     if (!Number.isFinite(midi) || midi < 0) return;
     const noteName = getSamplerNoteName(midi);
@@ -1925,7 +2021,7 @@ function syncTrainerRoutingUiState() {
     if (summary) {
         if (hasMidiOut) {
             const outName = document.getElementById('midi-out')?.selectedOptions?.[0]?.textContent?.replace(/\s*\(Disconnected\)\s*$/, '') || 'MIDI Out';
-            summary.textContent = `Device: ${outName} | Channel: ${AppState.midiOutChannel || 1}`;
+            summary.textContent = `Send playback and input to ${outName}.`;
             summary.classList.remove('is-disabled');
             summaryHint?.classList.add('hidden');
         } else {
@@ -1935,6 +2031,10 @@ function syncTrainerRoutingUiState() {
         }
     }
     midiOutCard?.classList.toggle('is-disabled', !hasMidiOut);
+    const midiOutVolumeSlider = document.getElementById('slider-midiout-vol');
+    const midiOutVolumeInput = document.getElementById('val-midiout-vol');
+    if (midiOutVolumeSlider) midiOutVolumeSlider.disabled = !hasMidiOut;
+    if (midiOutVolumeInput) midiOutVolumeInput.disabled = !hasMidiOut;
     ['enable-midiout-hand-staves', 'enable-midiout-other', 'enable-midiout-instrument', 'enable-midiout-virtual-keyboard'].forEach((id) => {
         const input = document.getElementById(id);
         if (!input) return;
@@ -1954,12 +2054,26 @@ function shouldRouteLiveSourceToMidiOut(source) {
     return roleKey ? getRoutingEnabledForRole(AppState.midiOutEnabled, roleKey) : false;
 }
 
+function getMidiOutExpressionValue(value = AppState.midiOutVolume) {
+    const percent = Math.max(0, Math.min(100, Number(value) || 0));
+    return Math.max(0, Math.min(127, Math.round((percent / 100) * 127)));
+}
+
+function sendMidiOutExpressionLevel(value = AppState.midiOutVolume) {
+    const output = getSelectedMidiOutOutput();
+    if (!output) return false;
+    const status = getMidiOutStatus(0xB0);
+    output.send([status, 11, getMidiOutExpressionValue(value)]);
+    return true;
+}
+
 function sendMidiOutNoteOn(midi, velocity = 100) {
     const output = getSelectedMidiOutOutput();
     if (!output) return false;
     const status = getMidiOutStatus(0x90);
-    rememberOutgoingMidiMessage(status, midi, velocity);
-    output.send([status, midi, velocity]);
+    const finalVelocity = normalizeLiveVelocity(velocity).midi;
+    rememberOutgoingMidiMessage(status, midi, finalVelocity);
+    output.send([status, midi, finalVelocity]);
     return true;
 }
 
@@ -1994,16 +2108,17 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
         AppState.pressedKeys.add(midi);
         
         const liveVelocity = (source === 'midi' && AppState.inputVelocityEnabled) ? velocity : 100;
+        const localAudioVelocity = getLiveMonitoringVelocity(source, liveVelocity);
 
         if (shouldRouteLiveSourceToLocalAudio(source)) {
-            playLocalPianoNote(midi, liveVelocity, null, {
+            playLocalPianoNote(midi, localAudioVelocity, null, {
                 lowLatencyLive: source === 'ui' ? true : !!AppState.liveLowLatencyMonitoringEnabled,
                 retrigger: true
             });
         }
 
         if (shouldRouteLiveSourceToMidiOut(source)) {
-            sendMidiOutNoteOn(midi, normalizeLiveVelocity(liveVelocity).midi);
+            sendMidiOutNoteOn(midi, normalizeLiveVelocity(liveVelocity).midi, { scaleVolume: source === 'ui' });
         }
 
         if (AppState.ledCalibrationMode) {
@@ -2015,13 +2130,11 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
         if (AppState.isPlaying) {
             const expectedMatch = findExpectedMatchForMidi(midi);
             const sustainMatch = !expectedMatch ? findSatisfiedOrSustainedMatchForMidi(midi) : null;
-            const earlyGraceMatch = (!expectedMatch && !sustainMatch) ? getImmediateNextEarlyGraceMatch(midi) : null;
+            const earlyGraceReservation = (!expectedMatch && !sustainMatch) ? tryReserveSingleHandEarlyGrace(midi) : null;
             const isCorrect = !!expectedMatch;
             const isAcceptedRepeat = !expectedMatch && !!sustainMatch;
-            const isEarlyGrace = !expectedMatch && !sustainMatch && !!earlyGraceMatch;
-            const targetStaffId = expectedMatch
-                ? expectedMatch.staffId
-                : (sustainMatch ? sustainMatch.staffId : (earlyGraceMatch ? earlyGraceMatch.staffId : null));
+            const isEarlyGraceReserved = !!earlyGraceReservation;
+            const targetStaffId = expectedMatch ? expectedMatch.staffId : (sustainMatch ? sustainMatch.staffId : (earlyGraceReservation ? earlyGraceReservation.staffId : null));
             
             if (AppState.practice.left || AppState.practice.right) {
                 const forceMIdx = expectedMatch ? expectedMatch.mIdx : null;
@@ -2031,7 +2144,7 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
                     midi,
                     isCorrect,
                     isAcceptedRepeat,
-                    isEarlyGrace,
+                    isEarlyGraceReserved,
                     targetStaffId,
                     forceMIdx,
                     sustainMatch: sustainMatch ? {
@@ -2039,13 +2152,6 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
                         staffId: sustainMatch.staffId,
                         mIdx: sustainMatch.mIdx,
                         source: sustainMatch.source
-                    } : null,
-                    earlyGraceMatch: earlyGraceMatch ? {
-                        midi: earlyGraceMatch.midi,
-                        staffId: earlyGraceMatch.staffId,
-                        targetMeasureIdx: earlyGraceMatch.targetMeasureIdx,
-                        targetTimestamp: earlyGraceMatch.targetTimestamp,
-                        source: earlyGraceMatch.source
                     } : null,
                     anchor: anchor ? { x: anchor.x, y: anchor.y } : null,
                     expectedMatch: expectedMatch ? {
@@ -2061,12 +2167,13 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
                     AppState.score.correct++;
                     AppState.heldCorrectNotes.set(midi, targetStaffId);
                     updateScoreDisplay();
-                } else if (isAcceptedRepeat) {
+                } else if (isAcceptedRepeat || isEarlyGraceReserved) {
                     AppState.heldCorrectNotes.set(midi, targetStaffId);
-                } else if (isEarlyGrace) {
-                    AppState.pendingEarlyGraceNotes.set(midi, earlyGraceMatch);
                 } else {
-                    drawFeedbackNote(midi, false, targetStaffId, forceMIdx, anchor);
+                    if (AppState.mode === 'realtime') {
+                        AppState.realtimeWrongPressInCurrentContext = true;
+                    }
+                    registerHeldIncorrectFeedback(midi, targetStaffId, forceMIdx, anchor);
                     AppState.score.wrong++;
                     updateScoreDisplay();
                 }
@@ -2083,7 +2190,8 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
         AppState.pressedKeys.delete(midi);
         AppState.heldCorrectNotes.delete(midi); 
         AppState.preExpectedHeldNotes.delete(midi);
-        AppState.pendingEarlyGraceNotes.delete(midi);
+        AppState.earlyGraceReservations.delete(midi);
+        releaseHeldIncorrectFeedback(midi);
         
         if (shouldRouteLiveSourceToLocalAudio(source)) {
             const noteName = getSamplerNoteName(midi);
@@ -2129,14 +2237,34 @@ function checkWaitModeAdvance() {
         const followInfo = AppState.followAdvanceInfo || null;
         const shouldFollow = AppState.mode === 'follow' && followInfo && Number.isFinite(followInfo.waitSeconds);
         if (shouldFollow) {
+            const fullWaitSeconds = Math.max(0, followInfo.waitSeconds);
+            const rawRemainingSeconds = Number.isFinite(AppState.anchorTime)
+                ? Math.max(0, AppState.anchorTime - Tone.now())
+                : fullWaitSeconds;
+
+            // Follow Me should preserve the original beat grid when the user is on time,
+            // but it should not restart a full note-length wait after a slightly late hit.
+            // Use the remaining scheduled time, with a tiny floor so dense playback does not
+            // collapse into an unnaturally rushed burst when the user lands right on/past the beat.
+            const carryForwardFloorSeconds = Math.min(0.06, fullWaitSeconds * 0.35);
+            const lateRecoveryFloorSeconds = Math.min(0.09, fullWaitSeconds * 0.5);
+
+            let effectiveWaitSeconds = rawRemainingSeconds;
+            if (effectiveWaitSeconds <= 0) {
+                effectiveWaitSeconds = lateRecoveryFloorSeconds;
+            } else if (effectiveWaitSeconds < carryForwardFloorSeconds) {
+                effectiveWaitSeconds = carryForwardFloorSeconds;
+            }
+            effectiveWaitSeconds = Math.min(Math.max(0, effectiveWaitSeconds), fullWaitSeconds);
+
             scheduleMetronomeForPlaybackWindow(
                 Tone.now(),
                 followInfo.currentMeasureIdx,
                 followInfo.currentTimestamp,
-                followInfo.waitSeconds,
+                effectiveWaitSeconds,
                 followInfo.beatsToWait
             );
-            const delayMs = Math.max(0, Math.round(followInfo.waitSeconds * 1000));
+            const delayMs = Math.max(0, Math.round(effectiveWaitSeconds * 1000));
             setTimeout(() => {
                 if (AppState.isPlaying && AppState.mode === 'follow') {
                     osmd.cursor.update(); 
@@ -2165,38 +2293,65 @@ function applyModeSettings() {
     const isWait = AppState.mode === 'wait';
     const isFollow = AppState.mode === 'follow';
 
+    syncActiveHandStateFromMode();
+
+    const practiceLeftToggle = document.getElementById('practice-lh');
+    const practiceRightToggle = document.getElementById('practice-rh');
     const playbackLeftToggle = document.getElementById('enable-staff-lh');
     const playbackRightToggle = document.getElementById('enable-staff-rh');
     const audioHandsToggle = document.getElementById('enable-hand-staves');
     const otherAudioToggle = document.getElementById('enable-other');
     const midiOutHandsToggle = document.getElementById('enable-midiout-hand-staves');
     const midiOutOtherToggle = document.getElementById('enable-midiout-other');
+    const playbackRow = document.querySelector('.practice-playback-row');
     const waitNoteRow = document.getElementById('practice-wait-note-row');
     const waitNote = document.getElementById('practice-wait-note');
+
+    if (practiceLeftToggle) practiceLeftToggle.checked = AppState.practice.left;
+    if (practiceRightToggle) practiceRightToggle.checked = AppState.practice.right;
+    if (playbackLeftToggle) playbackLeftToggle.checked = AppState.playback.left;
+    if (playbackRightToggle) playbackRightToggle.checked = AppState.playback.right;
 
     if (isWait) {
         if (audioHandsToggle) audioHandsToggle.checked = false;
         AppState.audioEnabled.hands = false;
         if (midiOutHandsToggle) midiOutHandsToggle.checked = false;
         AppState.midiOutEnabled.hands = false;
-    } else {
-        if (playbackLeftToggle) playbackLeftToggle.checked = getStoredBool(TRAINER_PLAYBACK_LH_STORAGE_KEY, true);
-        if (playbackRightToggle) playbackRightToggle.checked = getStoredBool(TRAINER_PLAYBACK_RH_STORAGE_KEY, true);
-        if (audioHandsToggle) audioHandsToggle.checked = getStoredBool(TRAINER_AUDIO_HANDS_STORAGE_KEY, true);
-        AppState.audioEnabled.hands = getStoredBool(TRAINER_AUDIO_HANDS_STORAGE_KEY, true);
-        if (midiOutHandsToggle) midiOutHandsToggle.checked = getStoredBool(TRAINER_MIDIOUT_HANDS_STORAGE_KEY, false);
-        AppState.midiOutEnabled.hands = getStoredBool(TRAINER_MIDIOUT_HANDS_STORAGE_KEY, false);
     }
 
-    playbackLeftToggle.disabled = isWait;
-    playbackRightToggle.disabled = isWait;
+    if (practiceLeftToggle) {
+        practiceLeftToggle.disabled = false;
+        practiceLeftToggle.closest('label')?.classList.toggle('is-disabled', false);
+    }
+    if (practiceRightToggle) {
+        practiceRightToggle.disabled = false;
+        practiceRightToggle.closest('label')?.classList.toggle('is-disabled', false);
+    }
+    const playbackDisabled = isWait || isFollow;
+
+    if (playbackLeftToggle) {
+        playbackLeftToggle.disabled = playbackDisabled;
+        playbackLeftToggle.closest('label')?.classList.toggle('is-disabled', playbackDisabled);
+    }
+    if (playbackRightToggle) {
+        playbackRightToggle.disabled = playbackDisabled;
+        playbackRightToggle.closest('label')?.classList.toggle('is-disabled', playbackDisabled);
+    }
+    playbackRow?.classList.toggle('is-disabled', playbackDisabled);
     if (audioHandsToggle) audioHandsToggle.disabled = isWait;
-    otherAudioToggle.disabled = isWait;
+    if (otherAudioToggle) otherAudioToggle.disabled = isWait;
     if (midiOutHandsToggle) midiOutHandsToggle.disabled = isWait || !getSelectedMidiOutOutput();
     if (midiOutOtherToggle) midiOutOtherToggle.disabled = isWait || !getSelectedMidiOutOutput();
 
-    waitNoteRow?.classList.toggle('is-hidden', !isWait);
-    waitNote?.classList.toggle('is-disabled', !isWait);
+    let modeNote = '';
+    if (isWait) modeNote = 'Audio playback is unavailable in Wait mode.';
+    else if (isFollow) modeNote = 'Playback is automatically set to the opposite hand in Follow Me.';
+    waitNoteRow?.classList.toggle('is-hidden', !modeNote);
+    waitNoteRow?.classList.toggle('is-disabled-context', playbackDisabled && !!modeNote);
+    if (waitNote) {
+        waitNote.textContent = modeNote;
+        waitNote.classList.toggle('is-disabled', !modeNote);
+    }
     syncTrainerRoutingUiState();
 }
 
@@ -2261,7 +2416,9 @@ document.getElementById('check-feedback').addEventListener('change', (e) => {
     AppState.feedbackEnabled = e.target.checked;
     setStoredBool(TRAINER_FEEDBACK_STORAGE_KEY, AppState.feedbackEnabled);
     if (!e.target.checked) {
-        document.getElementById('feedback-layer').innerHTML = '';
+        GeometryEngine.clearSvgFeedback();
+    } else {
+        renderFeedbackOverlay();
     }
     if (typeof window.syncSettingsDebugVisibility === 'function') {
         window.syncSettingsDebugVisibility();
@@ -2379,15 +2536,100 @@ document.getElementById('canvas-wrapper').addEventListener('click', (e) => {
 
 
 const playPauseButton = document.getElementById('btn-play');
+const scoreFullscreenButton = document.getElementById('btn-score-fullscreen');
+
+function getFullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function getFullscreenTargetElement() {
+    return document.documentElement;
+}
+
+function canUseNativeFullscreen() {
+    const target = getFullscreenTargetElement();
+    return !!(target?.requestFullscreen || target?.webkitRequestFullscreen || document.exitFullscreen || document.webkitExitFullscreen);
+}
+
+function isFullscreenActive() {
+    return !!getFullscreenElement() || !!AppState.pseudoFullscreenActive;
+}
+
+function syncFullscreenUi() {
+    const fullscreenActive = isFullscreenActive();
+    document.body.classList.toggle('app-fullscreen-active', fullscreenActive);
+    if (scoreFullscreenButton) {
+        scoreFullscreenButton.classList.toggle('is-active', fullscreenActive);
+        scoreFullscreenButton.textContent = fullscreenActive ? '🗗' : '⛶';
+        scoreFullscreenButton.setAttribute('aria-label', fullscreenActive ? 'Exit full screen' : 'Enter full screen');
+        scoreFullscreenButton.title = fullscreenActive ? 'Exit full screen' : 'Enter full screen';
+    }
+}
+
+async function requestAppFullscreen() {
+    hideToolbarPanels();
+    const target = getFullscreenTargetElement();
+    try {
+        if (target?.requestFullscreen) {
+            await target.requestFullscreen();
+            AppState.pseudoFullscreenActive = false;
+        } else if (target?.webkitRequestFullscreen) {
+            target.webkitRequestFullscreen();
+            AppState.pseudoFullscreenActive = false;
+        } else {
+            AppState.pseudoFullscreenActive = true;
+        }
+    } catch (err) {
+        console.warn('Fullscreen request failed; using in-app fullscreen fallback.', err);
+        AppState.pseudoFullscreenActive = true;
+    }
+    syncFullscreenUi();
+}
+
+async function exitAppFullscreen() {
+    try {
+        if (document.exitFullscreen && document.fullscreenElement) {
+            await document.exitFullscreen();
+        } else if (document.webkitExitFullscreen && document.webkitFullscreenElement) {
+            document.webkitExitFullscreen();
+        }
+    } catch (err) {
+        console.warn('Could not exit native fullscreen cleanly.', err);
+    }
+    AppState.pseudoFullscreenActive = false;
+    syncFullscreenUi();
+}
+
+async function toggleAppFullscreen() {
+    if (isFullscreenActive()) {
+        await exitAppFullscreen();
+        return;
+    }
+    await requestAppFullscreen();
+}
+
+document.addEventListener('fullscreenchange', syncFullscreenUi);
+document.addEventListener('webkitfullscreenchange', syncFullscreenUi);
+if (scoreFullscreenButton) {
+    scoreFullscreenButton.addEventListener('click', () => {
+        toggleAppFullscreen();
+    });
+}
 
 function updatePlayPauseButton() {
+    document.body.classList.toggle('app-playing', !!AppState.isPlaying);
     if (playPauseButton) {
         playPauseButton.textContent = AppState.isPlaying ? '⏸ Pause' : '▶ Play';
     }
 }
 
-function startPlaybackFromToolbar() {
+async function startPlaybackFromToolbar() {
     if (!osmd.cursor || AppState.isPlaying) return;
+
+    if (AppState.fullscreenOnPlay && !isFullscreenActive()) {
+        await requestAppFullscreen();
+    }
+
     if (Tone.context.state !== 'running') Tone.context.resume();
 
     AppState.isPlaying = true;
@@ -2477,9 +2719,9 @@ function resetPlaybackForLoadedScore() {
 }
 
 if (playPauseButton) {
-    playPauseButton.onclick = () => {
+    playPauseButton.onclick = async () => {
         if (AppState.isPlaying) pausePlaybackFromToolbar();
-        else startPlaybackFromToolbar();
+        else await startPlaybackFromToolbar();
     };
 }
 
@@ -2525,9 +2767,10 @@ window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
         if (osmd.IsReadyToRender()) {
+            clearFeedbackVisualStatePreserveScoring();
             renderScoreAndRefreshGeometry();
         }
-            positionLedCalibrationPanel();
+        positionLedCalibrationPanel();
     }, 300);
 });
 
@@ -2559,6 +2802,7 @@ function applyZoom(val, { save = true } = {}) {
     }
     if (osmd.IsReadyToRender()) {
         osmd.zoom = AppState.zoom;
+        clearFeedbackVisualStatePreserveScoring();
         renderScoreAndRefreshGeometry();
     }
 }
@@ -2643,6 +2887,40 @@ function updatePianoVolume(value, { save = true } = {}) {
     else masterPianoVolume.volume.value = 20 * Math.log10(val / 100);
 }
 
+const midiOutVolSlider = document.getElementById('slider-midiout-vol');
+const midiOutVolInput = document.getElementById('val-midiout-vol');
+
+function updateMidiOutVolume(value, { save = true } = {}) {
+    const val = Math.max(0, Math.min(100, parseInt(value, 10) || 0));
+    AppState.midiOutVolume = val;
+    if (midiOutVolSlider) midiOutVolSlider.value = val;
+    if (midiOutVolInput) midiOutVolInput.value = val;
+    if (save) {
+        localStorage.setItem(TRAINER_MIDIOUT_VOL_STORAGE_KEY, String(val));
+    }
+    sendMidiOutExpressionLevel(val);
+}
+
+const midiInBoostSlider = document.getElementById('slider-midiin-boost');
+const midiInBoostInput = document.getElementById('val-midiin-boost');
+
+function syncMidiInBoostUi() {
+    const boostRow = document.getElementById('routing-midiin-boost-row');
+    const showBoost = !!AppState.audioEnabled.instrument;
+    boostRow?.classList.toggle('hidden', !showBoost);
+}
+
+function updateMidiInBoost(value, { save = true } = {}) {
+    const val = Math.max(50, Math.min(200, parseInt(value, 10) || 100));
+    AppState.midiInBoost = val;
+    if (midiInBoostSlider) midiInBoostSlider.value = val;
+    if (midiInBoostInput) midiInBoostInput.value = val;
+    if (save) {
+        localStorage.setItem(TRAINER_MIDIIN_BOOST_STORAGE_KEY, String(val));
+    }
+    syncMidiInBoostUi();
+}
+
 function updateMetroVolume(value, { save = true } = {}) {
     const val = Math.max(0, Math.min(100, parseInt(value, 10) || 0));
     if (metroVolSlider) metroVolSlider.value = val;
@@ -2656,6 +2934,10 @@ function updateMetroVolume(value, { save = true } = {}) {
 
 if (pianoVolSlider) pianoVolSlider.addEventListener('input', (e) => updatePianoVolume(e.target.value));
 if (pianoVolInput) pianoVolInput.addEventListener('change', (e) => updatePianoVolume(e.target.value));
+if (midiOutVolSlider) midiOutVolSlider.addEventListener('input', (e) => updateMidiOutVolume(e.target.value));
+if (midiOutVolInput) midiOutVolInput.addEventListener('change', (e) => updateMidiOutVolume(e.target.value));
+if (midiInBoostSlider) midiInBoostSlider.addEventListener('input', (e) => updateMidiInBoost(e.target.value));
+if (midiInBoostInput) midiInBoostInput.addEventListener('change', (e) => updateMidiInBoost(e.target.value));
 if (metroVolSlider) metroVolSlider.addEventListener('input', (e) => updateMetroVolume(e.target.value));
 if (metroVolInput) metroVolInput.addEventListener('change', (e) => updateMetroVolume(e.target.value));
 
@@ -2666,25 +2948,65 @@ if (autoScrollCheckbox) {
     });
 }
 
+const fullscreenOnPlayCheckbox = document.getElementById('check-fullscreen-on-play');
+if (fullscreenOnPlayCheckbox) {
+    fullscreenOnPlayCheckbox.addEventListener('change', (e) => {
+        AppState.fullscreenOnPlay = e.target.checked;
+        setStoredBool(TRAINER_FULLSCREEN_ON_PLAY_STORAGE_KEY, AppState.fullscreenOnPlay);
+    });
+}
+
 document.getElementById('practice-lh').addEventListener('change', (e) => {
-    AppState.practice.left = e.target.checked;
-    setStoredBool(TRAINER_PRACTICE_LH_STORAGE_KEY, AppState.practice.left);
+    if (AppState.mode === 'follow') {
+        if (!e.target.checked) {
+            e.target.checked = true;
+            return;
+        }
+        setFollowPracticeHand('left');
+        applyModeSettings();
+        return;
+    }
+    const settings = getCurrentModeSettings();
+    settings.practice.left = e.target.checked;
+    syncActiveHandStateFromMode();
 });
 document.getElementById('practice-rh').addEventListener('change', (e) => {
-    AppState.practice.right = e.target.checked;
-    setStoredBool(TRAINER_PRACTICE_RH_STORAGE_KEY, AppState.practice.right);
+    if (AppState.mode === 'follow') {
+        if (!e.target.checked) {
+            e.target.checked = true;
+            return;
+        }
+        setFollowPracticeHand('right');
+        applyModeSettings();
+        return;
+    }
+    const settings = getCurrentModeSettings();
+    settings.practice.right = e.target.checked;
+    syncActiveHandStateFromMode();
 });
 
 const enableStaffLh = document.getElementById('enable-staff-lh');
 if (enableStaffLh) {
     enableStaffLh.addEventListener('change', (e) => {
-        setStoredBool(TRAINER_PLAYBACK_LH_STORAGE_KEY, e.target.checked);
+        if (AppState.mode === 'follow' || AppState.mode === 'wait') {
+            e.target.checked = AppState.playback.left;
+            return;
+        }
+        const settings = getCurrentModeSettings();
+        settings.playback.left = e.target.checked;
+        syncActiveHandStateFromMode();
     });
 }
 const enableStaffRh = document.getElementById('enable-staff-rh');
 if (enableStaffRh) {
     enableStaffRh.addEventListener('change', (e) => {
-        setStoredBool(TRAINER_PLAYBACK_RH_STORAGE_KEY, e.target.checked);
+        if (AppState.mode === 'follow' || AppState.mode === 'wait') {
+            e.target.checked = AppState.playback.right;
+            return;
+        }
+        const settings = getCurrentModeSettings();
+        settings.playback.right = e.target.checked;
+        syncActiveHandStateFromMode();
     });
 }
 const enableHandStaves = document.getElementById('enable-hand-staves');
@@ -2706,6 +3028,7 @@ if (enableInstrument) {
     enableInstrument.addEventListener('change', (e) => {
         AppState.audioEnabled.instrument = e.target.checked;
         setStoredBool(TRAINER_AUDIO_INSTRUMENT_STORAGE_KEY, AppState.audioEnabled.instrument);
+        syncMidiInBoostUi();
     });
 }
 const enableVirtualKeyboard = document.getElementById('enable-virtual-keyboard');
@@ -2993,7 +3316,13 @@ function playbackLoop() {
     }
 
     buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimestamp);
+    AppState.currentExpectedContext = {
+        measureIndex: currentMeasureIdx,
+        timestamp: currentTimestamp,
+        signature: makeLedPreviewEntrySignature(entries)
+    };
 
+    renderFeedbackOverlay();
     renderVirtualKeyboard(entries, currentMeasureIdx, currentTimestamp);
 
     entries.forEach(e => {
@@ -3003,8 +3332,8 @@ function playbackLoop() {
         const isLH = handRole === 'left';
         const isOther = (!isRH && !isLH);
         const isPracticingThisHand = (isRH && AppState.practice.right) || (isLH && AppState.practice.left);
-        const playbackLeftEnabled = getStoredBool(TRAINER_PLAYBACK_LH_STORAGE_KEY, true);
-        const playbackRightEnabled = getStoredBool(TRAINER_PLAYBACK_RH_STORAGE_KEY, true);
+        const playbackLeftEnabled = !!AppState.playback.left;
+        const playbackRightEnabled = !!AppState.playback.right;
         const isSelectedHandPlayback = (isRH && playbackRightEnabled) || (isLH && playbackLeftEnabled);
 
         const routeToLocalAudio = ((isRH || isLH) && isSelectedHandPlayback && AppState.audioEnabled.hands) || 
@@ -3146,17 +3475,20 @@ function playbackLoop() {
             waitSeconds,
             beatsToWait
         } : null;
-
-        const hasExpectedNotes = AppState.expectedNotes.length > 0;
-        const allExpectedAlreadyHit = hasExpectedNotes && AppState.expectedNotes.every(n => n.hit);
-
-        if (allExpectedAlreadyHit) {
-            checkWaitModeAdvance();
-            return;
-        }
         
-        if (hasExpectedNotes) {
-            // Engine waits for user input
+        if (AppState.expectedNotes.length > 0) {
+            const allExpectedAlreadyHit = AppState.expectedNotes.every(n => n.hit);
+            if (allExpectedAlreadyHit) {
+                // One-hand early-grace reservations can promote held notes to hit as soon as
+                // a new expected group is built. In wait/follow modes, that means this step
+                // is already satisfied before any fresh keydown event occurs, so we need to
+                // advance immediately instead of deadlocking on an already-hit group.
+                setTimeout(() => {
+                    if (!AppState.isPlaying || (AppState.mode !== 'wait' && AppState.mode !== 'follow')) return;
+                    checkWaitModeAdvance();
+                }, 0);
+            }
+            // Otherwise engine waits for user input.
         } else {
             startVisualSustains();
             const advanceDelayMs = AppState.mode === 'follow' ? Math.max(0, timeToWaitMs) : 10;

@@ -6,17 +6,20 @@
 // ==========================================
 // STATE MANAGEMENT
 // ==========================================
-const APP_VERSION = String(window.__PT_APP_VERSION__ || window.__PT_ASSET_VERSION__ || '0.0.0').trim();
+const APP_MANIFEST = window.__PT_APP_MANIFEST__ || {};
 const APP_REPO_SLUG = 'ztbishop/piano-trainer-studio';
+const APP_VERSION = String(window.__PT_ASSET_VERSION__ || APP_MANIFEST.version || 'dev').trim();
 const UPDATE_MANIFEST_URL = 'https://ztbishop.github.io/piano-trainer-studio/version.json';
 const UPDATE_MANIFEST_URL_STORAGE_KEY = 'pt_updateManifestUrl';
-const UPDATE_RELEASES_URL = `https://github.com/${APP_REPO_SLUG}/releases/latest`;
+const UPDATE_RELEASES_URL = String(APP_MANIFEST.releaseUrl || `https://github.com/${APP_REPO_SLUG}/releases/latest`).trim();
+const UPDATE_TAG_ZIP_URL = String(APP_MANIFEST.downloadUrl || `https://github.com/${APP_REPO_SLUG}/archive/refs/tags/v${APP_VERSION}.zip`).trim();
 const ASSET_VERSION_OVERRIDE_STORAGE_KEY = 'pt_assetVersionOverride';
-const LAST_KNOWN_VERSION_STORAGE_KEY = 'pt_lastKnownVersion';
 
 const AppState = {
     mode: 'realtime',
     followAdvanceInfo: null,
+    currentExpectedContext: null,
+    earlyGraceReservations: new Map(),
     isPlaying: false,
     isAudioBusy: false, 
     zoom: 1.0,
@@ -25,13 +28,24 @@ const AppState = {
     looper: { enabled: false, min: 1, max: 100 },
     hands: { left: 2, right: 1 },
     practice: { left: true, right: true },
+    playback: { left: true, right: true },
+    modeSettings: {
+        realtime: { practice: { left: true, right: true }, playback: { left: true, right: true } },
+        wait: { practice: { left: true, right: true }, playback: { left: false, right: false } },
+        follow: { practice: { left: false, right: true }, playback: { left: true, right: false } }
+    },
     audioEnabled: { hands: true, other: false, instrument: false, virtual: true }, 
     midiOutEnabled: { hands: false, other: false, instrument: false, virtual: false }, 
+    midiOutVolume: 65,
+    midiInBoost: 100,
     expectedNotes: [], 
     pressedKeys: new Set(), 
     heldCorrectNotes: new Map(), 
     preExpectedHeldNotes: new Set(), 
-    pendingEarlyGraceNotes: new Map(), 
+    activeHeldIncorrectFeedback: new Map(),
+    releasedIncorrectFeedback: [],
+    correctFeedbackHistory: [],
+    realtimeWrongPressInCurrentContext: false,
     pendingAudio: [], 
     feedbackEnabled: true,
     anchorTime: 0,
@@ -94,6 +108,8 @@ const AppState = {
     currentScoreOriginalFileType: '',
     currentScoreLibraryId: null,
     currentScoreTitle: '',
+    fullscreenOnPlay: false,
+    pseudoFullscreenActive: false,
     transpose: {
         available: false,
         sourceKeyLabel: 'No score loaded',
@@ -154,9 +170,12 @@ const TRAINER_MIDIOUT_VIRTUAL_STORAGE_KEY = 'pt_midiOutVirtualKeyboard';
 const TRAINER_INPUT_VELOCITY_STORAGE_KEY = 'pt_inputVelocityEnabled';
 const TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY = 'pt_liveLowLatencyMonitoringEnabled';
 const TRAINER_PIANO_VOL_STORAGE_KEY = 'pt_trainerPianoVolume';
+const TRAINER_MIDIOUT_VOL_STORAGE_KEY = 'pt_trainerMidiOutVolume';
+const TRAINER_MIDIIN_BOOST_STORAGE_KEY = 'pt_trainerMidiInBoost';
 const TRAINER_ZOOM_STORAGE_KEY = 'pt_trainerZoom';
 const TRAINER_AUTOSCROLL_STORAGE_KEY = 'pt_autoScroll';
 const TRAINER_KEYBOARD_STORAGE_KEY = 'pt_virtualKeyboardVisible';
+const TRAINER_FULLSCREEN_ON_PLAY_STORAGE_KEY = 'pt_fullscreenOnPlay';
 const SETTINGS_DEBUG_STORAGE_KEY = 'pt_debugEnabled';
 const MIDI_IN_ID_STORAGE_KEY = 'pt_savedMidiIn';
 const MIDI_OUT_ID_STORAGE_KEY = 'pt_savedMidiOut';
@@ -174,6 +193,8 @@ const DEFAULT_PREFERENCES = Object.freeze({
     playerPianoType: 88,
     ledCount: 88,
     trainerPianoVolume: 80,
+    trainerMidiOutVolume: 65,
+    trainerMidiInBoost: 100,
     metronomeVolume: 25,
     ledMasterBrightness: 25,
     ledFuture1Pct: 1,
@@ -198,6 +219,8 @@ function seedFirstRunDefaults() {
     localStorage.setItem(PLAYER_PIANO_STORAGE_KEY, String(DEFAULT_PREFERENCES.playerPianoType));
     localStorage.setItem(LED_COUNT_STORAGE_KEY, String(DEFAULT_PREFERENCES.ledCount));
     localStorage.setItem(TRAINER_PIANO_VOL_STORAGE_KEY, String(DEFAULT_PREFERENCES.trainerPianoVolume));
+    localStorage.setItem(TRAINER_MIDIOUT_VOL_STORAGE_KEY, String(DEFAULT_PREFERENCES.trainerMidiOutVolume));
+    localStorage.setItem(TRAINER_MIDIIN_BOOST_STORAGE_KEY, String(DEFAULT_PREFERENCES.trainerMidiInBoost));
     localStorage.setItem(METRONOME_VOL_STORAGE_KEY, String(DEFAULT_PREFERENCES.metronomeVolume));
     localStorage.setItem(LED_MASTER_BRIGHTNESS_STORAGE_KEY, String(DEFAULT_PREFERENCES.ledMasterBrightness));
     localStorage.setItem(LED_FUTURE1_PCT_STORAGE_KEY, String(DEFAULT_PREFERENCES.ledFuture1Pct));
@@ -256,9 +279,12 @@ const RESETTABLE_PREFERENCE_KEYS = [
     TRAINER_INPUT_VELOCITY_STORAGE_KEY,
     TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY,
     TRAINER_PIANO_VOL_STORAGE_KEY,
+    TRAINER_MIDIOUT_VOL_STORAGE_KEY,
+    TRAINER_MIDIIN_BOOST_STORAGE_KEY,
     TRAINER_ZOOM_STORAGE_KEY,
     TRAINER_AUTOSCROLL_STORAGE_KEY,
     TRAINER_KEYBOARD_STORAGE_KEY,
+    TRAINER_FULLSCREEN_ON_PLAY_STORAGE_KEY,
     SETTINGS_DEBUG_STORAGE_KEY,
     VISUAL_PULSE_STORAGE_KEY,
     LOOP_COUNT_IN_STORAGE_KEY,
@@ -295,213 +321,6 @@ function getStoredBool(key, fallback) {
 function getStoredNumber(key, fallback) {
     const value = Number(localStorage.getItem(key));
     return Number.isFinite(value) ? value : fallback;
-}
-
-
-function compareSemverLoose(a, b) {
-    const parse = (value) => String(value || '')
-        .trim()
-        .replace(/^[^\d]*/, '')
-        .split(/[\.-]/)
-        .map(part => {
-            const n = Number(part);
-            return Number.isFinite(n) ? n : 0;
-        });
-    const aa = parse(a);
-    const bb = parse(b);
-    const len = Math.max(aa.length, bb.length, 3);
-    for (let i = 0; i < len; i++) {
-        const av = aa[i] || 0;
-        const bv = bb[i] || 0;
-        if (av > bv) return 1;
-        if (av < bv) return -1;
-    }
-    return 0;
-}
-
-function getAppVersionDisplayText() {
-    return `Version: ${APP_VERSION || 'unknown'}`;
-}
-
-function isLocalAppRuntime() {
-    const host = String(window.location.hostname || '').toLowerCase();
-    return window.location.protocol === 'file:' || host === 'localhost' || host === '127.0.0.1';
-}
-
-function getRequestedAssetVersion() {
-    try {
-        const url = new URL(window.location.href);
-        return String(url.searchParams.get('appv') || '').trim();
-    } catch (_) {
-        return '';
-    }
-}
-
-function setAssetVersionOverride(version) {
-    const normalized = String(version || '').trim();
-    if (!normalized) {
-        localStorage.removeItem(ASSET_VERSION_OVERRIDE_STORAGE_KEY);
-        return;
-    }
-    localStorage.setItem(ASSET_VERSION_OVERRIDE_STORAGE_KEY, normalized);
-}
-
-function clearAssetVersionOverrideIfCurrent() {
-    const requested = getRequestedAssetVersion();
-    const stored = String(localStorage.getItem(ASSET_VERSION_OVERRIDE_STORAGE_KEY) || '').trim();
-    if (requested && compareSemverLoose(APP_VERSION, requested) >= 0) {
-        localStorage.removeItem(ASSET_VERSION_OVERRIDE_STORAGE_KEY);
-        try {
-            const url = new URL(window.location.href);
-            url.searchParams.delete('appv');
-            url.searchParams.delete('t');
-            window.history.replaceState({}, '', url.pathname + url.search + url.hash);
-        } catch (_) {}
-        return;
-    }
-    if (stored && compareSemverLoose(APP_VERSION, stored) >= 0) {
-        localStorage.removeItem(ASSET_VERSION_OVERRIDE_STORAGE_KEY);
-    }
-}
-
-function forceReloadToVersion(version) {
-    const normalized = String(version || '').trim();
-    if (!normalized) {
-        window.location.reload();
-        return;
-    }
-
-    setAssetVersionOverride(normalized);
-
-    try {
-        const url = new URL(window.location.href);
-        url.searchParams.set('appv', normalized);
-        url.searchParams.set('t', String(Date.now()));
-        window.location.replace(url.toString());
-    } catch (_) {
-        window.location.reload();
-    }
-}
-
-function getVersionedTagZipUrl(version) {
-    const normalized = String(version || '').trim();
-    return normalized
-        ? `https://github.com/${APP_REPO_SLUG}/archive/refs/tags/v${normalized}.zip`
-        : '';
-}
-
-function getUpdateActionUrl() {
-    const remoteVersion = String(AppState.updateInfo?.remoteVersion || '').trim();
-    const downloadUrl = String(AppState.updateInfo?.downloadUrl || '').trim();
-    const releaseUrl = String(AppState.updateInfo?.releaseUrl || '').trim();
-    return downloadUrl || getVersionedTagZipUrl(remoteVersion) || releaseUrl || UPDATE_RELEASES_URL || '';
-}
-
-function buildUpdateStatusText() {
-    if (AppState.updateStatus) return AppState.updateStatus;
-    if (!AppState.updateManifestUrl) return 'Update checks are not configured yet.';
-    return 'Update status: not checked yet.';
-}
-
-function syncUpdateControls() {
-    const versionEl = document.getElementById('app-version-display');
-    const statusEl = document.getElementById('update-status');
-    const button = document.getElementById('btn-check-updates');
-
-    if (versionEl) versionEl.textContent = getAppVersionDisplayText();
-    if (statusEl) statusEl.textContent = buildUpdateStatusText();
-
-    if (button) {
-        button.disabled = false;
-        if (AppState.updateInfo?.updateAvailable) {
-            button.textContent = isLocalAppRuntime() ? 'Download Latest' : 'Reload to Update';
-        } else if (AppState.updateInfo && AppState.updateInfo.remoteVersion) {
-            button.textContent = 'Up to Date';
-        } else {
-            button.textContent = 'Check for Updates';
-        }
-    }
-}
-
-async function checkForUpdates({ manual = false } = {}) {
-    const button = document.getElementById('btn-check-updates');
-    if (button) button.disabled = true;
-
-    if (!AppState.updateManifestUrl) {
-        AppState.updateLastCheckedAt = Date.now();
-        AppState.updateInfo = null;
-        AppState.updateStatus = 'Update checks are not configured yet.';
-        syncUpdateControls();
-        return;
-    }
-
-    try {
-        const response = await fetch(`${AppState.updateManifestUrl}${AppState.updateManifestUrl.includes('?') ? '&' : '?'}t=${Date.now()}`, {
-            cache: 'no-store'
-        });
-        if (!response.ok) throw new Error(`Manifest HTTP ${response.status}`);
-        const manifest = await response.json();
-        const remoteVersion = String(manifest?.version || '').trim();
-        const releaseUrl = String(manifest?.releaseUrl || UPDATE_RELEASES_URL || '').trim();
-        const downloadUrl = String(manifest?.downloadUrl || '').trim() || getVersionedTagZipUrl(remoteVersion);
-        const updateAvailable = remoteVersion ? compareSemverLoose(remoteVersion, APP_VERSION) > 0 : false;
-
-        if (remoteVersion) {
-            try { localStorage.setItem(LAST_KNOWN_VERSION_STORAGE_KEY, remoteVersion); } catch (_) {}
-        }
-
-        AppState.updateInfo = {
-            currentVersion: APP_VERSION,
-            remoteVersion,
-            updateAvailable,
-            releaseUrl,
-            downloadUrl
-        };
-        AppState.updateLastCheckedAt = Date.now();
-
-        if (!remoteVersion) {
-            AppState.updateStatus = 'Update manifest is missing a version value.';
-        } else if (updateAvailable) {
-            AppState.updateStatus = `Update available: ${remoteVersion}.`;
-        } else {
-            AppState.updateStatus = 'Up to date.';
-            clearAssetVersionOverrideIfCurrent();
-        }
-    } catch (err) {
-        AppState.updateLastCheckedAt = Date.now();
-        AppState.updateInfo = null;
-        AppState.updateStatus = manual
-            ? `Update check failed: ${err?.message || String(err)}`
-            : 'Update check unavailable.';
-    } finally {
-        syncUpdateControls();
-    }
-}
-
-function initUpdateControls() {
-    AppState.updateManifestUrl = String(localStorage.getItem(UPDATE_MANIFEST_URL_STORAGE_KEY) || UPDATE_MANIFEST_URL || '').trim();
-    AppState.updateStatus = '';
-    clearAssetVersionOverrideIfCurrent();
-    const button = document.getElementById('btn-check-updates');
-    if (button && !button.dataset.boundCheckUpdates) {
-        button.dataset.boundCheckUpdates = 'true';
-        button.addEventListener('click', async () => {
-            if (AppState.updateInfo?.updateAvailable) {
-                if (isLocalAppRuntime()) {
-                    const releaseUrl = getUpdateActionUrl();
-                    if (releaseUrl) window.open(releaseUrl, '_blank', 'noopener');
-                    else window.alert('No release URL is configured yet.');
-                    return;
-                }
-                const shouldReload = window.confirm(`Version ${AppState.updateInfo.remoteVersion} is available. Reload now?`);
-                if (shouldReload) forceReloadToVersion(AppState.updateInfo.remoteVersion);
-                return;
-            }
-            await checkForUpdates({ manual: true });
-        });
-    }
-    syncUpdateControls();
-    checkForUpdates({ manual: false }).catch(() => {});
 }
 
 function getClampedNumber(key, min, max, defaultVal) {

@@ -271,6 +271,7 @@ document.getElementById('midi-out').addEventListener('change', (e) => {
     updateConnectionStatuses();
     syncMidiOutChannelVisibility();
     if (typeof syncTrainerRoutingUiState === 'function') syncTrainerRoutingUiState();
+    if (typeof sendMidiOutExpressionLevel === 'function') sendMidiOutExpressionLevel();
 });
 
 
@@ -280,6 +281,7 @@ document.getElementById('midi-out-channel').addEventListener('change', (e) => {
     AppState.midiOutChannel = nextChannel;
     localStorage.setItem(MIDI_OUT_CHANNEL_STORAGE_KEY, String(nextChannel));
     if (typeof syncTrainerRoutingUiState === 'function') syncTrainerRoutingUiState();
+    if (typeof sendMidiOutExpressionLevel === 'function') sendMidiOutExpressionLevel();
 });
 
 document.getElementById('midi-lights-channel').addEventListener('change', (e) => {

@@ -22,6 +22,7 @@ function renderScoreAndRefreshGeometry() {
     if (!osmd || !osmd.IsReadyToRender || !osmd.IsReadyToRender()) return;
     osmd.render();
     GeometryEngine.invalidate();
+    renderFeedbackOverlay();
     GeometryEngine.renderLooper();
     if (window.FeedbackDebug?.renderStickyDebug) {
         window.FeedbackDebug.renderStickyDebug();
@@ -545,6 +546,12 @@ const GeometryEngine = {
         group.appendChild(circle);
     },
 
+
+    drawStoredFeedbackMarker(marker) {
+        if (!marker?.anchor) return;
+        this.drawFeedbackMarker(marker.anchor, !!marker.isCorrect);
+    },
+
     renderLooper() {
         this.clearSvgLooper();
         if (!document.getElementById('check-looper').checked || !osmd?.GraphicSheet) return;
@@ -679,23 +686,23 @@ function getGraphicalNote(logicalNote, mIdx, staffIdx) {
     return null;
 }
 
-function drawFeedbackNote(midi, isCorrect, targetStaffId, forceMIdx = null, anchorOrExactY = null) {
-    if (!AppState.feedbackEnabled) return;
+function getFeedbackContextKey(measureIndex = null, timestamp = null) {
+    return `${Number.isFinite(measureIndex) ? measureIndex : 'na'}|${Number.isFinite(timestamp) ? timestamp : 'na'}`;
+}
 
+function getCurrentFeedbackContext() {
+    const measureIndex = AppState.currentExpectedContext?.measureIndex ?? osmd?.cursor?.Iterator?.CurrentMeasureIndex ?? null;
+    const timestamp = AppState.currentExpectedContext?.timestamp ?? osmd?.cursor?.Iterator?.currentTimeStamp?.RealValue ?? null;
+    return {
+        measureIndex,
+        timestamp,
+        key: getFeedbackContextKey(measureIndex, timestamp)
+    };
+}
+
+function resolveFeedbackAnchor(midi, targetStaffId, forceMIdx = null, anchorOrExactY = null) {
     if (anchorOrExactY && typeof anchorOrExactY === 'object' && anchorOrExactY.x != null && anchorOrExactY.y != null) {
-        GeometryEngine.drawFeedbackMarker(anchorOrExactY, isCorrect);
-        window.FeedbackDebug?.pushStickyDebugFrame?.({
-            kind: 'feedback',
-            measureIndex: forceMIdx,
-            notes: [{
-                midi,
-                staffId: targetStaffId,
-                anchor: anchorOrExactY,
-                hit: isCorrect,
-                kind: 'feedback'
-            }]
-        });
-        return;
+        return { x: anchorOrExactY.x, y: anchorOrExactY.y };
     }
 
     let anchor = null;
@@ -733,20 +740,103 @@ function drawFeedbackNote(midi, isCorrect, targetStaffId, forceMIdx = null, anch
         }
     }
 
-    if (anchor) {
-        GeometryEngine.drawFeedbackMarker(anchor, isCorrect);
-        window.FeedbackDebug?.pushStickyDebugFrame?.({
-            kind: 'feedback',
-            measureIndex: forceMIdx,
-            notes: [{
-                midi,
-                staffId: targetStaffId,
-                anchor,
-                hit: isCorrect,
-                kind: 'feedback'
-            }]
-        });
+    return anchor;
+}
+
+function renderFeedbackOverlay() {
+    GeometryEngine.clearSvgFeedback();
+    if (!AppState.feedbackEnabled) return;
+
+    const currentContextKey = getCurrentFeedbackContext().key;
+
+    AppState.correctFeedbackHistory.forEach(marker => GeometryEngine.drawStoredFeedbackMarker(marker));
+
+    AppState.releasedIncorrectFeedback.forEach(marker => {
+        if (marker?.contextKey === currentContextKey) return;
+        GeometryEngine.drawStoredFeedbackMarker(marker);
+    });
+
+    AppState.activeHeldIncorrectFeedback.forEach(marker => {
+        if (marker?.contextKey !== currentContextKey) return;
+        GeometryEngine.drawStoredFeedbackMarker(marker);
+    });
+}
+
+function registerHeldIncorrectFeedback(midi, targetStaffId, forceMIdx = null, anchorOrExactY = null) {
+    if (!AppState.feedbackEnabled) return;
+
+    const anchor = resolveFeedbackAnchor(midi, targetStaffId, forceMIdx, anchorOrExactY);
+    if (!anchor) return;
+
+    const context = getCurrentFeedbackContext();
+    AppState.activeHeldIncorrectFeedback.set(midi, {
+        midi,
+        staffId: targetStaffId,
+        anchor,
+        isCorrect: false,
+        measureIndex: context.measureIndex,
+        timestamp: context.timestamp,
+        contextKey: context.key
+    });
+
+    renderFeedbackOverlay();
+    window.FeedbackDebug?.pushStickyDebugFrame?.({
+        kind: 'feedback',
+        measureIndex: forceMIdx,
+        notes: [{
+            midi,
+            staffId: targetStaffId,
+            anchor,
+            hit: false,
+            kind: 'feedback'
+        }]
+    });
+}
+
+function releaseHeldIncorrectFeedback(midi) {
+    const marker = AppState.activeHeldIncorrectFeedback.get(midi);
+    if (!marker) return;
+
+    AppState.activeHeldIncorrectFeedback.delete(midi);
+    AppState.releasedIncorrectFeedback.push(marker);
+    renderFeedbackOverlay();
+}
+
+function drawFeedbackNote(midi, isCorrect, targetStaffId, forceMIdx = null, anchorOrExactY = null) {
+    if (!AppState.feedbackEnabled) return;
+
+    const anchor = resolveFeedbackAnchor(midi, targetStaffId, forceMIdx, anchorOrExactY);
+    if (!anchor) return;
+
+    const context = getCurrentFeedbackContext();
+    const marker = {
+        midi,
+        staffId: targetStaffId,
+        anchor,
+        isCorrect: !!isCorrect,
+        measureIndex: forceMIdx,
+        timestamp: context.timestamp,
+        contextKey: getFeedbackContextKey(forceMIdx, context.timestamp)
+    };
+
+    if (isCorrect) {
+        AppState.correctFeedbackHistory.push(marker);
+    } else {
+        AppState.releasedIncorrectFeedback.push(marker);
     }
+
+    renderFeedbackOverlay();
+    window.FeedbackDebug?.pushStickyDebugFrame?.({
+        kind: 'feedback',
+        measureIndex: forceMIdx,
+        notes: [{
+            midi,
+            staffId: targetStaffId,
+            anchor,
+            hit: isCorrect,
+            kind: 'feedback'
+        }]
+    });
 }
 
 function getCursorSvgX() {
@@ -970,9 +1060,26 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
     AppState.expectedNotes = Array.from(mergedExpected.values());
     AppState.visualNotesToStart = Array.from(mergedVisuals.values());
     AppState.outOfRangeCurrentNotes = Array.from(mergedOutOfRange.values());
+    AppState.realtimeWrongPressInCurrentContext = false;
 
-    if (typeof window.applyPendingEarlyGraceMatches === 'function') {
-        window.applyPendingEarlyGraceMatches();
+    const consumedReservationMidis = [];
+    AppState.expectedNotes.forEach(expected => {
+        const reservation = AppState.earlyGraceReservations.get(expected.midi);
+        if (!reservation) return;
+        if (reservation.measureIndex !== currentMeasureIdx || reservation.timestamp !== currentTimestamp) return;
+        if (!AppState.pressedKeys.has(expected.midi)) return;
+
+        expected.hit = true;
+        AppState.heldCorrectNotes.set(expected.midi, expected.staffId);
+        AppState.preExpectedHeldNotes.add(expected.midi);
+        drawFeedbackNote(expected.midi, true, expected.staffId, currentMeasureIdx, expected.anchor);
+        AppState.score.correct++;
+        consumedReservationMidis.push(expected.midi);
+    });
+
+    if (consumedReservationMidis.length > 0) {
+        consumedReservationMidis.forEach(midi => AppState.earlyGraceReservations.delete(midi));
+        updateScoreDisplay();
     }
 
     window.FeedbackDebug?.pushStickyDebugFrame?.({
@@ -1015,9 +1122,13 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
 
 function processMissedNotes() {
     let missedCount = 0;
+    const suppressMissedVisuals = AppState.mode === 'realtime' && AppState.realtimeWrongPressInCurrentContext;
+
     AppState.expectedNotes.forEach(n => {
         if (!n.hit) {
-            drawFeedbackNote(n.midi, false, n.staffId, n.mIdx, n.anchor);
+            if (!suppressMissedVisuals) {
+                drawFeedbackNote(n.midi, false, n.staffId, n.mIdx, n.anchor);
+            }
             AppState.score.wrong++;
             missedCount++;
         }

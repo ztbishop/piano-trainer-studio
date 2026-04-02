@@ -26,7 +26,7 @@ GitHub repository: [[https://github.com/ztbishop/piano-trainer-studio](https://g
 ## Practice Modes
 - Realtime — Play continuously at the set tempo.
 - Wait for Me — Waits for correct notes before continuing.
-- Follow Me — Waits for correct notes and can play the other hand in time.
+- Follow Me — Play one hand while the app follows with the other.
   * Tip: Start with Wait for Me to learn notes, then try Follow Me to practice with timing.
   
 ---

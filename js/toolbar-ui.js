@@ -226,7 +226,6 @@ function isAnyToolbarPanelOpen() {
 
 document.addEventListener('click', (e) => {
     if (
-        e.target.closest('#static-menu') ||
         e.target.closest('#scores-panel') ||
         e.target.closest('#options-overlay') ||
         e.target.closest('#tempo-popup') ||

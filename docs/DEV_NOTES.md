@@ -655,23 +655,83 @@ v1.1.2
 * Improved LED and Virtual Keyboard rendering behaviors to prevent sensory overload. Highlights turn off after note's value, regardless if player holds the key afterward.  
 * Added new practice mode: "Follow Me" - hybrid between real-time and wait modes.  Player cannot RUSH past the set tempo without penalty (suggest using metronome). Good for 'wait' behavior while allowing the app to playback the other hand and promote tempo awareness. 
 
-v1.1.4
+v1.1.2
+* Improved LED and Virtual Keyboard rendering behaviors to prevent sensory overload. Highlights turn off after note's value, regardless if player holds the key afterward.  
+* Added new practice mode: "Follow Me" - hybrid between real-time and wait modes.  Player cannot RUSH past the set tempo without penalty (suggest using metronome). Good for 'wait' behavior while allowing the app to playback the other hand and promote tempo awareness. 
+
+v1.1.3
 * Fixed MIDI OUT routing for L/R staff playback.
 * Improved 'Follow me' and "real time' scorring to allow for some 'early' playing grace. - this makes the scoring MUCH easier to use. 
-* Improved auto updating (online version should flush oudated cache) 
-* Updated OSMD from 1.8.8 to 1.9.7
+
+1.1.4
+Fixed MIDI OUT routing for L/R staff playback.
+Improved 'Follow me' and "real time' scorring to allow for some 'early' playing grace. - this makes the scoring MUCH easier to use.
+Improved auto updating (online version should flush oudated cache)
+Updated OSMD from 1.8.8 to 1.9.7
+
+
+v1.1.5 
+
+Updated menu polish (close by licking anywhere outside of menu)
+
+Transpose menu - resetting now puts slider / dropdown to default positions. 
+
+Version control - only need to update version number in version.json for each update going forward. 
+
+Rendering updates
+- If a player hits a wrong note and does NOT play the correct note, the anticipated note is no longer marked red as well. 
+- If a player hits many wrong notes at once, they only render during key press, then go away UNTIL the cursor moves on. 
+- Future notes on virtual keyboard are now full key, fainter shade. 
+- Added FULLSCREEN mode.  Can be default on in settings menu.
+
+Updated Practice Hand / Playack Hand UI & interactions
+- Realtime playback allows full Practice Hand / Playback Hand selection
+- Wait for me mode: Disables Playback Hand Selection
+- Follow Me mode: syncs opposite hands
+
+Updated Audio/Routing
+- Volume slider for midi out (CC11) - should work with most pianos without impacting tone. 
+- In-app audio now has boost slider if midi input monitoring is selected (only impacts tone.js app audio). 
+
+🎹 Follow Me Mode Improvements
+No more getting stuck
+Fixed cases where the app would stop progressing even after playing correctly
+More forgiving timing
+You can play slightly early without being marked wrong
+Helps especially during fast passages
+Better one-hand practice
+When practicing one hand, the app now correctly follows that hand’s timing
+Prevents false mistakes caused by the other (non-practiced) hand
+Improved note detection
+Notes you already played correctly will no longer be incorrectly marked as wrong in the next beat
+Smoother playback
+The app adapts more naturally to your timing instead of forcing you to play under tempo
+⚠️ What to expect
+Follow Me is designed to be flexible, not perfectly strict
+When your timing varies slightly:
+the playback hand may adjust or slightly compress notes to stay in sync
+This is intentional and helps keep practice flowing without interruptions.
+
+⏱️ Realtime Mode Update
+Realtime mode now allows slightly early notes
+Improves feel without affecting strict tempo playback
+
 
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
 //----------------------------------------------------------------------------------------------------------//
+
+--update: only need to update version.json going forward
+---------------------------------------------------------
+
 VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!
-update version.json → "version": "x.y.z"
 
 version.json
   "version": 
-  "downloadUrl
-"
+  "downloadUrl"
 
-version.json
-index.html → FALLBACK_ASSET_VERSION
-js/trainer-state.js → APP_VERSION
+trainer-state.js
+const APP_VERSION = 
+
+index.html
+const FALLBACK_ASSET_VERSION = '1.1.0';
 //----------------------------------------------------------------------------------------------------------//

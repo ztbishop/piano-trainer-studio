@@ -9,52 +9,70 @@
     <title>Piano Trainer Studio</title>
     <script>
         (function () {
-            const DEFAULT_ASSET_VERSION = '0.0.0';
-            const VERSION_JSON_PATH = 'version.json';
-            const VERSION_CACHE_KEY = 'pt_lastKnownVersion';
+            const FALLBACK_ASSET_VERSION = 'dev';
             const OVERRIDE_KEY = 'pt_assetVersionOverride';
-            let assetVersion = DEFAULT_ASSET_VERSION;
+            const VERSION_JSON_PATH = 'version.json';
+            let assetVersion = FALLBACK_ASSET_VERSION;
+            let versionManifest = null;
 
-            try {
-                const storedKnownVersion = String(localStorage.getItem(VERSION_CACHE_KEY) || '').trim();
-                if (storedKnownVersion) assetVersion = storedKnownVersion;
-            } catch (_) {}
+            function compareSemverLoose(a, b) {
+                const parse = (value) => String(value || '')
+                    .trim()
+                    .replace(/^[^\d]*/, '')
+                    .split(/[\.-]/)
+                    .map(part => {
+                        const n = Number(part);
+                        return Number.isFinite(n) ? n : 0;
+                    });
+                const aa = parse(a);
+                const bb = parse(b);
+                const len = Math.max(aa.length, bb.length, 3);
+                for (let i = 0; i < len; i++) {
+                    const av = aa[i] || 0;
+                    const bv = bb[i] || 0;
+                    if (av > bv) return 1;
+                    if (av < bv) return -1;
+                }
+                return 0;
+            }
 
+            function pickNewestVersion() {
+                const candidates = Array.prototype.slice.call(arguments)
+                    .map(value => String(value || '').trim())
+                    .filter(Boolean);
+                if (!candidates.length) return FALLBACK_ASSET_VERSION;
+                return candidates.reduce((latest, candidate) => {
+                    if (!latest) return candidate;
+                    return compareSemverLoose(candidate, latest) > 0 ? candidate : latest;
+                }, '');
+            }
+
+            let requestedVersion = '';
+            let storedVersion = '';
             try {
                 const url = new URL(window.location.href);
-                const requestedVersion = String(url.searchParams.get('appv') || '').trim();
-                const storedOverride = String(localStorage.getItem(OVERRIDE_KEY) || '').trim();
-                assetVersion = requestedVersion || storedOverride || assetVersion;
+                requestedVersion = String(url.searchParams.get('appv') || '').trim();
+                storedVersion = String(localStorage.getItem(OVERRIDE_KEY) || '').trim();
+                assetVersion = pickNewestVersion(assetVersion, requestedVersion, storedVersion);
             } catch (_) {}
 
             try {
                 const request = new XMLHttpRequest();
-                request.open('GET', VERSION_JSON_PATH + '?t=' + Date.now(), false);
+                const cacheBustedPath = VERSION_JSON_PATH + '?t=' + Date.now();
+                request.open('GET', cacheBustedPath, false);
                 request.setRequestHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
                 request.setRequestHeader('Pragma', 'no-cache');
                 request.send(null);
 
                 if (request.status >= 200 && request.status < 300) {
-                    const payload = JSON.parse(request.responseText || '{}');
-                    const jsonVersion = String(payload.version || '').trim();
-                    const hasOverride = (() => {
-                        try {
-                            const url = new URL(window.location.href);
-                            return !!String(url.searchParams.get('appv') || '').trim() || !!String(localStorage.getItem(OVERRIDE_KEY) || '').trim();
-                        } catch (_) {
-                            return !!String(localStorage.getItem(OVERRIDE_KEY) || '').trim();
-                        }
-                    })();
-                    if (jsonVersion) {
-                        try { localStorage.setItem(VERSION_CACHE_KEY, jsonVersion); } catch (_) {}
-                        window.__PT_MANIFEST_VERSION__ = jsonVersion;
-                        if (!hasOverride) assetVersion = jsonVersion;
-                    }
+                    versionManifest = JSON.parse(request.responseText || '{}');
+                    const jsonVersion = String(versionManifest.version || '').trim();
+                    assetVersion = pickNewestVersion(assetVersion, jsonVersion);
                 }
             } catch (_) {}
 
+            window.__PT_APP_MANIFEST__ = versionManifest || {};
             window.__PT_ASSET_VERSION__ = assetVersion;
-            window.__PT_APP_VERSION__ = window.__PT_MANIFEST_VERSION__ || assetVersion || DEFAULT_ASSET_VERSION;
 
             function writeStyle(href) {
                 document.write('<link rel="stylesheet" href="' + href + '?v=' + encodeURIComponent(assetVersion) + '">');
@@ -162,7 +180,7 @@
                     <ul>
                         <li><strong>Realtime</strong> — Play continuously at the set tempo.</li>
                         <li><strong>Wait for Me</strong> — Waits for correct notes before continuing.</li>
-                        <li><strong>Follow Me</strong> — Waits for correct notes and can play the other hand in time.</li>
+                        <li><strong>Follow Me</strong> — Play one hand while the app follows with the other.</li>
                     </ul>
                     <p><strong>Tip:</strong> Start with <em>Wait for Me</em> to learn notes, then try <em>Follow Me</em> to practice with timing.</p>
                 </section>
@@ -425,7 +443,7 @@
                         <div class="routing-source-group">
                             <div class="routing-source-group-label">Score Playback</div>
                             <div class="routing-source-grid routing-source-grid-score">
-                                <label class="routing-readonly-note">Uses the Left / Right selections in Practice.</label>
+                                <label class="routing-readonly-note">Uses Practice hand selections.</label>
                                 <label><input type="checkbox" id="enable-hand-staves" checked> Hand Staves</label>
                                 <label><input type="checkbox" id="enable-other"> Other Staves</label>
                             </div>
@@ -436,20 +454,35 @@
                                 <label><input type="checkbox" id="enable-instrument"> MIDI In</label>
                                 <label><input type="checkbox" id="enable-virtual-keyboard" checked> Virtual Keyboard</label>
                             </div>
+                            <div id="routing-midiin-boost-row" class="practice-row value-row routing-volume-row routing-live-boost-row hidden">
+                                <label for="slider-midiin-boost" class="practice-row-label inline-label">MIDI In Boost</label>
+                                <input type="range" id="slider-midiin-boost" min="50" max="200" value="100">
+                                <div class="routing-value-group">
+                                    <input type="number" id="val-midiin-boost" value="100" min="50" max="200" class="num-input">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
 
                 <section class="routing-card" id="trainer-midiout-card">
                     <div class="routing-card-title">MIDI Out</div>
-                    <div class="routing-card-subtitle" id="trainer-midi-out-summary">Choose a MIDI Out device in Settings to send enabled playback and live input externally.</div>
-                    <div class="routing-card-subtitle routing-card-subtitle-secondary hidden" id="trainer-midi-out-summary-hint">Select a device in Settings.</div>
+                    <div class="routing-card-subtitle" id="trainer-midi-out-summary">No MIDI device selected.</div>
+                    <div class="routing-card-subtitle routing-card-subtitle-secondary" id="trainer-midi-out-summary-hint">Select a device in Settings.</div>
+
+                    <div class="practice-row value-row routing-volume-row">
+                        <label for="slider-midiout-vol" class="practice-row-label inline-label">Volume</label>
+                        <input type="range" id="slider-midiout-vol" min="0" max="100" value="65">
+                        <div class="routing-value-group">
+                            <input type="number" id="val-midiout-vol" value="65" min="0" max="100" class="num-input">
+                        </div>
+                    </div>
 
                     <div class="routing-source-groups">
                         <div class="routing-source-group">
                             <div class="routing-source-group-label">Score Playback</div>
                             <div class="routing-source-grid routing-source-grid-score">
-                                <label class="routing-readonly-note">Uses the Left / Right selections in Practice.</label>
+                                <label class="routing-readonly-note">Uses Practice hand selections.</label>
                                 <label><input type="checkbox" id="enable-midiout-hand-staves"> Hand Staves</label>
                                 <label><input type="checkbox" id="enable-midiout-other"> Other Staves</label>
                             </div>
@@ -482,6 +515,7 @@
                 <div class="practice-row display-toggle-row">
                     <label><input type="checkbox" id="check-autoscroll" checked> Auto Scroll</label>
                     <label><input type="checkbox" id="check-keyboard" checked> Virtual Keyboard</label>
+                    <label><input type="checkbox" id="check-fullscreen-on-play"> Full Screen on Play</label>
                 </div>
             </div>
         </fieldset>
@@ -593,7 +627,7 @@
                     <label class="practice-mode-option">
                         <input type="radio" name="practice-mode" id="mode-follow" value="follow">
                         <span class="practice-mode-title">Follow Me</span>
-                        <span class="practice-mode-desc">Waits for correct notes and can play the other hand in time.</span>
+                        <span class="practice-mode-desc">Play one hand while the app follows with the other.</span>
                     </label>
                 </div>
 
@@ -625,9 +659,9 @@
                 <div class="practice-section-title">Visual Feedback</div>
 
                 <div class="practice-feedback-list">
-                    <label class="inline-row-flex"><input type="checkbox" id="check-feedback" checked> Show correct / incorrect notes (on Stave)</label>
+                    <label class="inline-row-flex"><input type="checkbox" id="check-feedback" checked> Highlight correct / incorrect notes (on staff)</label>
+                    <label class="inline-row-flex"><input type="checkbox" id="check-correct-highlight"> Highlight correct-note feedback (keyboard)</label>
                     <label class="inline-row-flex"><input type="checkbox" id="check-future-preview" checked> Highlight future notes (keyboard)</label>
-                    <label class="inline-row-flex"><input type="checkbox" id="check-correct-highlight"> Show correct-note feedback (keyboard)</label>
                 </div>
 
                 <div class="practice-divider"></div>
@@ -680,6 +714,9 @@
     </div>
 
     <div id="music-area">
+        <div class="score-overlay-controls" aria-label="Score view controls">
+            <button type="button" id="btn-score-fullscreen" class="score-fullscreen-toggle" aria-label="Enter full screen" title="Enter full screen">⛶</button>
+        </div>
         <div id="canvas-wrapper">
             <div id="cursor-layer"></div>
             <div id="looper-layer"></div>
@@ -716,17 +753,17 @@
         <input type="file" id="input-led-calibration-import" accept=".json,application/json" class="hidden">
     </div>
 
-    <script>document.write('<script src="js/trainer-state.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.1.0') + '"><\/script>');</script>
-    <script>document.write('<script src="js/transpose/transpose-engine.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.1.0') + '"><\/script>');</script>
-    <script>document.write('<script src="js/transpose/transpose-ui.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.1.0') + '"><\/script>');</script>
-    <script>document.write('<script src="js/toolbar-ui.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.1.0') + '"><\/script>');</script>
-    <script>document.write('<script src="js/score-library.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.1.0') + '"><\/script>');</script>
-    <script>document.write('<script src="js/scores-ui.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.1.0') + '"><\/script>');</script>
-    <script>document.write('<script src="js/led.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.1.0') + '"><\/script>');</script>
-    <script>document.write('<script src="js/midi.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.1.0') + '"><\/script>');</script>
-    <script>document.write('<script src="js/midi-import.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.1.0') + '"><\/script>');</script>
-    <script>document.write('<script src="js/feedback-engine.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.1.0') + '"><\/script>');</script>
-    <script>document.write('<script src="js/feedback-debug.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.1.0') + '"><\/script>');</script>
-    <script>document.write('<script src="js/trainer-core.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || '1.1.0') + '"><\/script>');</script>
+    <script>document.write('<script src="js/trainer-state.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
+    <script>document.write('<script src="js/transpose/transpose-engine.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
+    <script>document.write('<script src="js/transpose/transpose-ui.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
+    <script>document.write('<script src="js/toolbar-ui.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
+    <script>document.write('<script src="js/score-library.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
+    <script>document.write('<script src="js/scores-ui.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
+    <script>document.write('<script src="js/led.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
+    <script>document.write('<script src="js/midi.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
+    <script>document.write('<script src="js/midi-import.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
+    <script>document.write('<script src="js/feedback-engine.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
+    <script>document.write('<script src="js/feedback-debug.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
+    <script>document.write('<script src="js/trainer-core.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
 </body>
 </html>

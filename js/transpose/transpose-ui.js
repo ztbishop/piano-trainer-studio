@@ -20,7 +20,7 @@
             sourceKeyFound: false,
             mode: 'key',
             semitones: 0,
-            targetKey: 'sig-0',
+            targetKey: null,
             updateKeySignature: true,
             active: false,
             activeLabel: 'Original score',
@@ -108,10 +108,12 @@
         state.disableReason = '';
         if (detected.found) {
             const inferredPreset = detected.presetValue ? window.TransposeEngine.getPresetByValue(detected.presetValue) : null;
-            const hasValidSelection = !!window.TransposeEngine.getPresetByValue(state.targetKey);
-            if (inferredPreset && !hasValidSelection) {
+            const hasValidTargetKey = !!window.TransposeEngine.getPresetByValue(state.targetKey);
+            if (inferredPreset && (!state.targetKey || !hasValidTargetKey)) {
                 state.targetKey = inferredPreset.value;
             }
+        } else if (!window.TransposeEngine.getPresetByValue(state.targetKey)) {
+            state.targetKey = 'sig-0';
         }
         return state;
     }
@@ -196,7 +198,14 @@
             });
             state.active = false;
             state.activeLabel = 'Original score';
+            state.semitones = 0;
             refreshAvailabilityFromCurrentScore();
+            const originalXml = AppState.currentScoreOriginalData;
+            const detected = (window.TransposeEngine && window.TransposeEngine.isXmlString(originalXml))
+                ? window.TransposeEngine.detectScoreKey(window.TransposeEngine.parseXml(originalXml))
+                : null;
+            const inferredPreset = detected?.presetValue ? window.TransposeEngine.getPresetByValue(detected.presetValue) : null;
+            state.targetKey = inferredPreset?.value || 'sig-0';
             syncUiFromState();
         } catch (err) {
             console.error('Transpose reset failed', err);
