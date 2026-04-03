@@ -1,9 +1,11 @@
 # 🎹 Piano Trainer Studio
 Practice piano with real-time MIDI feedback, scoring, and optional LED guidance.
 
-App: [[https://ztbishop.github.io/piano-trainer-studio/](https://ztbishop.github.io/piano-trainer-studio/](https://ztbishop.github.io/piano-trainer-studio/](https://ztbishop.github.io/piano-trainer-studio/))
+App (Github): [https://ztbishop.github.io/piano-trainer-studio/](https://ztbishop.github.io/piano-trainer-studio/)
 
-GitHub repository: [[https://github.com/ztbishop/piano-trainer-studio](https://github.com/ztbishop/piano-trainer-studio](https://github.com/ztbishop/piano-trainer-studio](https://github.com/ztbishop/piano-trainer-studio))
+App (CustomDomain): [https://www.pianotrainerstudio.com/](https://www.pianotrainerstudio.com)
+
+GitHub repository: [https://github.com/ztbishop/piano-trainer-studio](https://github.com/ztbishop/piano-trainer-studio)
 
 👉 New here?
 - Start with **Quick Start**
@@ -72,7 +74,7 @@ iOS browsers do not support MIDI.
    [TestFlight on the App Store](https://apps.apple.com/us/app/testflight/id899247664)  
 
 2. Install **MIDIWeb**  
-   [[https://midiweb.cc](https://midiweb.cc](https://midiweb.cc](https://midiweb.cc))  
+   [https://midiweb.cc](https://midiweb.cc)  
 
 3. Open MIDIWeb
 
@@ -221,23 +223,22 @@ Songs are stored in your browser (IndexedDB).
 
 ### Where can I find MusicXML songs? 
 
-- **Musetrainer**  [https://musetrainer.github.io/library](https://musetrainer.github.io/library)
-  - Public domain MusicXML Library (69 popular songs formatted for piano)
+- **[Musetrainer](https://musetrainer.github.io/library)** - Public domain MusicXML Library (69 popular songs formatted for piano)
 
-- **Openscore**  [https://fourscoreandmore.org/openscore/lieder/](https://fourscoreandmore.org/openscore/lieder/)
-  - 19th-centurey classical art songs for voice and piano
+- **[Openscore](https://fourscoreandmore.org/openscore/lieder/)** - 19th-centurey classical art songs for voice and piano
 
-- **Musescore**  [https://musescore.com/](https://musescore.com/)
-  - Large collection of music.  Use a FREE account.
+- **[Musescore](https://musescore.com/)** - Large collection of music.  **Use a FREE account.**
   - Decline any promotional pop-ups or screens asking you to upgrade to MuseScore PRO or start a 7-day free trial. **You only need the basic, free account.**
   - When searching, filter for public domain & original to bypass paywalls.  Filter for Piano / Solo.
   - Under DOWNLOAD section, choose mxl / musicxml 
   - If you are prompted to pay, ensure you are logged in, and search for anything that is **NOT** 'official score'.  Some 'Pro' scores can be downloaded if logged into a free account. 
 
-- **Github** [https://github.com/](https://github.com/)
-- Can be used to find musicxml (may find mixed results)
-  - Search this within github with your song name:  extension:mxl OR extension:musicxml piano
-  - Search this within google with your song name:  filetype:mxl OR filetype:musicxml "piano"
+- **[Github](https://github.com/)**
+  - Can be used to find musicxml (may find mixed results)
+    - Search this within github with your song name:  extension:mxl OR extension:musicxml piano
+    - Search this within google with your song name:  filetype:mxl OR filetype:musicxml "piano"
+
+- **[MusicXML](https://www.musicxml.com/music-in-musicxml/)** - List of popular websites to find MusicXML files. 
 
 
 ---

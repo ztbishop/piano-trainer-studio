@@ -716,6 +716,13 @@ This is intentional and helps keep practice flowing without interruptions.
 Realtime mode now allows slightly early notes
 Improves feel without affecting strict tempo playback
 
+v1.1.6
+Fixed delays on repeats 
+Fixed scrolling to top of song upon play. 
+Split trainer-core.js  -file becoming too large to maintain.
+Updated Metronome to support MIDI out. 
+Add custom domain
+
 
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
 //----------------------------------------------------------------------------------------------------------//

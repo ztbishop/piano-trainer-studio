@@ -1,0 +1,94 @@
+Realtime repeat + ending traversal timing fixes
+
+Fix: eliminate delay on backward repeat jumps (Realtime mode)
+
+Replaced unreliable first-note fallback timing with remaining time in current measure
+Prevents delayed cursor jump when repeating backward
+
+Fix: eliminate delay when skipping 1st ending on 2nd pass
+
+Forward structural skips (e.g., alternate endings) no longer rely on inflated iterator delta
+Timing now respects remaining playable time in current measure
+Removes end-of-measure “stall” before skipping to next section
+
+Behavioral result
+
+Realtime traversal now matches musical flow for:
+backward repeats
+alternate ending skips
+No impact to Wait mode
+
+Safety
+
+No changes to rendering, anchors, beams, resize, or clef logic
+Playback architecture unchanged (no monotonic rewrite)
+
+Rule established
+
+Realtime structural jumps should be timed using current-measure remainder, not:
+first-note fallback lengths
+raw iterator timestamp deltas
+
+=========================
+MORE DETAILS:
+=========================
+
+
+
+
+Realtime repeat / ending traversal timing fixes
+
+Issue 1: backward repeat jump delay in Realtime mode
+
+In Realtime mode, backward repeat / jump-backs had a visible delay before the cursor returned to the repeated section.
+Wait mode did not show the same issue because it advances from note input rather than from the timed playback loop.
+Root cause:
+when OSMD jumped backward, the app detected it correctly
+but the Realtime loop used an unreliable fallback wait based on the first note length in the current cursor entry
+in piano music, that first note can belong to the wrong voice, be tied/held, or otherwise not represent the true remaining playable time before the jump
+Fix:
+changed Realtime backward-jump timing so it no longer uses first-note fallback length
+instead, it waits only for the actual remaining musical time in the current measure
+Result:
+backward repeat jumps now happen at the correct time in Realtime mode
+no delay before jumping back
+
+Issue 2: delay when skipping 1st ending on 2nd pass
+
+In the repeated section around measures 63–70, the jump back worked correctly after the first fix.
+But on the second pass, when the music should skip the 1st ending and continue to the 2nd ending / following measure, Realtime still delayed on the last beat before the skip.
+Symptom:
+cursor would linger at the end of the preceding measure
+last note would highlight with expected feedback color
+then it would finally skip forward
+Root cause:
+Realtime was still trusting iterator/timestamp-based forward wait behavior too literally during structural skips
+for forward structural jumps like “skip first ending on second pass,” that raw forward delta can overstate how long the app should wait before advancing
+Fix:
+extended the same safe timing principle to this case
+for the relevant Realtime structural traversal, timing was clamped to the playable remainder of the current measure rather than trusting the inflated structural jump delta
+Result:
+second-pass skip over the 1st ending now happens without the delay
+
+What was not changed
+
+No changes to rendering layout
+No changes to feedback anchor coordinate systems
+No changes to beam layout / resize behavior
+No changes to clef-dependent placement logic
+No changes to debug overlay layering
+No monotonic playback rewrite
+
+Those were intentionally left untouched to avoid regressions in the fragile rendering/feedback systems.
+
+Broad rule established
+
+In Realtime structural navigation (repeats, backward jumps, ending skips), timing should be based on the playable remainder of the current measure, not on:
+first-note fallback lengths
+raw iterator timestamp deltas alone
+
+Practical takeaway for future edge cases
+
+If a future case appears with codas, D.S., D.C., segnos, alternate endings, etc., first check whether Realtime is:
+using an inflated structural delta, or
+relying on a note-level fallback that does not reflect the actual remaining playable time in the current measure

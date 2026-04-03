@@ -98,6 +98,7 @@ const AppState = {
     visualPulseEnabled: true,
     accentedDownbeatEnabled: true,
     loopCountInEnabled: true,
+    metronomeMidiOutEnabled: false,
     currentScoreData: null,
     currentScoreOriginalData: null,
     currentScoreFileName: '',
@@ -187,6 +188,7 @@ const MIDI_LED_LOW_VELOCITY_STORAGE_KEY = 'pt_midiLedLowVelocity';
 const VISUAL_PULSE_STORAGE_KEY = 'pt_visualPulseEnabled';
 const LOOP_COUNT_IN_STORAGE_KEY = 'pt_loopCountInEnabled';
 const METRONOME_VOL_STORAGE_KEY = 'pt_metronomeVolume';
+const METRONOME_MIDIOUT_STORAGE_KEY = 'pt_metronomeMidiOutEnabled';
 const ACCENTED_DOWNBEAT_STORAGE_KEY = 'pt_accentedDownbeatEnabled';
 
 const DEFAULT_PREFERENCES = Object.freeze({
@@ -289,6 +291,7 @@ const RESETTABLE_PREFERENCE_KEYS = [
     VISUAL_PULSE_STORAGE_KEY,
     LOOP_COUNT_IN_STORAGE_KEY,
     METRONOME_VOL_STORAGE_KEY,
+    METRONOME_MIDIOUT_STORAGE_KEY,
     ACCENTED_DOWNBEAT_STORAGE_KEY
 ];
 
