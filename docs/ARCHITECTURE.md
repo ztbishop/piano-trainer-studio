@@ -9,6 +9,7 @@
 
 ## Current modules
 - `js/trainer-state.js` = shared state and persisted preference helpers
+- `js/trainer-timing.js` = shared timing math for traversal waits, measure remainder checks, and playback scheduling inputs
 - `js/toolbar-ui.js` = toolbar/menu shell
 - `js/scores-ui.js` = score browser UI shell
 - `js/score-library.js` = score library shell
@@ -17,6 +18,14 @@
 - `js/feedback-engine.js` = production feedback-note matching, anchor resolution, and overlay placement
 - `js/feedback-debug.js` = developer-only feedback diagnostics and sticky debug labels
 - `trainer-core.js` = remaining trainer core and orchestration
+
+
+## Timing module boundary
+- `js/trainer-timing.js` is shared infrastructure for all practice modes
+- It answers **how long** structural traversal should wait
+- It must not directly move the cursor, render feedback, or update UI
+- `trainer-core.js` remains the orchestrator that decides **when** each mode advances
+- Realtime structural jumps should use current-measure remainder timing instead of first-note fallbacks or raw iterator deltas
 
 ## Why `trainer-core.js` stays together for now
 The remaining file still owns the most timing-sensitive systems:

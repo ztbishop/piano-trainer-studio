@@ -115,6 +115,7 @@ function applyPersistedTrainerAndSettingsPreferences() {
     AppState.visualPulseEnabled = getStoredBool(VISUAL_PULSE_STORAGE_KEY, true);
     AppState.accentedDownbeatEnabled = getStoredBool(ACCENTED_DOWNBEAT_STORAGE_KEY, true);
     AppState.loopCountInEnabled = getStoredBool(LOOP_COUNT_IN_STORAGE_KEY, true);
+    AppState.metronomeMidiOutEnabled = getStoredBool(METRONOME_MIDIOUT_STORAGE_KEY, false);
 
     const realtimeRadio = document.getElementById('mode-realtime');
     const waitRadio = document.getElementById('mode-wait');
@@ -216,6 +217,9 @@ function applyPersistedTrainerAndSettingsPreferences() {
     const loopCountInCheckbox = document.getElementById('check-loop-countin');
     if (loopCountInCheckbox) loopCountInCheckbox.checked = AppState.loopCountInEnabled;
 
+    const metronomeMidiOutCheckbox = document.getElementById('check-metronome-midiout');
+    if (metronomeMidiOutCheckbox) metronomeMidiOutCheckbox.checked = AppState.metronomeMidiOutEnabled;
+
     const metronomeVolume = getClampedNumber(METRONOME_VOL_STORAGE_KEY, 0, 100, 25);
     updateMetroVolume(metronomeVolume, { save: false });
 }
@@ -306,6 +310,10 @@ function restoreDefaultPreferences({ reloadDevices = true } = {}) {
     AppState.loopCountInEnabled = true;
     const loopCountInCheckbox = document.getElementById('check-loop-countin');
     if (loopCountInCheckbox) loopCountInCheckbox.checked = true;
+
+    AppState.metronomeMidiOutEnabled = false;
+    const metronomeMidiOutCheckbox = document.getElementById('check-metronome-midiout');
+    if (metronomeMidiOutCheckbox) metronomeMidiOutCheckbox.checked = false;
 
     updateMetroVolume(25, { save: true });
     syncTempoMetronomeDependentUi();
@@ -453,6 +461,57 @@ function getMetronomeClickSpec(isDownbeat) {
     return { note: 'C6', velocity: 0.7 };
 }
 
+function getMetronomeMidiClickSpec(isDownbeat) {
+    if (isDownbeat && AppState.accentedDownbeatEnabled !== false) {
+        return { note: 75, velocity: 118 };
+    }
+    return { note: 76, velocity: 92 };
+}
+
+function getMetronomeMidiVelocity(volumePercent, clickVelocity = 100) {
+    const volumeScale = Math.max(0, Math.min(100, Number(volumePercent) || 0)) / 100;
+    const baseVelocity = Math.max(1, Math.min(127, Math.round(Number(clickVelocity) || 100)));
+    return Math.max(1, Math.min(127, Math.round(baseVelocity * volumeScale)));
+}
+
+function shouldUseMidiOutMetronome() {
+    return !!AppState.metronomeMidiOutEnabled && !!getSelectedMidiOutOutput();
+}
+
+function sendMidiOutMetronomeClick(note, velocity = 100, durationMs = 80) {
+    const output = getSelectedMidiOutOutput();
+    if (!output) return false;
+    const channel = 10;
+    const noteNumber = Math.max(0, Math.min(127, Math.round(Number(note) || 0)));
+    const finalVelocity = getMetronomeMidiVelocity(metroVolSlider?.value, velocity);
+    const onStatus = getMidiStatus(0x90, channel);
+    const offStatus = getMidiStatus(0x80, channel);
+    rememberOutgoingMidiMessage(onStatus, noteNumber, finalVelocity);
+    output.send([onStatus, noteNumber, finalVelocity]);
+    window.setTimeout(() => {
+        rememberOutgoingMidiMessage(offStatus, noteNumber, 0);
+        output.send([offStatus, noteNumber, 0]);
+    }, Math.max(20, Number(durationMs) || 80));
+    return true;
+}
+
+function playMetronomeClick(isDownbeat, timeSec = null) {
+    const pulseTime = Number.isFinite(timeSec) ? timeSec : null;
+    if (shouldUseMidiOutMetronome()) {
+        const clickSpec = getMetronomeMidiClickSpec(isDownbeat);
+        const delayMs = pulseTime == null ? 0 : Math.max(0, ((pulseTime - Tone.now()) * 1000) - 2);
+        window.setTimeout(() => {
+            if (!document.getElementById('check-metronome')?.checked) return;
+            sendMidiOutMetronomeClick(clickSpec.note, clickSpec.velocity);
+        }, delayMs);
+        triggerTempoVisualPulse(pulseTime);
+        return;
+    }
+
+    const clickSpec = getMetronomeClickSpec(isDownbeat);
+    metronomeSynth.triggerAttackRelease(clickSpec.note, '64n', pulseTime ?? Tone.now(), clickSpec.velocity);
+    triggerTempoVisualPulse(pulseTime);
+}
 
 function clearTempoVisualPulse() {
     const tempoButton = document.getElementById('btn-tempo');
@@ -546,9 +605,7 @@ function scheduleNextWaitModeMetronomeTick(referenceTimeSec = null) {
         if (!document.getElementById('check-metronome')?.checked) return;
 
         const isDownbeat = waitMetronomeBeatCounter === 0;
-        const clickSpec = getMetronomeClickSpec(isDownbeat);
-        metronomeSynth.triggerAttackRelease(clickSpec.note, '64n', Tone.now(), clickSpec.velocity);
-        triggerTempoVisualPulse();
+        playMetronomeClick(isDownbeat);
 
         waitMetronomeBeatCounter = (waitMetronomeBeatCounter + 1) % Math.max(1, waitMetronomeNumerator || 4);
         waitMetronomeNextClickAtSec = targetTimeSec + beatDurationSec;
@@ -713,12 +770,10 @@ function scheduleMetronomeForPlaybackWindow(startTimeSec, currentMeasureIdx, cur
             const clickTimeSec = startTimeSec + Math.max(0, beatOffsetSec);
             const delayMs = Math.max(0, ((clickTimeSec - Tone.now()) * 1000) - 8);
             const isDownbeat = beatIndex === 0;
-            const clickSpec = getMetronomeClickSpec(isDownbeat);
             const timeoutId = window.setTimeout(() => {
                 if (!AppState.isPlaying || AppState.countInActive) return;
                 if (!document.getElementById('check-metronome')?.checked) return;
-                metronomeSynth.triggerAttackRelease(clickSpec.note, '64n', getLiveAudioTime(), clickSpec.velocity);
-                triggerTempoVisualPulse();
+                playMetronomeClick(isDownbeat, shouldUseMidiOutMetronome() ? null : getLiveAudioTime());
             }, delayMs);
             scheduledMetronomeEventIds.push(timeoutId);
         }
@@ -2042,6 +2097,7 @@ function syncTrainerRoutingUiState() {
         input.disabled = shouldDisable;
         input.closest('label')?.classList.toggle('is-disabled', shouldDisable);
     });
+    syncTempoMetronomeDependentUi();
 }
 
 function shouldRouteLiveSourceToLocalAudio(source) {
@@ -2473,9 +2529,7 @@ function doCountInAndStart(callback) {
         }
         
         const isDownbeat = beatCount === 0;
-        const clickSpec = getMetronomeClickSpec(isDownbeat);
-        metronomeSynth.triggerAttackRelease(clickSpec.note, "64n", Tone.now(), clickSpec.velocity);
-        triggerTempoVisualPulse();
+        playMetronomeClick(isDownbeat);
         beatCount++;
         
         if (beatCount < beats) {
@@ -2623,6 +2677,20 @@ function updatePlayPauseButton() {
     }
 }
 
+function preserveMusicAreaScroll(callback) {
+    const musicArea = document.getElementById('music-area');
+    if (!musicArea || typeof callback !== 'function') {
+        return typeof callback === 'function' ? callback() : undefined;
+    }
+
+    const savedScrollTop = musicArea.scrollTop;
+    const savedScrollLeft = musicArea.scrollLeft;
+    const result = callback();
+    musicArea.scrollTop = savedScrollTop;
+    musicArea.scrollLeft = savedScrollLeft;
+    return result;
+}
+
 async function startPlaybackFromToolbar() {
     if (!osmd.cursor || AppState.isPlaying) return;
 
@@ -2642,11 +2710,18 @@ async function startPlaybackFromToolbar() {
 
     AppState.lastLedPreviewEvents = [];
     AppState.ledPreviewTraversalIndex = -1;
-    ensureLedPreviewTimelineBuilt();
+
+    // WARNING:
+    // Building the LED preview timeline temporarily resets/traverses the OSMD cursor.
+    // Preserve the user's pre-play viewport so auto-scroll does not jump to measure 1 during count-in.
+    preserveMusicAreaScroll(() => {
+        ensureLedPreviewTimelineBuilt();
+    });
 
     doCountInAndStart(() => {
         AppState.anchorTime = Tone.now();
         osmd.cursor.show();
+        handleAutoScroll();
         Tone.Transport.bpm.value = AppState.baseBpm * AppState.speedPercent;
         Tone.Transport.start();
         if (AppState.mode === 'wait' && document.getElementById('check-metronome')?.checked) {
@@ -2817,21 +2892,34 @@ const bpmInput = document.getElementById('val-bpm');
 
 function syncTempoMetronomeDependentUi() {
     const metronomeEnabled = !!document.getElementById('check-metronome')?.checked;
+    const hasMidiOut = !!getSelectedMidiOutOutput();
+    const midiOutModeEnabled = !!document.getElementById('check-metronome-midiout')?.checked;
     const metroVolumeLabel = document.getElementById('tempo-metro-volume-label');
     const metroControls = [
         document.getElementById('slider-metro-vol'),
         document.getElementById('val-metro-vol'),
         document.getElementById('check-accented-downbeat'),
-        document.getElementById('check-visual-pulse')
+        document.getElementById('check-visual-pulse'),
+        document.getElementById('check-metronome-midiout')
     ];
+    const midiOutHint = document.getElementById('tempo-midiout-metronome-hint');
 
     if (metroVolumeLabel) {
+        metroVolumeLabel.textContent = midiOutModeEnabled ? 'Level' : 'Volume';
         metroVolumeLabel.setAttribute('aria-disabled', metronomeEnabled ? 'false' : 'true');
     }
 
     for (const control of metroControls) {
         if (!control) continue;
         control.disabled = !metronomeEnabled;
+        control.closest('label')?.classList.toggle('is-disabled', !metronomeEnabled);
+    }
+
+    if (midiOutHint) {
+        midiOutHint.textContent = hasMidiOut
+            ? 'Uses GM percussion on the selected MIDI Out device.'
+            : 'Select a MIDI Out device to hear metronome clicks on Channel 10.';
+        midiOutHint.classList.toggle('is-disabled', !metronomeEnabled || !hasMidiOut);
     }
 }
 
@@ -3125,6 +3213,14 @@ if (visualPulseCheckbox) {
     });
 }
 
+const metronomeMidiOutCheckbox = document.getElementById('check-metronome-midiout');
+if (metronomeMidiOutCheckbox) {
+    metronomeMidiOutCheckbox.addEventListener('change', (e) => {
+        AppState.metronomeMidiOutEnabled = e.target.checked;
+        setStoredBool(METRONOME_MIDIOUT_STORAGE_KEY, AppState.metronomeMidiOutEnabled);
+        syncTempoMetronomeDependentUi();
+    });
+}
 
 syncLooperDependentUi();
 
@@ -3368,6 +3464,7 @@ function playbackLoop() {
 
     osmd.cursor.Iterator.moveToNext(); 
     
+    const nextMeasureIdx = osmd.cursor.Iterator.CurrentMeasureIndex;
     let nextTimestamp = osmd.cursor.Iterator.currentTimeStamp.RealValue;
     const isEndReached = osmd.cursor.Iterator.EndReached;
     
@@ -3380,14 +3477,14 @@ function playbackLoop() {
         nextTimestamp = currentTimestamp + fallbackLength;
     }
 
-    let beatsToWait;
-    if (nextTimestamp < currentTimestamp) {
-        // Repeat / ending jump: iterator moved backward in musical time.
-        // Use the current event length instead of a negative timestamp delta.
-        beatsToWait = fallbackLength * 4;
-    } else {
-        beatsToWait = (nextTimestamp - currentTimestamp) * 4;
-    }
+    const beatsToWait = window.PTTiming.getTraversalBeatsToWait({
+        currentMeasureIdx,
+        currentTimestamp,
+        nextMeasureIdx,
+        nextTimestamp,
+        fallbackLength,
+        getMeasureTimingInfo
+    });
 
     const currentRunningBpm = AppState.baseBpm * AppState.speedPercent;
     const waitSeconds = beatsToWait * (60 / currentRunningBpm);

@@ -593,6 +593,12 @@
                     </div>
                 </div>
 
+                <div class="tempo-row tempo-midiout-metronome-row">
+                    <div class="tempo-row-spacer" aria-hidden="true"></div>
+                    <label class="tempo-midiout-metronome-toggle"><input type="checkbox" id="check-metronome-midiout"> MIDI Out click (Ch 10)</label>
+                    <div id="tempo-midiout-metronome-hint" class="tempo-inline-note">Uses GM percussion on the selected MIDI Out device.</div>
+                </div>
+
                 <div class="tempo-row tempo-accented-downbeat-row">
                     <div class="tempo-row-spacer" aria-hidden="true"></div>
                     <label class="tempo-accented-downbeat-toggle"><input type="checkbox" id="check-accented-downbeat" checked> Accented Downbeat</label>
@@ -764,6 +770,7 @@
     <script>document.write('<script src="js/midi-import.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
     <script>document.write('<script src="js/feedback-engine.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
     <script>document.write('<script src="js/feedback-debug.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
+    <script>document.write('<script src="js/trainer-timing.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
     <script>document.write('<script src="js/trainer-core.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
 </body>
 </html>

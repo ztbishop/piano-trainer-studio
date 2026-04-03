@@ -4961,3 +4961,46 @@ input[type="range"] {
 #trainer-midiout-card input:disabled {
     opacity: 0.6;
 }
+
+
+.tempo-midiout-metronome-row {
+    align-items: center;
+}
+
+.tempo-midiout-metronome-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tempo-inline-note {
+    grid-column: 3 / 5;
+    font-size: 0.9rem;
+    color: var(--muted-text, #6f7b8f);
+    line-height: 1.35;
+}
+
+.tempo-inline-note.is-disabled {
+    opacity: 0.6;
+}
+
+@media (max-width: 900px) {
+    .tempo-inline-note {
+        grid-column: 2 / -1;
+    }
+}
+
+
+#fs-tempo-popup .tempo-midiout-metronome-row .tempo-row-spacer {
+    display: none !important;
+}
+
+#fs-tempo-popup .tempo-midiout-metronome-toggle {
+    margin-left: 0 !important;
+    justify-self: start;
+}
+
+#fs-tempo-popup .tempo-midiout-metronome-hint,
+#tempo-midiout-metronome-hint {
+    justify-self: start;
+}
