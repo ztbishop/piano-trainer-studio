@@ -12,6 +12,11 @@
 // State and persisted preference helpers now load from js/trainer-state.js.
 // Keep trainer-core.js focused on orchestration and cross-module coordination.
 
+// IMPORTANT:
+// For rendering, pass original .mxl files directly to OSMD.
+// Do NOT substitute normalized XML as the render source for .mxl.
+// Normalized XML may still be used for other features, but not render.
+
 // ===== Boot + persisted preferences =====
 
 function getDefaultStaffAssignment() {
@@ -390,18 +395,75 @@ let osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("osmd-container", {
     drawTitle: true
 });
 
+const TONE_AUDIO_PERFORMANCE_SETTINGS = Object.freeze({
+    latencyHint: 0.001,
+    lookAhead: 0.005,
+    updateInterval: 0.005
+});
+
+const FOLLOW_ME_MIN_WAIT_RATIO = 0.6;
+
+function configureLowLatencyToneContext() {
+    try {
+        if (typeof Tone?.Context === 'function' && typeof Tone?.setContext === 'function') {
+            Tone.setContext(new Tone.Context(TONE_AUDIO_PERFORMANCE_SETTINGS));
+        }
+    } catch (err) {
+        console.warn('Could not replace Tone.js context with low-latency settings.', err);
+    }
+
+    try {
+        const ctx = typeof Tone?.getContext === 'function' ? Tone.getContext() : Tone?.context;
+        if (!ctx) return;
+        if ('latencyHint' in ctx) ctx.latencyHint = TONE_AUDIO_PERFORMANCE_SETTINGS.latencyHint;
+        if ('lookAhead' in ctx) ctx.lookAhead = TONE_AUDIO_PERFORMANCE_SETTINGS.lookAhead;
+        if ('updateInterval' in ctx) ctx.updateInterval = TONE_AUDIO_PERFORMANCE_SETTINGS.updateInterval;
+    } catch (err) {
+        console.warn('Could not apply low-latency tuning to Tone.js context.', err);
+    }
+}
+
+function getPreferredPianoSampleExtension() {
+    try {
+        const probe = document.createElement('audio');
+        const oggSupport = typeof probe.canPlayType === 'function'
+            ? probe.canPlayType('audio/ogg; codecs="vorbis"')
+            : '';
+        return oggSupport && oggSupport !== 'no' ? 'ogg' : 'mp3';
+    } catch (_) {
+        return 'mp3';
+    }
+}
+
+configureLowLatencyToneContext();
+
+const PIANO_SAMPLE_EXTENSION = getPreferredPianoSampleExtension();
 const masterPianoVolume = new Tone.Volume(0).toDestination();
+
+const lowLatencyPlaybackSynth = new Tone.PolySynth(Tone.Synth, {
+    maxPolyphony: 24,
+    volume: -6,
+    options: {
+        oscillator: { type: 'triangle' },
+        envelope: {
+            attack: 0.001,
+            decay: 0.08,
+            sustain: 0.18,
+            release: 0.12
+        }
+    }
+}).connect(masterPianoVolume);
 
 const pianoSampler = new Tone.Sampler({
     urls: {
-        "A0": "A0.mp3", "C1": "C1.mp3", "D#1": "Ds1.mp3", "F#1": "Fs1.mp3",
-        "A1": "A1.mp3", "C2": "C2.mp3", "D#2": "Ds2.mp3", "F#2": "Fs2.mp3",
-        "A2": "A2.mp3", "C3": "C3.mp3", "D#3": "Ds3.mp3", "F#3": "Fs3.mp3",
-        "A3": "A3.mp3", "C4": "C4.mp3", "D#4": "Ds4.mp3", "F#4": "Fs4.mp3",
-        "A4": "A4.mp3", "C5": "C5.mp3", "D#5": "Ds5.mp3", "F#5": "Fs5.mp3",
-        "A5": "A5.mp3", "C6": "C6.mp3", "D#6": "Ds6.mp3", "F#6": "Fs6.mp3",
-        "A6": "A6.mp3", "C7": "C7.mp3", "D#7": "Ds7.mp3", "F#7": "Fs7.mp3",
-        "A7": "A7.mp3", "C8": "C8.mp3"
+        "A0": `A0.${PIANO_SAMPLE_EXTENSION}`, "C1": `C1.${PIANO_SAMPLE_EXTENSION}`, "D#1": `Ds1.${PIANO_SAMPLE_EXTENSION}`, "F#1": `Fs1.${PIANO_SAMPLE_EXTENSION}`,
+        "A1": `A1.${PIANO_SAMPLE_EXTENSION}`, "C2": `C2.${PIANO_SAMPLE_EXTENSION}`, "D#2": `Ds2.${PIANO_SAMPLE_EXTENSION}`, "F#2": `Fs2.${PIANO_SAMPLE_EXTENSION}`,
+        "A2": `A2.${PIANO_SAMPLE_EXTENSION}`, "C3": `C3.${PIANO_SAMPLE_EXTENSION}`, "D#3": `Ds3.${PIANO_SAMPLE_EXTENSION}`, "F#3": `Fs3.${PIANO_SAMPLE_EXTENSION}`,
+        "A3": `A3.${PIANO_SAMPLE_EXTENSION}`, "C4": `C4.${PIANO_SAMPLE_EXTENSION}`, "D#4": `Ds4.${PIANO_SAMPLE_EXTENSION}`, "F#4": `Fs4.${PIANO_SAMPLE_EXTENSION}`,
+        "A4": `A4.${PIANO_SAMPLE_EXTENSION}`, "C5": `C5.${PIANO_SAMPLE_EXTENSION}`, "D#5": `Ds5.${PIANO_SAMPLE_EXTENSION}`, "F#5": `Fs5.${PIANO_SAMPLE_EXTENSION}`,
+        "A5": `A5.${PIANO_SAMPLE_EXTENSION}`, "C6": `C6.${PIANO_SAMPLE_EXTENSION}`, "D#6": `Ds6.${PIANO_SAMPLE_EXTENSION}`, "F#6": `Fs6.${PIANO_SAMPLE_EXTENSION}`,
+        "A6": `A6.${PIANO_SAMPLE_EXTENSION}`, "C7": `C7.${PIANO_SAMPLE_EXTENSION}`, "D#7": `Ds7.${PIANO_SAMPLE_EXTENSION}`, "F#7": `Fs7.${PIANO_SAMPLE_EXTENSION}`,
+        "A7": `A7.${PIANO_SAMPLE_EXTENSION}`, "C8": `C8.${PIANO_SAMPLE_EXTENSION}`
     },
     release: 1,
     baseUrl: "assets/audio/salamander/"
@@ -434,6 +496,35 @@ function getSamplerNoteName(midi) {
     } catch (_) {
         return null;
     }
+}
+
+function shouldUseLowLatencyPlaybackPath() {
+    if (!AppState.lowLatencyPlaybackEnabled) return false;
+    return AppState.mode === 'follow' || AppState.mode === 'realtime';
+}
+
+function playLowLatencyPlaybackNote(midi, velocity = 100, durationMs = null) {
+    const noteName = getSamplerNoteName(midi);
+    if (!noteName) return;
+
+    const normalized = normalizeLiveVelocity(velocity);
+    const liveTime = getLiveAudioTime();
+
+    if (Number.isFinite(durationMs) && durationMs > 0) {
+        lowLatencyPlaybackSynth.triggerAttackRelease(noteName, Math.max(0.01, durationMs / 1000), liveTime, normalized.gain);
+        return;
+    }
+
+    lowLatencyPlaybackSynth.triggerRelease(noteName, liveTime);
+    lowLatencyPlaybackSynth.triggerAttack(noteName, liveTime, normalized.gain);
+}
+
+function playScheduledPlaybackNote(midi, velocity = 100, durationMs = null) {
+    if (shouldUseLowLatencyPlaybackPath()) {
+        playLowLatencyPlaybackNote(midi, velocity, durationMs);
+        return;
+    }
+    playLocalPianoNote(midi, velocity, durationMs);
 }
 
 const metronomeSynth = new Tone.MembraneSynth({
@@ -855,17 +946,206 @@ function cloneScoreRawData(rawData) {
     return rawData;
 }
 
+function readUint16LE(bytes, offset) {
+    return bytes[offset] | (bytes[offset + 1] << 8);
+}
+
+function readUint32LE(bytes, offset) {
+    return (
+        bytes[offset] |
+        (bytes[offset + 1] << 8) |
+        (bytes[offset + 2] << 16) |
+        (bytes[offset + 3] << 24)
+    ) >>> 0;
+}
+
+function normalizeZipEntryPath(path) {
+    return String(path || '').replace(/^\/+/, '').replace(/\\/g, '/');
+}
+
+function getZipEntryDepth(path) {
+    const normalized = normalizeZipEntryPath(path);
+    if (!normalized) return Number.MAX_SAFE_INTEGER;
+    return normalized.split('/').length - 1;
+}
+
+async function rawDataToArrayBuffer(rawData) {
+    if (rawData instanceof ArrayBuffer) return rawData;
+    if (ArrayBuffer.isView(rawData)) {
+        return rawData.buffer.slice(rawData.byteOffset, rawData.byteOffset + rawData.byteLength);
+    }
+    if (typeof Blob !== 'undefined' && rawData instanceof Blob) {
+        return await rawData.arrayBuffer();
+    }
+    return null;
+}
+
+function listZipEntries(arrayBuffer) {
+    const bytes = new Uint8Array(arrayBuffer);
+    const eocdSignature = 0x06054b50;
+    const centralSignature = 0x02014b50;
+    const minEocdSize = 22;
+    const maxCommentLength = 0xffff;
+    const searchStart = Math.max(0, bytes.length - (minEocdSize + maxCommentLength));
+
+    let eocdOffset = -1;
+    for (let offset = bytes.length - minEocdSize; offset >= searchStart; offset -= 1) {
+        if (readUint32LE(bytes, offset) === eocdSignature) {
+            eocdOffset = offset;
+            break;
+        }
+    }
+
+    if (eocdOffset < 0) {
+        throw new Error('Could not find the ZIP directory in this MXL file.');
+    }
+
+    const entryCount = readUint16LE(bytes, eocdOffset + 10);
+    const centralDirectoryOffset = readUint32LE(bytes, eocdOffset + 16);
+    let offset = centralDirectoryOffset;
+    const decoder = new TextDecoder('utf-8');
+    const entries = [];
+
+    for (let index = 0; index < entryCount; index += 1) {
+        if (offset + 46 > bytes.length || readUint32LE(bytes, offset) !== centralSignature) {
+            throw new Error('Could not read the ZIP entries from this MXL file.');
+        }
+
+        const compressionMethod = readUint16LE(bytes, offset + 10);
+        const compressedSize = readUint32LE(bytes, offset + 20);
+        const uncompressedSize = readUint32LE(bytes, offset + 24);
+        const fileNameLength = readUint16LE(bytes, offset + 28);
+        const extraFieldLength = readUint16LE(bytes, offset + 30);
+        const fileCommentLength = readUint16LE(bytes, offset + 32);
+        const localHeaderOffset = readUint32LE(bytes, offset + 42);
+        const fileNameStart = offset + 46;
+        const fileNameEnd = fileNameStart + fileNameLength;
+        const fileName = decoder.decode(bytes.slice(fileNameStart, fileNameEnd));
+
+        entries.push({
+            fileName,
+            compressionMethod,
+            compressedSize,
+            uncompressedSize,
+            localHeaderOffset
+        });
+
+        offset = fileNameEnd + extraFieldLength + fileCommentLength;
+    }
+
+    return entries;
+}
+
+async function inflateZipEntryData(compressedBytes, compressionMethod) {
+    if (compressionMethod === 0) {
+        return compressedBytes;
+    }
+
+    if (compressionMethod !== 8) {
+        throw new Error(`Unsupported MXL compression method: ${compressionMethod}.`);
+    }
+
+    if (typeof DecompressionStream !== 'function') {
+        throw new Error('This browser does not support ZIP decompression for transpose.');
+    }
+
+    const stream = new Blob([compressedBytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    const inflatedBuffer = await new Response(stream).arrayBuffer();
+    return new Uint8Array(inflatedBuffer);
+}
+
+async function extractZipEntryText(arrayBuffer, entry) {
+    const bytes = new Uint8Array(arrayBuffer);
+    const localSignature = 0x04034b50;
+    const localOffset = entry.localHeaderOffset;
+
+    if (localOffset + 30 > bytes.length || readUint32LE(bytes, localOffset) !== localSignature) {
+        throw new Error(`Could not read ZIP entry "${entry.fileName}".`);
+    }
+
+    const fileNameLength = readUint16LE(bytes, localOffset + 26);
+    const extraFieldLength = readUint16LE(bytes, localOffset + 28);
+    const dataStart = localOffset + 30 + fileNameLength + extraFieldLength;
+    const dataEnd = dataStart + entry.compressedSize;
+    const compressedBytes = bytes.slice(dataStart, dataEnd);
+    const inflatedBytes = await inflateZipEntryData(compressedBytes, entry.compressionMethod);
+    return new TextDecoder('utf-8').decode(inflatedBytes);
+}
+
+function chooseMusicXmlEntry(entries, containerPath = '') {
+    const normalizedContainerPath = normalizeZipEntryPath(containerPath).toLowerCase();
+    const xmlEntries = entries.filter((entry) => {
+        const normalizedPath = normalizeZipEntryPath(entry.fileName);
+        if (!normalizedPath) return false;
+        if (normalizedPath.toLowerCase() === 'meta-inf/container.xml') return false;
+        return /\.(xml|musicxml)$/i.test(normalizedPath);
+    });
+
+    if (!xmlEntries.length) return null;
+
+    if (normalizedContainerPath) {
+        const containerMatch = xmlEntries.find((entry) => normalizeZipEntryPath(entry.fileName).toLowerCase() === normalizedContainerPath);
+        if (containerMatch) return containerMatch;
+    }
+
+    const rootLevelEntry = xmlEntries
+        .filter((entry) => getZipEntryDepth(entry.fileName) === 0)
+        .sort((left, right) => normalizeZipEntryPath(left.fileName).localeCompare(normalizeZipEntryPath(right.fileName)))[0];
+    if (rootLevelEntry) return rootLevelEntry;
+
+    return xmlEntries.sort((left, right) => {
+        const depthDelta = getZipEntryDepth(left.fileName) - getZipEntryDepth(right.fileName);
+        if (depthDelta !== 0) return depthDelta;
+        return normalizeZipEntryPath(left.fileName).localeCompare(normalizeZipEntryPath(right.fileName));
+    })[0];
+}
+
+async function extractMusicXmlFromMxl(rawData) {
+    const arrayBuffer = await rawDataToArrayBuffer(rawData);
+    if (!arrayBuffer) return null;
+
+    const entries = listZipEntries(arrayBuffer);
+    const containerEntry = entries.find((entry) => normalizeZipEntryPath(entry.fileName).toLowerCase() === 'meta-inf/container.xml');
+    let containerPath = '';
+
+    if (containerEntry) {
+        try {
+            const containerText = await extractZipEntryText(arrayBuffer, containerEntry);
+            const match = containerText.match(/full-path\s*=\s*["']([^"']+)["']/i);
+            if (match && match[1]) {
+                containerPath = match[1];
+            }
+        } catch (_) {}
+    }
+
+    const xmlEntry = chooseMusicXmlEntry(entries, containerPath);
+    if (!xmlEntry) {
+        throw new Error('Could not find the embedded MusicXML inside this MXL file.');
+    }
+
+    return await extractZipEntryText(arrayBuffer, xmlEntry);
+}
+
 async function getCanonicalMusicXmlForTranspose(rawData, { fileName = 'Untitled Score', fileType = 'xml' } = {}) {
     const resolvedType = String(fileType || getScoreFileTypeFromName(fileName || '') || 'xml').toLowerCase();
     if (resolvedType === 'xml' || resolvedType === 'musicxml') {
         return typeof rawData === 'string' ? rawData : null;
     }
 
-    if (resolvedType === 'mxl' && window.MidiImport && typeof window.MidiImport.normalizeScoreToMusicXml === 'function') {
+    if (resolvedType === 'mxl') {
         try {
-            return await window.MidiImport.normalizeScoreToMusicXml(rawData, { fileName, fileType: resolvedType });
-        } catch (err) {
-            console.warn('Could not normalize MXL to MusicXML for transpose support.', err);
+            return await extractMusicXmlFromMxl(rawData);
+        } catch (extractErr) {
+            if (window.MidiImport && typeof window.MidiImport.normalizeScoreToMusicXml === 'function') {
+                try {
+                    return await window.MidiImport.normalizeScoreToMusicXml(rawData, { fileName, fileType: resolvedType });
+                } catch (normalizeErr) {
+                    console.warn('Could not normalize MXL to MusicXML for transpose support.', normalizeErr);
+                    console.warn('Direct MXL XML extraction also failed.', extractErr);
+                    return null;
+                }
+            }
+            console.warn('Could not extract MXL to MusicXML for transpose support.', extractErr);
             return null;
         }
     }
@@ -912,6 +1192,9 @@ function getOsmdLoadPayload(rawData, fileType = 'xml', fileName = 'Untitled Scor
 
     return rawData;
 }
+
+
+
 
 async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType = 'xml', libraryScoreId = null, title = null, originalRawData = undefined, originalFileName = undefined, originalFileType = undefined, skipTransposeReset = false } = {}) {
     try {
@@ -1192,7 +1475,7 @@ function getRenderableNotesForHandFromTimelineEvent(event, handRole) {
     return event.notes.filter(note => getAssignedHandRoleForStaff(note.staffId) === handRole);
 }
 
-function findNextSingleHandPracticeTimelineEvent() {
+function findSingleHandPracticeTimelineWindow() {
     const handRole = getSinglePracticedHandRole();
     const ctx = AppState.currentExpectedContext;
     if (!handRole || !ctx) return null;
@@ -1209,19 +1492,79 @@ function findNextSingleHandPracticeTimelineEvent() {
     );
     if (currentIndex < 0) return null;
 
-    for (let i = currentIndex + 1; i < timeline.length; i++) {
-        const event = timeline[i];
-        const notes = getRenderableNotesForHandFromTimelineEvent(event, handRole);
+    let referenceEvent = null;
+    let referenceIndex = -1;
+    for (let i = currentIndex; i >= 0; i--) {
+        const notes = getRenderableNotesForHandFromTimelineEvent(timeline[i], handRole);
         if (notes.length > 0) {
-            return {
-                measureIndex: event.measureIndex,
-                timestamp: event.timestamp,
+            referenceEvent = {
+                measureIndex: timeline[i].measureIndex,
+                timestamp: timeline[i].timestamp,
                 notes
             };
+            referenceIndex = i;
+            break;
         }
     }
 
-    return null;
+    let nextEvent = null;
+    let nextIndex = -1;
+    for (let i = currentIndex + 1; i < timeline.length; i++) {
+        const notes = getRenderableNotesForHandFromTimelineEvent(timeline[i], handRole);
+        if (notes.length > 0) {
+            nextEvent = {
+                measureIndex: timeline[i].measureIndex,
+                timestamp: timeline[i].timestamp,
+                notes
+            };
+            nextIndex = i;
+            break;
+        }
+    }
+
+    return {
+        handRole,
+        timeline,
+        currentIndex,
+        referenceEvent,
+        referenceIndex,
+        nextEvent,
+        nextIndex
+    };
+}
+
+function findNextSingleHandPracticeTimelineEvent() {
+    return findSingleHandPracticeTimelineWindow()?.nextEvent || null;
+}
+
+function getSingleHandPracticeBeatsUntilNextEvent(windowInfo) {
+    const nextEvent = windowInfo?.nextEvent;
+    if (!nextEvent) return Number.POSITIVE_INFINITY;
+
+    const referenceEvent = windowInfo?.referenceEvent;
+    if (!referenceEvent) {
+        const ctx = AppState.currentExpectedContext;
+        if (!ctx || !Number.isFinite(ctx.measureIndex) || !Number.isFinite(ctx.timestamp)) {
+            return Number.POSITIVE_INFINITY;
+        }
+        return window.PTTiming.getTraversalBeatsToWait({
+            currentMeasureIdx: ctx.measureIndex,
+            currentTimestamp: ctx.timestamp,
+            nextMeasureIdx: nextEvent.measureIndex,
+            nextTimestamp: nextEvent.timestamp,
+            fallbackLength: 0.25,
+            getMeasureTimingInfo
+        });
+    }
+
+    return window.PTTiming.getTraversalBeatsToWait({
+        currentMeasureIdx: referenceEvent.measureIndex,
+        currentTimestamp: referenceEvent.timestamp,
+        nextMeasureIdx: nextEvent.measureIndex,
+        nextTimestamp: nextEvent.timestamp,
+        fallbackLength: 0.25,
+        getMeasureTimingInfo
+    });
 }
 
 function tryReserveSingleHandEarlyGrace(midi) {
@@ -1230,17 +1573,27 @@ function tryReserveSingleHandEarlyGrace(midi) {
     if (!getSinglePracticedHandRole()) return null;
     if (AppState.expectedNotes.length > 0 && !AppState.expectedNotes.every(n => n.hit)) return null;
 
-    const nextEvent = findNextSingleHandPracticeTimelineEvent();
+    const practiceWindow = findSingleHandPracticeTimelineWindow();
+    const nextEvent = practiceWindow?.nextEvent || null;
     if (!nextEvent) return null;
 
     const matched = nextEvent.notes.find(note => note.midi === midi);
     if (!matched) return null;
 
+    const beatsUntilTarget = getSingleHandPracticeBeatsUntilNextEvent(practiceWindow);
+    // In Follow Me, early grace should be based on the next cursor for the practiced hand only.
+    // Once we have identified that next practiced-hand event, keep the reservation even if the user
+    // releases before the app reaches any intervening playback-hand cursor steps.
+    const allowTapCarry = AppState.mode === 'follow'
+        ? true
+        : (Number.isFinite(beatsUntilTarget) && beatsUntilTarget <= 1.05);
     const reservation = {
         midi,
         staffId: matched.staffId,
         measureIndex: nextEvent.measureIndex,
-        timestamp: nextEvent.timestamp
+        timestamp: nextEvent.timestamp,
+        allowTapCarry,
+        beatsUntilTarget: Number.isFinite(beatsUntilTarget) ? beatsUntilTarget : null
     };
 
     AppState.earlyGraceReservations.set(midi, reservation);
@@ -2147,7 +2500,7 @@ function schedulePlaybackForDestinations(midi, durationMs, velocity = 100, optio
     if (durationMs <= 0) return;
 
     if (options.toLocalAudio) {
-        playLocalPianoNote(midi, velocity, durationMs);
+        playScheduledPlaybackNote(midi, velocity, durationMs);
     }
 
     if (options.toMidiOut && sendMidiOutNoteOn(midi, velocity)) {
@@ -2186,7 +2539,12 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
         if (AppState.isPlaying) {
             const expectedMatch = findExpectedMatchForMidi(midi);
             const sustainMatch = !expectedMatch ? findSatisfiedOrSustainedMatchForMidi(midi) : null;
-            const earlyGraceReservation = (!expectedMatch && !sustainMatch) ? tryReserveSingleHandEarlyGrace(midi) : null;
+            const repeatCarryReservation = (!expectedMatch && sustainMatch?.source === 'already-hit')
+                ? tryReserveSingleHandEarlyGrace(midi)
+                : null;
+            const earlyGraceReservation = (!expectedMatch && !sustainMatch)
+                ? tryReserveSingleHandEarlyGrace(midi)
+                : repeatCarryReservation;
             const isCorrect = !!expectedMatch;
             const isAcceptedRepeat = !expectedMatch && !!sustainMatch;
             const isEarlyGraceReserved = !!earlyGraceReservation;
@@ -2246,7 +2604,10 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
         AppState.pressedKeys.delete(midi);
         AppState.heldCorrectNotes.delete(midi); 
         AppState.preExpectedHeldNotes.delete(midi);
-        AppState.earlyGraceReservations.delete(midi);
+        const earlyReservation = AppState.earlyGraceReservations.get(midi);
+        if (!earlyReservation || !earlyReservation.allowTapCarry) {
+            AppState.earlyGraceReservations.delete(midi);
+        }
         releaseHeldIncorrectFeedback(midi);
         
         if (shouldRouteLiveSourceToLocalAudio(source)) {
@@ -2295,23 +2656,20 @@ function checkWaitModeAdvance() {
         if (shouldFollow) {
             const fullWaitSeconds = Math.max(0, followInfo.waitSeconds);
             const rawRemainingSeconds = Number.isFinite(AppState.anchorTime)
-                ? Math.max(0, AppState.anchorTime - Tone.now())
+                ? (AppState.anchorTime - Tone.now())
                 : fullWaitSeconds;
 
-            // Follow Me should preserve the original beat grid when the user is on time,
-            // but it should not restart a full note-length wait after a slightly late hit.
-            // Use the remaining scheduled time, with a tiny floor so dense playback does not
-            // collapse into an unnaturally rushed burst when the user lands right on/past the beat.
-            const carryForwardFloorSeconds = Math.min(0.06, fullWaitSeconds * 0.35);
-            const lateRecoveryFloorSeconds = Math.min(0.09, fullWaitSeconds * 0.5);
-
-            let effectiveWaitSeconds = rawRemainingSeconds;
-            if (effectiveWaitSeconds <= 0) {
-                effectiveWaitSeconds = lateRecoveryFloorSeconds;
-            } else if (effectiveWaitSeconds < carryForwardFloorSeconds) {
-                effectiveWaitSeconds = carryForwardFloorSeconds;
+            // Keep the original beat grid when the player is on time or early.
+            // If the player arrives late, do not collapse the next delay into a tiny
+            // catch-up burst. Let Follow Me breathe from the player's actual hit time.
+            let effectiveWaitSeconds = rawRemainingSeconds > 0
+                ? rawRemainingSeconds
+                : fullWaitSeconds;
+            const minimumComfortWaitSeconds = fullWaitSeconds * FOLLOW_ME_MIN_WAIT_RATIO;
+            if (effectiveWaitSeconds < minimumComfortWaitSeconds) {
+                effectiveWaitSeconds = fullWaitSeconds;
             }
-            effectiveWaitSeconds = Math.min(Math.max(0, effectiveWaitSeconds), fullWaitSeconds);
+            effectiveWaitSeconds = Math.max(0, effectiveWaitSeconds);
 
             scheduleMetronomeForPlaybackWindow(
                 Tone.now(),
@@ -2362,11 +2720,13 @@ function applyModeSettings() {
     const playbackRow = document.querySelector('.practice-playback-row');
     const waitNoteRow = document.getElementById('practice-wait-note-row');
     const waitNote = document.getElementById('practice-wait-note');
+    const lowLatencyPlaybackCheckbox = document.getElementById('check-low-latency-playback');
 
     if (practiceLeftToggle) practiceLeftToggle.checked = AppState.practice.left;
     if (practiceRightToggle) practiceRightToggle.checked = AppState.practice.right;
     if (playbackLeftToggle) playbackLeftToggle.checked = AppState.playback.left;
     if (playbackRightToggle) playbackRightToggle.checked = AppState.playback.right;
+    if (lowLatencyPlaybackCheckbox) lowLatencyPlaybackCheckbox.checked = !!AppState.lowLatencyPlaybackEnabled;
 
     if (isWait) {
         if (audioHandsToggle) audioHandsToggle.checked = false;
@@ -2409,6 +2769,13 @@ function applyModeSettings() {
         waitNote.classList.toggle('is-disabled', !modeNote);
     }
     syncTrainerRoutingUiState();
+}
+
+function syncLowLatencyPlaybackPreferenceUi() {
+    const lowLatencyPlaybackCheckbox = document.getElementById('check-low-latency-playback');
+    if (lowLatencyPlaybackCheckbox) {
+        lowLatencyPlaybackCheckbox.checked = !!AppState.lowLatencyPlaybackEnabled;
+    }
 }
 
 function initLedSimulatorToggleControl() {
@@ -2734,6 +3101,7 @@ async function startPlaybackFromToolbar() {
 function silencePlaybackOutputsImmediately() {
     try {
         pianoSampler.releaseAll?.();
+        lowLatencyPlaybackSynth.releaseAll?.();
     } catch (err) {
         console.warn('Could not release Tone.js playback voices immediately.', err);
     }
@@ -2918,7 +3286,7 @@ function syncTempoMetronomeDependentUi() {
     if (midiOutHint) {
         midiOutHint.textContent = hasMidiOut
             ? 'Uses GM percussion on the selected MIDI Out device.'
-            : 'Select a MIDI Out device to hear metronome clicks on Channel 10.';
+            : 'Select a MIDI Out device to hear metronome clicks on Channel 10. Some keyboards require a drum (Ch 10) or multi-timbral mode to avoid piano sounds.';
         midiOutHint.classList.toggle('is-disabled', !metronomeEnabled || !hasMidiOut);
     }
 }
@@ -3041,6 +3409,18 @@ if (fullscreenOnPlayCheckbox) {
     fullscreenOnPlayCheckbox.addEventListener('change', (e) => {
         AppState.fullscreenOnPlay = e.target.checked;
         setStoredBool(TRAINER_FULLSCREEN_ON_PLAY_STORAGE_KEY, AppState.fullscreenOnPlay);
+    });
+}
+
+const lowLatencyPlaybackCheckbox = document.getElementById('check-low-latency-playback');
+if (lowLatencyPlaybackCheckbox) {
+    syncLowLatencyPlaybackPreferenceUi();
+    lowLatencyPlaybackCheckbox.addEventListener('change', (e) => {
+        AppState.lowLatencyPlaybackEnabled = e.target.checked;
+        setStoredBool(TRAINER_LOW_LATENCY_PLAYBACK_STORAGE_KEY, AppState.lowLatencyPlaybackEnabled);
+        if (!AppState.lowLatencyPlaybackEnabled) {
+            try { lowLatencyPlaybackSynth.releaseAll?.(); } catch (_) {}
+        }
     });
 }
 
@@ -3729,3 +4109,11 @@ startLedPulseLoop();
 window.syncTrainerRoutingUiState = syncTrainerRoutingUiState;
 
 
+
+
+// ensure synth cleanup
+function releaseLowLatencySynth() {
+    if (lowLatencySynth) {
+        try { lowLatencySynth.releaseAll(); } catch(e) {}
+    }
+}

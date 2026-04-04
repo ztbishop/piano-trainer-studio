@@ -9,10 +9,18 @@
 const APP_MANIFEST = window.__PT_APP_MANIFEST__ || {};
 const APP_REPO_SLUG = 'ztbishop/piano-trainer-studio';
 const APP_VERSION = String(window.__PT_ASSET_VERSION__ || APP_MANIFEST.version || 'dev').trim();
-const UPDATE_MANIFEST_URL = 'https://ztbishop.github.io/piano-trainer-studio/version.json';
+
+// Use relative path (works on custom domain, localhost, and GitHub Pages)
+// Allows override via localStorage for testing if needed
+const UPDATE_MANIFEST_URL =
+  localStorage.getItem('pt_updateManifestUrl') || '/version.json';
 const UPDATE_MANIFEST_URL_STORAGE_KEY = 'pt_updateManifestUrl';
-const UPDATE_RELEASES_URL = String(APP_MANIFEST.releaseUrl || `https://github.com/${APP_REPO_SLUG}/releases/latest`).trim();
-const UPDATE_TAG_ZIP_URL = String(APP_MANIFEST.downloadUrl || `https://github.com/${APP_REPO_SLUG}/archive/refs/tags/v${APP_VERSION}.zip`).trim();
+const UPDATE_RELEASES_URL = String(
+  APP_MANIFEST.releaseUrl || `https://github.com/${APP_REPO_SLUG}/releases/latest`
+).trim();
+const UPDATE_TAG_ZIP_URL = String(
+  APP_MANIFEST.downloadUrl || `https://github.com/${APP_REPO_SLUG}/archive/refs/tags/v${APP_VERSION}.zip`
+).trim();
 const ASSET_VERSION_OVERRIDE_STORAGE_KEY = 'pt_assetVersionOverride';
 
 const AppState = {
@@ -105,6 +113,7 @@ const AppState = {
     currentScoreOriginalFileName: '',
     inputVelocityEnabled: true,
     liveLowLatencyMonitoringEnabled: true,
+    lowLatencyPlaybackEnabled: false,
     currentScoreFileType: '',
     currentScoreOriginalFileType: '',
     currentScoreLibraryId: null,
@@ -170,6 +179,7 @@ const TRAINER_MIDIOUT_INSTRUMENT_STORAGE_KEY = 'pt_midiOutInstrument';
 const TRAINER_MIDIOUT_VIRTUAL_STORAGE_KEY = 'pt_midiOutVirtualKeyboard';
 const TRAINER_INPUT_VELOCITY_STORAGE_KEY = 'pt_inputVelocityEnabled';
 const TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY = 'pt_liveLowLatencyMonitoringEnabled';
+const TRAINER_LOW_LATENCY_PLAYBACK_STORAGE_KEY = 'pt_lowLatencyPlaybackEnabled';
 const TRAINER_PIANO_VOL_STORAGE_KEY = 'pt_trainerPianoVolume';
 const TRAINER_MIDIOUT_VOL_STORAGE_KEY = 'pt_trainerMidiOutVolume';
 const TRAINER_MIDIIN_BOOST_STORAGE_KEY = 'pt_trainerMidiInBoost';
@@ -280,6 +290,7 @@ const RESETTABLE_PREFERENCE_KEYS = [
     TRAINER_MIDIOUT_VIRTUAL_STORAGE_KEY,
     TRAINER_INPUT_VELOCITY_STORAGE_KEY,
     TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY,
+    TRAINER_LOW_LATENCY_PLAYBACK_STORAGE_KEY,
     TRAINER_PIANO_VOL_STORAGE_KEY,
     TRAINER_MIDIOUT_VOL_STORAGE_KEY,
     TRAINER_MIDIIN_BOOST_STORAGE_KEY,
@@ -450,6 +461,7 @@ AppState.midiLedLowVelocity = getStoredBool(MIDI_LED_LOW_VELOCITY_STORAGE_KEY, f
 AppState.ledReverse = getStoredBool(LED_REVERSE_STORAGE_KEY, false);
 AppState.inputVelocityEnabled = true;
 AppState.liveLowLatencyMonitoringEnabled = true;
+AppState.lowLatencyPlaybackEnabled = getStoredBool(TRAINER_LOW_LATENCY_PLAYBACK_STORAGE_KEY, false);
 setStoredBool(TRAINER_INPUT_VELOCITY_STORAGE_KEY, true);
 setStoredBool(TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY, true);
 

@@ -539,7 +539,7 @@ const GeometryEngine = {
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         circle.setAttribute('cx', anchor.x);
         circle.setAttribute('cy', anchor.y);
-        circle.setAttribute('r', 6);
+        circle.setAttribute('r', 4.5);
         circle.setAttribute('fill', isCorrect ? 'rgba(46, 204, 113, 0.55)' : 'rgba(231, 76, 60, 0.55)');
         circle.setAttribute('stroke', isCorrect ? 'rgba(39, 174, 96, 0.9)' : 'rgba(192, 57, 43, 0.9)');
         circle.setAttribute('stroke-width', '1.5');
@@ -1067,18 +1067,37 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
         const reservation = AppState.earlyGraceReservations.get(expected.midi);
         if (!reservation) return;
         if (reservation.measureIndex !== currentMeasureIdx || reservation.timestamp !== currentTimestamp) return;
-        if (!AppState.pressedKeys.has(expected.midi)) return;
+
+        const isStillHeld = AppState.pressedKeys.has(expected.midi);
+        const canCarryTap = !!reservation.allowTapCarry;
+        if (!isStillHeld && !canCarryTap) return;
 
         expected.hit = true;
-        AppState.heldCorrectNotes.set(expected.midi, expected.staffId);
-        AppState.preExpectedHeldNotes.add(expected.midi);
+        if (isStillHeld) {
+            AppState.heldCorrectNotes.set(expected.midi, expected.staffId);
+            AppState.preExpectedHeldNotes.add(expected.midi);
+        }
         drawFeedbackNote(expected.midi, true, expected.staffId, currentMeasureIdx, expected.anchor);
         AppState.score.correct++;
         consumedReservationMidis.push(expected.midi);
     });
 
+    if (AppState.earlyGraceReservations.size > 0) {
+        for (const [midi, reservation] of AppState.earlyGraceReservations.entries()) {
+            const isPastTarget = reservation.measureIndex < currentMeasureIdx || (
+                reservation.measureIndex === currentMeasureIdx && reservation.timestamp < currentTimestamp
+            );
+            const isCurrentTargetWithoutExpected = reservation.measureIndex === currentMeasureIdx
+                && reservation.timestamp === currentTimestamp
+                && !AppState.expectedNotes.some(expected => expected.midi === midi);
+
+            if (isPastTarget || isCurrentTargetWithoutExpected || consumedReservationMidis.includes(midi)) {
+                AppState.earlyGraceReservations.delete(midi);
+            }
+        }
+    }
+
     if (consumedReservationMidis.length > 0) {
-        consumedReservationMidis.forEach(midi => AppState.earlyGraceReservations.delete(midi));
         updateScoreDisplay();
     }
 

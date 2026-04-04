@@ -94,6 +94,19 @@ function openScoresImportPicker() {
     input.click();
 }
 
+function ensureScoresDrawerOpen() {
+    const panel = document.getElementById('scores-panel');
+    if (!panel) return;
+    if (window.ToolbarUI && typeof window.ToolbarUI.showToolbarPanel === 'function') {
+        window.ToolbarUI.showToolbarPanel(panel);
+        return;
+    }
+    panel.classList.remove('hidden', 'is-closing');
+    requestAnimationFrame(() => {
+        panel.classList.add('is-open');
+    });
+}
+
 function updateScoresActionButtonsState() {
     const btnSaveCurrent = document.getElementById('btn-scores-save-current');
     if (!btnSaveCurrent) return;
@@ -488,7 +501,7 @@ function createScoresLibraryToolbar({ filteredScores = [], folders = [], activeF
         const addFilesBtn = document.createElement('button');
         addFilesBtn.type = 'button';
         addFilesBtn.className = 'scores-toolbar-button';
-        addFilesBtn.textContent = 'Add Files';
+        addFilesBtn.textContent = 'Add File(s)';
         addFilesBtn.addEventListener('click', openScoresImportPicker);
         actions.appendChild(addFilesBtn);
 
@@ -963,6 +976,7 @@ async function importFilesToLibrary(files) {
         AppState.scoreLibrarySelectedFolderId = selectedFolderId ?? '__unfiled__';
         AppState.scoreLibraryView = 'scores';
         await refreshScoresDrawer();
+        ensureScoresDrawerOpen();
     } catch (err) {
         console.error('Could not import score files', err);
         window.alert(err?.message || 'Could not import one or more score files.');

@@ -1,36 +1,60 @@
 # 🎹 Piano Trainer Studio
+
 Practice piano with real-time MIDI feedback, scoring, and optional LED guidance.
-
-App (Github): [https://ztbishop.github.io/piano-trainer-studio/](https://ztbishop.github.io/piano-trainer-studio/)
-
-App (CustomDomain): [https://www.pianotrainerstudio.com/](https://www.pianotrainerstudio.com)
-
-GitHub repository: [https://github.com/ztbishop/piano-trainer-studio](https://github.com/ztbishop/piano-trainer-studio)
-
-👉 New here?
-- Start with **Quick Start**
-- Using iPad? See **iPad / iPhone section**
-- Want LED setup? Jump to **WLED Setup**
-- Want to find MusixXML? **Library & Backup**
 
 ---
 
-## 🚀 Features
+## 🌐 Try It
 
-- 🎼 Load and play **MusicXML / MXL** piano scores  
-- 🔄 Import **MIDI, MuseScore, and Guitar Pro files** (auto-converted to MusicXML)  
-- 🎹 Real-time **MIDI keyboard feedback**  
-- 💡 Optional **LED visualization (WLED or MIDI LED devices)**  
-- 🌐 Runs in your browser — no install required  
-- 📱 iPad/iPhone support via MIDIWeb  
-- ⏱️ Various Trainer Modes
+- App (GitHub Pages): [https://ztbishop.github.io/piano-trainer-studio/](https://ztbishop.github.io/piano-trainer-studio/)
+- App (Custom Domain): [https://www.pianotrainerstudio.com/](https://www.pianotrainerstudio.com/)
+- GitHub Repository: [https://github.com/ztbishop/piano-trainer-studio](https://github.com/ztbishop/piano-trainer-studio)
 
-## Practice Modes
-- Realtime — Play continuously at the set tempo.
-- Wait for Me — Waits for correct notes before continuing.
-- Follow Me — Play one hand while the app follows with the other.
-  * Tip: Start with Wait for Me to learn notes, then try Follow Me to practice with timing.
-  
+👉 New here?
+- Start with **Quick Start**
+- Using iPad? See **iPad / iPhone**
+- Want LED setup? Jump to **WLED / LED Setup**
+- Want songs? See **Where can I find MusicXML songs?**
+
+---
+
+## 📸 Preview
+
+### Main Interface
+![Main Interface](docs/screenshots/Screenshot.png)
+
+### Piano Setup with LED Feedback
+![Piano Setup](docs/screenshots/PianoSetup.jpg)
+
+---
+
+## 🚀 What It Does
+
+- 🎼 Play along with sheet music
+- 🎹 Get real-time note accuracy feedback
+- 🧠 Train using multiple practice modes
+- 💡 Optional LED lighting synced to keys (WLED)
+
+---
+
+## ✨ Features
+
+- 🎼 Load and play **MusicXML / MXL** piano scores
+- 🔄 Import **MIDI, MuseScore 3.x, and Guitar Pro files 5.x** (auto-converted to MusicXML)
+- 🎹 Real-time **MIDI keyboard feedback**
+- 💡 Optional **LED visualization (WLED or MIDI LED devices)**
+- 🌐 Runs in your browser — no install required
+- 📱 iPad/iPhone support via MIDIWeb
+- ⏱️ Various trainer modes
+
+## 🎹 Practice Modes
+
+- **Realtime** — play continuously at the set tempo
+- **Wait for Me** — waits for correct notes before continuing
+- **Follow Me** — play one hand while the app follows with the other
+
+*Tip: Start with Wait for Me to learn notes, then try Follow Me to practice with timing.*
+
 ---
 
 ## ⚡ Quick Start (Desktop)
@@ -38,16 +62,21 @@ GitHub repository: [https://github.com/ztbishop/piano-trainer-studio](https://gi
 ### 1. Run the app
 Open:
 `Launchers/Windows/Piano Trainer - Desktop.bat`
+
 (or Mac equivalent)
 
 ### 2. Connect your MIDI keyboard
-- USB recommended  
-- Bluetooth may vary by browser  
-- Optional: CME WIDI Bud Pro for wireless  
+- USB recommended
+- Bluetooth may vary by browser
+- Optional: CME WIDI Bud Pro for wireless
 
 ### 3. Load a song
 - Best: **MusicXML / MXL**
-- Also supported: MIDI, MuseScore, Guitar Pro  
+- Also supported: MIDI, MuseScore 3, Guitar Pro 5
+
+### 4. Start practicing
+- Press **Play** or open **Practice**
+- Before pressing play, you can click any measure in the song to start playback there
 
 ---
 
@@ -55,12 +84,12 @@ Open:
 
 Run directly from GitHub in your browser (Chrome recommended)
 
-- Works great on desktop  
-- No helper required  
+- Works great on desktop
+- No helper required
 
 ⚠️ Notes:
-- MIDI works on desktop browsers  
-- iOS Safari/Chrome do NOT support MIDI  
+- MIDI works on desktop browsers
+- iOS Safari/Chrome do NOT support MIDI
 
 ---
 
@@ -68,137 +97,85 @@ Run directly from GitHub in your browser (Chrome recommended)
 
 iOS browsers do not support MIDI.
 
+
 ### ✅ Solution: MIDIWeb
 
 1. Install **TestFlight**  
-   [TestFlight on the App Store](https://apps.apple.com/us/app/testflight/id899247664)  
-
+   [TestFlight on the App Store](https://apps.apple.com/us/app/testflight/id899247664)
 2. Install **MIDIWeb**  
-   [https://midiweb.cc](https://midiweb.cc)  
-
+   [https://midiweb.cc](https://midiweb.cc)
 3. Open MIDIWeb
-
 4. Load Piano Trainer (GitHub or local network)
+5. Connect your MIDI device
 
-5. Connect your MIDI device  
 🔵 Bluetooth MIDI (Optional)
-- Tap the Bluetooth icon in MIDIWeb  
-- Connect your device  
+- Tap the Bluetooth icon in MIDIWeb
+- Connect your device
 - It will appear in Piano Trainer
 
-6. **WLED light strips** will NOT work on iOS without a helper. 
-- Open the following on a Mac/PC on your local network.
+**WLED light strips** will NOT work on iOS without a helper.
+- Open the following on a Mac/PC on your local network:
 - `Launchers/Windows/Piano Trainer - iPad (Wi-Fi).bat`
 - (or Mac equivalent)
-- Using MIDIWeb app, connect to the resulting URL/IP displayed on your mac/pc browser.  
-- Be sure to use http  (NOT https) when putting this URL into MIDIWeb. 
+- Using the MIDIWeb app, connect to the resulting URL/IP displayed on your Mac/PC browser
+- Be sure to use **http** (NOT https) when putting this URL into MIDIWeb
 
 ---
 
 ## 🎼 Supported Score Formats
 
 ### ✅ Best Compatibility
-- `.xml`
-- `.musicxml`
-- `.mxl`
+- `.xml`, `.musicxml`, `.mxl`
 
 ### 🔄 Supported via Conversion
-- MIDI (`.mid`, `.midi`)  
-- MuseScore (`.mscx`, `.mscz`)  
-- Guitar Pro (`.gp`, `.gpx`, etc.)  
+- MIDI (`.mid`, `.midi`)
+- MuseScore (`.mscx`, `.mscz`)
+- Guitar Pro (`.gp`, `.gpx`, etc.)
 
 ⚠️ Notes:
-- MusicXML is most reliable  
-- Converted formats may vary  
-- If issues occur → export to MusicXML  
+- MusicXML is most reliable
+- Converted formats may vary (MIDI does not contain key signatures, etc)
+- Musescore 4+ import is experimental (<4 should work)
+- Guitar Pro 6+ is experimental (<6 should be okay)
+- If Musescore conversion issues occur → export to MusicXML using Musescore software
+- If newer GuitarPro conversion issues occur → export to gp5 using TuxGuitar  or GuitarPro software
 
 ---
 
 # 💡 WLED / LED Setup (Optional)
-LEDs are optional but provide real-time visual guidance.
+
+![Piano Setup](docs/screenshots/PianoSetup.jpg)
+
+LEDs are optional but provide powerful real-time visual guidance while practicing.
 
 ---
 
-## 🔹 Quick Setup
+## 🔹 Quick Overview
 
-- Some pianos have red LED lights built in.  If you own one, set the piano as LED MIDI device out.  The app will simply light up the current 'Expected' notes.  Depending on your keyboard you may need to set the channel and optional low velocity to avoid hearing playback.  This is all done in the Setup menu. 
-
-- For a rich feedback experience, the following hardware can be used to place an LED strip over any piano. 
-
-- Use an **ESP32 WLED controller**
-- Use a **5V addressable LED strip (WS2812B)**
-- Enter your WLED IP in the Piano Trainer app settings. 
-
----
-
-## 🔹 Recommended Hardware
-
-- Controller: ESP32 (Athom / BTF / similar)
-- LED Strip: WS2812B (uses 5V) - Other types of strips may work as well; check WLED compatibility.
-- Density: **Recommend 160–200 LEDs per meter** Higher count = more accurancy to line up with keys.
-- Length: ~1.2–1.3m for full keyboard
-- **IMPORTANT**: Verify if you buy a 2m strip (for 88 keys), it is shipped as 1 piece, and not two individual 1m strips that need soldering. Simply cut the excess off the 2m strip. 
-
-### Power Supply
-- 5V power supply required for WS2812B LEDs.
-- Size depends on LED count (higher LED count = more power)  5v, 5A should suffice.
-
----
-
-## 🔹 Example Setup (Recommended)
-
-👉 Consider mounting the LED strip above keys  
-👉 Consider small white stickers extending back/up from the white keys, leaving black space for black keys. 
-    -This gives the illusion of extending the keys where you can place the LED strip directon on top. 
-This creates the effect of:
-- LEDs appearing on “extended keys”
-- Cleaner visual guidance during play
-
----
-
-## 🔹 LED Color Behavior
-
-- Correct / free play: warm white  
-- Expected notes: Blue (L) / Green (R)  
-- Future notes: lighter blue/green  
-- Incorrect notes: Red  
-
----
-
-## 🔹 Before Calibration (IMPORTANT)
-
-- Set **Player Piano Keys**  (88 if you have a full 88 key piano)
-- Set **LED Count** (LEDs/m * size after cutting).  You may need to tweak this after testing to get the count right.
-- Lower brightness to ~20%  if your WLED controller is set to 100%.
-- Set Future note brightness to 1% (bump it up if it doesn't turn on).
-
----
-
-## 🔹 Recommended WLED Controller Settings
-
-- Effect: Solid  
-- Brightness: 20–40%  
-- Color: controlled by app  
-- Power limit: optional  
-- Upon setting up the WLED controller on your wifi, get the IP and enter it in the Trainer WLED settings.
+- Set **LED Lights → WLED** in Settings  
+- Enter your **WLED IP address**  
+- Set **LED Count (LEDs/m × strip length)**  
+- Run **Test LED Strip**  
+- Run **LED Calibration**  
 
 ---
 
 ## 🔹 Connection Modes
 
-### Option 1: HTTP JSON (Recommended)
+**HTTP JSON (default)**
 - Works everywhere (desktop + iPad)
-- Simple setup
+- Recommended for most users  
 
-### Option 2: DDP (Low Latency)
-Run:
+**DDP (low latency)**
+- Run:
+  `Launchers/Windows/WLED Helper - Low Latency (DDP).bat`
+- Faster response  
+- Not supported on iPad  
 
-`Launchers/Windows/WLED Helper - Low Latency (DDP).bat`
+---
 
-- ✅ Faster performance  
-- ❌ Not supported on iPad  
-- ⚠️ Requires Node.js  
-  - This may change in the future if I ship the app with a wrapper. 
+👉 **Full LED Lights setup guide:**  
+[Open LED Setup Guide](docs/LED-Setup.html)
 
 ---
 
@@ -206,7 +183,7 @@ Run:
 
 - MIDI keyboard (USB or Bluetooth adapter)
 - Optimized for piano
-- CME WIDI Bud Pro is good for picking up Bluetooth MIDI as a USB device. 
+- CME WIDI Bud Pro is useful for picking up Bluetooth MIDI as a USB device
 
 ---
 
@@ -220,26 +197,46 @@ Songs are stored in your browser (IndexedDB).
 - Use **Scores → Backup Library**
 - Use **Settings → Backup All Settings**
 
+### Where can I find MusicXML songs?
 
-### Where can I find MusicXML songs? 
+- **[MuseTrainer](https://musetrainer.github.io/library)** — Public domain MusicXML library with popular songs formatted for piano
 
-- **[Musetrainer](https://musetrainer.github.io/library)** - Public domain MusicXML Library (69 popular songs formatted for piano)
+- **[PianoML](https://www.pianoml.org/library)** — Another useful library for piano MusicXML content
 
-- **[Openscore](https://fourscoreandmore.org/openscore/lieder/)** - 19th-centurey classical art songs for voice and piano
+- **[OpenScore](https://fourscoreandmore.org/openscore/lieder/)** — 19th-century classical art songs for voice and piano
 
-- **[Musescore](https://musescore.com/)** - Large collection of music.  **Use a FREE account.**
-  - Decline any promotional pop-ups or screens asking you to upgrade to MuseScore PRO or start a 7-day free trial. **You only need the basic, free account.**
-  - When searching, filter for public domain & original to bypass paywalls.  Filter for Piano / Solo.
-  - Under DOWNLOAD section, choose mxl / musicxml 
-  - If you are prompted to pay, ensure you are logged in, and search for anything that is **NOT** 'official score'.  Some 'Pro' scores can be downloaded if logged into a free account. 
+- **[MuseScore](https://musescore.com/)** — Large collection of music. **Use a FREE account.**
+  - Decline any promotional pop-ups or screens asking you to upgrade to MuseScore PRO or start a 7-day free trial
+  - When searching, filter for public domain & original to bypass paywalls
+  - Filter for Piano / Solo
+  - Under DOWNLOAD, choose MXL / MusicXML
+  - If prompted to pay, ensure you are logged in and search for anything that is **not** an official score. Some scores can be downloaded while logged into a free account
 
-- **[Github](https://github.com/)**
-  - Can be used to find musicxml (may find mixed results)
-    - Search this within github with your song name:  extension:mxl OR extension:musicxml piano
-    - Search this within google with your song name:  filetype:mxl OR filetype:musicxml "piano"
+- **[GitHub](https://github.com/)** — Can be used to find MusicXML, though results may vary
+  - Search within GitHub with your song name plus: `extension:mxl OR extension:musicxml piano`
+  - Search within Google with your song name plus: `filetype:mxl OR filetype:musicxml "piano"`
 
-- **[MusicXML](https://www.musicxml.com/music-in-musicxml/)** - List of popular websites to find MusicXML files. 
+- **[MusicXML](https://www.musicxml.com/music-in-musicxml/)** — List of websites to find MusicXML files
 
+---
+
+## 📂 Library & Scores
+
+- Open and save individual songs
+- Backup and import saved libraries
+- Bulk import songs into your library
+- Organize songs into folders
+- Rename and manage songs from the library
+
+---
+
+## ⚙️ Key Controls
+
+- **Practice Menu** — core training modes and feedback
+- **Tempo** — speed + metronome
+- **Loop** — repeat sections
+- **Display** — zoom, virtual keyboard
+- **Transpose** — key or semitone changes
 
 ---
 
@@ -249,21 +246,17 @@ Songs are stored in your browser (IndexedDB).
 - MIDI / MuseScore / Guitar Pro may:
   - Load imperfectly
   - Require cleanup
-  - Fail on complex scores  
+  - Fail on complex scores
 
-👉 Export to MusicXML for best results  
-
----
+👉 Export to MusicXML for best results
 
 ### iPad
-- No Web MIDI in Safari/Chrome  
+- No Web MIDI in Safari/Chrome
 - Requires MIDIWeb app
 - Requires PC/Mac host for WLED support
 
----
-
 ### WLED
-- DDP not supported on iPad  
+- DDP not supported on iPad
 
 ---
 
@@ -274,33 +267,53 @@ Songs are stored in your browser (IndexedDB).
 - Use MIDIWeb (iPad)
 
 ### Import issues
-- Convert to MusicXML (Musescore app)
+- Convert to MusicXML (MuseScore app)
+
+### Metronome MIDI Out sounds like a piano key
+- MIDI Out click (Ch 10) Many devices play Channel 10 as percussion, but some keyboards may play regular instrument notes unless a Multi-timbral, GM, or drum-on-Ch10 receive mode is enabled.
 
 ### LEDs not working
 - Verify IP
 - Start with HTTP JSON
 
+### Failed Musescore / GuitarPro conversion
+- Use Musescore software or TuxGuitar to export.  
+
 ---
 
 ## 📘 Notes
 
-- Web-first app  
-- Desktop = best experience  
-- iPad supported via MIDIWeb  
-- Regardless of Mac/PC/iOS/Android - do NOT block any accress requests. 
+- Web-first app
+- Desktop = best experience
+- iPad supported via MIDIWeb
+- Do **not** block browser access requests
   - These are needed for MIDI and/or WLED
+- Virtual Keyboard can be disabled in the Display menu
+- Full-screen toggle is available in the top-right corner of the sheet
 
 ---
 
 ## 🙌 Credits
 
-- OSMD  
-- WLED  
-- MIDIWeb  
-- MuseTrainer Library  
-- NodeJS  
-- Tone.js  
-- Webmscore  
+- OSMD
+- WLED
+- MIDIWeb
+- MuseTrainer Library
+- Node.js
+- Tone.js
+- Webmscore
+
+---
+
+## 📌 Project Status
+
+Actively developed. Feedback and suggestions welcome.
+
+---
+
+## ❤️ Support
+
+If you find this useful, consider sharing or contributing!
 
 ---
 

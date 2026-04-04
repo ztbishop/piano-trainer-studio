@@ -2,6 +2,12 @@
 // Conversion wrapper for browser-side score imports using webmscore.
 // Keeps conversion isolated so the main trainer remains MusicXML-first.
 
+// CRITICAL:
+// .mxl files must NOT go through converter normalization.
+// OSMD handles .mxl natively, and that preserves correct engraving.
+// Sending .mxl through normalize/convert before render can break
+// slurs, grace notes, grouping, and layout fidelity.
+
 (function () {
     const WEBSMCORE_SCRIPT_URL = 'assets/vendor/webmscore/webmscore.js';
     const CONVERTER_IMPORT_FORMATS = Object.freeze({
@@ -15,8 +21,7 @@
         '.gp5': 'gp5',
         '.gpx': 'gpx',
         '.gtp': 'gtp',
-        '.ptb': 'ptb',
-        '.mxl': 'mxl'
+        '.ptb': 'ptb'
     });
 
     let webMscoreScriptPromise = null;

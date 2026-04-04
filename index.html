@@ -190,7 +190,7 @@
                     <ul>
                         <li>Open a score from the Scores menu, or add your own files to the library.</li>
                         <li><strong>Best results:</strong> MusicXML / MXL.</li>
-                        <li><strong>Also supported:</strong> MIDI, MuseScore, and Guitar Pro files. These are experimental, and MIDI does not include all notation details.</li>
+                        <li><strong>Also supported:</strong> MIDI, MuseScore (3.x), and Guitar Pro (5.x) files. These are experimental, and MIDI does not include all notation details.</li>
                         <li>Connect your MIDI keyboard in Settings.</li>
                         <li>On iPad / iPhone, use <a href="https://midiweb.cc" target="_blank" rel="noopener noreferrer">midiweb.cc</a> for MIDI input support.</li>
                         <li>LED output is optional. See the setup guide for hardware and setup details.</li>
@@ -658,6 +658,16 @@
                 <div class="practice-row practice-mode-status-row" id="practice-wait-note-row">
                     <div class="practice-row-label"></div>
                     <div class="practice-inline-note" id="practice-wait-note">Audio playback is unavailable in Wait mode.</div>
+                </div>
+
+                <div class="practice-divider"></div>
+
+                <div class="practice-row practice-playback-timing-row">
+                    <div class="practice-row-label">Playback Timing</div>
+                    <div class="practice-options-stack">
+                        <label class="inline-row-flex"><input type="checkbox" id="check-low-latency-playback"> Low-latency playback (experimental)</label>
+                        <div class="practice-inline-note">Improves timing responsiveness. May reduce sound quality.</div>
+                    </div>
                 </div>
 
                 <div class="practice-divider"></div>

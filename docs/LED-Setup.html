@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Piano Trainer Studio – Setup Guide</title>
+  <title>LED Setup Guide</title>
 
-  <!-- Markdown renderer -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
   <style>
@@ -44,13 +43,13 @@
   </div>
 
   <script>
-    fetch('README.md')
+    fetch('LED-Setup.md')
       .then(res => res.text())
       .then(md => {
         document.getElementById('content').innerHTML = marked.parse(md);
       })
       .catch(err => {
-        document.getElementById('content').innerText = 'Failed to load README.md';
+        document.getElementById('content').innerText = 'Failed to load LED-Setup.md';
         console.error(err);
       });
   </script>

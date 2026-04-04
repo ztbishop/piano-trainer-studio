@@ -79,7 +79,7 @@
         } else if (state.active) {
             setStatus(`Applied: ${state.activeLabel || 'Transposed score'}`);
         } else {
-            setStatus('Ready. Transpose is applied from the original source score each time.');
+            setStatus('Ready. Transpose is applied from the original source score each time. \nTanspose by Key Signature or by Semitones');
         }
     }
 

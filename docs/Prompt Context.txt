@@ -45,4 +45,8 @@ DO NOT:
 - Change anchor coordinate system
 - Re-layout VexFlow beams after initial render
 
-
+// CRITICAL:
+// .mxl files must NOT go through converter normalization.
+// OSMD handles .mxl natively, and that preserves correct engraving.
+// Sending .mxl through normalize/convert before render can break
+// slurs, grace notes, grouping, and layout fidelity.

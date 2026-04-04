@@ -724,21 +724,20 @@ Updated Metronome to support MIDI out.
 Add custom domain
 
 
+v1.1.7
+Improved Follow-Me mode
+Fixed MXL format; no longer 'normalizes' which had caused rendering issues. 
+Improved in-app audio latency
+Added optional low-latency tone synth (helpful for follow-me mode)
+Updated version.json url
+Updated readme
+Added screenshots & LED instructions
+Add File(s) button in library no longer closes menu
+Added fix for 'piano' sounds with mentronome (midi-out). 
+Improved size of feedback notes (cleaner)
+
+
+//------------------------------//
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
-//----------------------------------------------------------------------------------------------------------//
-
---update: only need to update version.json going forward
----------------------------------------------------------
-
 VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!
-
-version.json
-  "version": 
-  "downloadUrl"
-
-trainer-state.js
-const APP_VERSION = 
-
-index.html
-const FALLBACK_ASSET_VERSION = '1.1.0';
-//----------------------------------------------------------------------------------------------------------//
+//------------------------------//
