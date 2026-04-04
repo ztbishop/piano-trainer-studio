@@ -736,6 +736,12 @@ Add File(s) button in library no longer closes menu
 Added fix for 'piano' sounds with mentronome (midi-out). 
 Improved size of feedback notes (cleaner)
 
+v1.1.8
+iPad updates for page not playing
+startPlaybackFromToolbar() now calls await ensureLiveAudioReady() before starting playback.
+visibilitychange now tries to resume audio when the page becomes visible again.
+Added resume attempts on pageshow and focus too.
+
 
 //------------------------------//
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**

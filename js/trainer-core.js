@@ -3065,7 +3065,7 @@ async function startPlaybackFromToolbar() {
         await requestAppFullscreen();
     }
 
-    if (Tone.context.state !== 'running') Tone.context.resume();
+    await ensureLiveAudioReady();
 
     AppState.isPlaying = true;
     updatePlayPauseButton();
@@ -4048,7 +4048,17 @@ window.addEventListener('touchcancel', (event) => {
 }, { passive: true });
 window.addEventListener('blur', () => releaseActiveVirtualPointer());
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden) releaseActiveVirtualPointer();
+    if (document.hidden) {
+        releaseActiveVirtualPointer();
+        return;
+    }
+    ensureLiveAudioReady();
+});
+window.addEventListener('pageshow', () => {
+    ensureLiveAudioReady();
+});
+window.addEventListener('focus', () => {
+    ensureLiveAudioReady();
 });
 document.addEventListener('touchstart', () => {
     ensureLiveAudioReady();
