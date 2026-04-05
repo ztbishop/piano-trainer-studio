@@ -10,11 +10,24 @@ Practice piano with real-time MIDI feedback, scoring, and optional LED guidance.
 - App (Custom Domain): [https://www.pianotrainerstudio.com/](https://www.pianotrainerstudio.com/)
 - GitHub Repository: [https://github.com/ztbishop/piano-trainer-studio](https://github.com/ztbishop/piano-trainer-studio)
 
+💻 Want to run locally? Download from the Releases page (no Git required)
+
 👉 New here?
 - Start with **Quick Start**
 - Using iPad? See **iPad / iPhone**
 - Want LED setup? Jump to **WLED / LED Setup**
 - Want songs? See **Where can I find MusicXML songs?**
+
+---
+
+## 📦 Download (No Git Required)
+
+You can download and run Piano Trainer Studio locally without cloning the repository:
+
+👉 https://github.com/ztbishop/piano-trainer-studio/releases
+
+- Download the latest `.zip` file under **Assets**
+- Extract it to a folder on your computer
 
 ---
 
@@ -59,24 +72,34 @@ Practice piano with real-time MIDI feedback, scoring, and optional LED guidance.
 
 ## ⚡ Quick Start (Desktop)
 
-### 1. Run the app
+### 1. Install Node.js (Required)
+
+Download and install Node.js (LTS recommended):  
+https://nodejs.org/en
+
+### 2. Run the app
 Open:
 `Launchers/Windows/Piano Trainer - Desktop.bat`
 
 (or Mac equivalent)
 
-### 2. Connect your MIDI keyboard
+### 3. Connect your MIDI keyboard
 - USB recommended
 - Bluetooth may vary by browser
 - Optional: CME WIDI Bud Pro for wireless
 
-### 3. Load a song
+### 4. Load a song
 - Best: **MusicXML / MXL**
 - Also supported: MIDI, MuseScore 3, Guitar Pro 5
 
-### 4. Start practicing
+### 5. Start practicing
 - Press **Play** or open **Practice**
 - Before pressing play, you can click any measure in the song to start playback there
+
+### ℹ️ Notes
+- No additional libraries need to be installed — all dependencies (including Tone.js) are already included
+- If nothing opens, check the terminal/command window for errors
+- On Mac, you may need to allow the `.command` file in System Settings → Security
 
 ---
 
@@ -96,7 +119,6 @@ Run directly from GitHub in your browser (Chrome recommended)
 ## 📱 iPad / iPhone (MIDI Support)
 
 iOS browsers do not support MIDI.
-
 
 ### ✅ Solution: MIDIWeb
 

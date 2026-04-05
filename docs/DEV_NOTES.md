@@ -750,6 +750,11 @@ Corrected iPad not playing after minimizing app and bringing it back up.
 v1.2.0
 Test - removed global low latency update from v1.1.7  (kept simple synth for situations that require minimal latency).
 
+v1.2.1
+Added latency fix to 'Follow-Me' mode only. 
+Updated readme
+
+
 //------------------------------//
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
 VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!

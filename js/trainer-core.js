@@ -395,6 +395,53 @@ let osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("osmd-container", {
     drawTitle: true
 });
 
+const FOLLOW_ME_TONE_LATENCY_PROFILE = Object.freeze({
+    lookAhead: 0.005,
+    updateInterval: 0.005,
+    latencyHint: 0.001
+});
+
+function getToneContextHandle() {
+    try {
+        return typeof Tone?.getContext === 'function' ? Tone.getContext() : Tone?.context;
+    } catch (_) {
+        return null;
+    }
+}
+
+function captureToneLatencyProfile() {
+    const ctx = getToneContextHandle();
+    return {
+        lookAhead: Number.isFinite(Number(ctx?.lookAhead)) ? Number(ctx.lookAhead) : null,
+        updateInterval: Number.isFinite(Number(ctx?.updateInterval)) ? Number(ctx.updateInterval) : null,
+        latencyHint: ctx?.latencyHint ?? null
+    };
+}
+
+const DEFAULT_TONE_LATENCY_PROFILE = captureToneLatencyProfile();
+
+function applyToneLatencyProfileForMode(mode = AppState.mode) {
+    const ctx = getToneContextHandle();
+    if (!ctx) return;
+
+    const useFollowProfile = mode === 'follow';
+    const nextProfile = useFollowProfile ? FOLLOW_ME_TONE_LATENCY_PROFILE : DEFAULT_TONE_LATENCY_PROFILE;
+
+    try {
+        if (nextProfile.lookAhead != null && 'lookAhead' in ctx) {
+            ctx.lookAhead = nextProfile.lookAhead;
+        }
+        if (nextProfile.updateInterval != null && 'updateInterval' in ctx) {
+            ctx.updateInterval = nextProfile.updateInterval;
+        }
+        if (nextProfile.latencyHint != null && 'latencyHint' in ctx) {
+            ctx.latencyHint = nextProfile.latencyHint;
+        }
+    } catch (err) {
+        console.warn('Could not apply Tone.js latency profile for mode.', err);
+    }
+}
+
 const FOLLOW_ME_MIN_WAIT_RATIO = 0.6;
 
 function getPreferredPianoSampleExtension() {
@@ -2677,6 +2724,7 @@ function checkWaitModeAdvance() {
 // UI LISTENERS & SYNC LOGIC
 // ==========================================
 function applyModeSettings() {
+    applyToneLatencyProfileForMode();
     const isWait = AppState.mode === 'wait';
     const isFollow = AppState.mode === 'follow';
 
@@ -2833,7 +2881,10 @@ document.querySelectorAll('input[name="practice-mode"]').forEach((radio) => {
         localStorage.setItem(TRAINER_MODE_STORAGE_KEY, AppState.mode);
         clearScheduledMetronomeEvents();
         stopWaitModeMetronome();
+        silencePlaybackOutputsImmediately();
+        clearTransientPlaybackState({ clearVisualState: true });
         applyModeSettings();
+        applyToneLatencyProfileForMode();
         updatePianoVolume(pianoVolSlider ? pianoVolSlider.value : 80);
         updateMetroVolume(metroVolSlider ? metroVolSlider.value : 50);
     });
@@ -3072,6 +3123,8 @@ async function startPlaybackFromToolbar() {
         ensureLedPreviewTimelineBuilt();
     });
 
+    applyToneLatencyProfileForMode();
+
     doCountInAndStart(() => {
         AppState.anchorTime = Tone.now();
         osmd.cursor.show();
@@ -3107,11 +3160,27 @@ function silencePlaybackOutputsImmediately() {
     }
 }
 
+function clearTransientPlaybackState({ clearVisualState = false } = {}) {
+    AppState.pendingAudio = [];
+    AppState.followAdvanceInfo = null;
+    AppState.currentExpectedContext = null;
+    AppState.earlyGraceReservations.clear();
+    AppState.isAudioBusy = false;
+    AppState.expectedNotes = [];
+    AppState.realtimeWrongPressInCurrentContext = false;
+    AppState.preExpectedHeldNotes.clear();
+
+    if (clearVisualState) {
+        clearVisuals();
+    }
+}
+
 function stopPlaybackState({ pauseTransport = true } = {}) {
     AppState.isPlaying = false;
     AppState.countInActive = false;
     AppState.lastLedPreviewEvents = [];
     AppState.ledPreviewTraversalIndex = -1;
+    clearTransientPlaybackState();
 
     if (pauseTransport) {
         Tone.Transport.pause();
@@ -3123,6 +3192,7 @@ function stopPlaybackState({ pauseTransport = true } = {}) {
     stopWaitModeMetronome();
     silencePlaybackOutputsImmediately();
     clearTempoVisualPulse();
+    applyToneLatencyProfileForMode();
     updatePlayPauseButton();
 
     if (AppState.ledOutputMode === 'midi') {
@@ -3164,10 +3234,10 @@ document.getElementById('btn-reset').onclick = () => {
     stopWaitModeMetronome();
     silencePlaybackOutputsImmediately();
     clearTempoVisualPulse();
+    applyToneLatencyProfileForMode();
     
     GeometryEngine.clearSvgFeedback(); 
-    AppState.pendingAudio = []; 
-    AppState.followAdvanceInfo = null;
+    clearTransientPlaybackState();
     AppState.score.correct = 0;
     AppState.score.wrong = 0;
     updateScoreDisplay();
@@ -4057,6 +4127,7 @@ document.addEventListener('mousedown', () => {
     ensureLiveAudioReady();
 }, { passive: true });
 
+applyToneLatencyProfileForMode();
 ensurePianoSamplerLoaded().catch(() => {});
 createKeyboard();
 LedEngine.init();
