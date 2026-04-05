@@ -747,6 +747,8 @@ Added favicon icons
 corrected webmanifest
 Corrected iPad not playing after minimizing app and bringing it back up. 
 
+v1.2.0
+Test - removed global low latency update from v1.1.7  (kept simple synth for situations that require minimal latency).
 
 //------------------------------//
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**

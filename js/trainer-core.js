@@ -395,33 +395,7 @@ let osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("osmd-container", {
     drawTitle: true
 });
 
-const TONE_AUDIO_PERFORMANCE_SETTINGS = Object.freeze({
-    latencyHint: 0.001,
-    lookAhead: 0.005,
-    updateInterval: 0.005
-});
-
 const FOLLOW_ME_MIN_WAIT_RATIO = 0.6;
-
-function configureLowLatencyToneContext() {
-    try {
-        if (typeof Tone?.Context === 'function' && typeof Tone?.setContext === 'function') {
-            Tone.setContext(new Tone.Context(TONE_AUDIO_PERFORMANCE_SETTINGS));
-        }
-    } catch (err) {
-        console.warn('Could not replace Tone.js context with low-latency settings.', err);
-    }
-
-    try {
-        const ctx = typeof Tone?.getContext === 'function' ? Tone.getContext() : Tone?.context;
-        if (!ctx) return;
-        if ('latencyHint' in ctx) ctx.latencyHint = TONE_AUDIO_PERFORMANCE_SETTINGS.latencyHint;
-        if ('lookAhead' in ctx) ctx.lookAhead = TONE_AUDIO_PERFORMANCE_SETTINGS.lookAhead;
-        if ('updateInterval' in ctx) ctx.updateInterval = TONE_AUDIO_PERFORMANCE_SETTINGS.updateInterval;
-    } catch (err) {
-        console.warn('Could not apply low-latency tuning to Tone.js context.', err);
-    }
-}
 
 function getPreferredPianoSampleExtension() {
     try {
@@ -435,7 +409,6 @@ function getPreferredPianoSampleExtension() {
     }
 }
 
-configureLowLatencyToneContext();
 
 const PIANO_SAMPLE_EXTENSION = getPreferredPianoSampleExtension();
 const masterPianoVolume = new Tone.Volume(0).toDestination();
