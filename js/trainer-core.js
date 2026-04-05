@@ -2873,6 +2873,20 @@ document.querySelectorAll('input[name="practice-mode"]').forEach((radio) => {
 // WARNING:
 // Count-in and metronome startup are timing-sensitive.
 // Keep transport startup, visual pulse timing, and playback handoff aligned when adjusting this flow.
+let ptNeedsImmediateResumeStart = false;
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && !AppState.isPlaying) {
+        ptNeedsImmediateResumeStart = true;
+    }
+});
+
+function consumeImmediateResumeStartFlag() {
+    const shouldBypass = ptNeedsImmediateResumeStart;
+    ptNeedsImmediateResumeStart = false;
+    return shouldBypass;
+}
+
 function doCountInAndStart(callback) {
     const mIdx = osmd.cursor.Iterator.CurrentMeasureIndex;
     let beats = 4; 

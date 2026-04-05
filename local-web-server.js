@@ -20,7 +20,8 @@ const ALLOWED_ROOT_PATHS = new Set([
   "version.json",
   "README.html",
   "README.md",
-  "quick-start.html"
+  "quick-start.html",
+  "site.webmanifest"
 ]);
 
 const MIME_TYPES = {
@@ -28,6 +29,7 @@ const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",

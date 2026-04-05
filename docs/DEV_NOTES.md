@@ -742,6 +742,11 @@ startPlaybackFromToolbar() now calls await ensureLiveAudioReady() before startin
 visibilitychange now tries to resume audio when the page becomes visible again.
 Added resume attempts on pageshow and focus too.
 
+v1.1.9
+Added favicon icons
+corrected webmanifest
+Corrected iPad not playing after minimizing app and bringing it back up. 
+
 
 //------------------------------//
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
