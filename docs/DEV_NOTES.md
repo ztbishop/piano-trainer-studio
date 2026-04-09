@@ -758,6 +758,8 @@ v1.2.2
 Fixed wait mode disablging 'hands' playback in audio routing menu. 
 Improved fullscreen button. 
 
+v1.2.3
+Updated readme for new iPad instructions
 
 //------------------------------//
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**

@@ -122,13 +122,11 @@ iOS browsers do not support MIDI.
 
 ### ✅ Solution: MIDIWeb
 
-1. Install **TestFlight**  
-   [TestFlight on the App Store](https://apps.apple.com/us/app/testflight/id899247664)
-2. Install **MIDIWeb**  
-   [https://midiweb.cc](https://midiweb.cc)
-3. Open MIDIWeb
-4. Load Piano Trainer (GitHub or local network)
-5. Connect your MIDI device
+1. Install **MIDIWeb**  
+   [MIDIWeb on the App Store](https://apps.apple.com/app/midiweb-browser/id6757226617)
+2. Open MIDIWeb
+3. Load Piano Trainer 
+4. Connect your MIDI device
 - Note: Piano Trainer Studio should be visible on the main midiweb page as well.
 
 🔵 Bluetooth MIDI (Optional)
