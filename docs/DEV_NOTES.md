@@ -754,6 +754,10 @@ v1.2.1
 Added latency fix to 'Follow-Me' mode only. 
 Updated readme
 
+v1.2.2
+Fixed wait mode disablging 'hands' playback in audio routing menu. 
+Improved fullscreen button. 
+
 
 //------------------------------//
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**

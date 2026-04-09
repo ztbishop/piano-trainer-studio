@@ -2466,7 +2466,7 @@ function syncTrainerRoutingUiState() {
     ['enable-midiout-hand-staves', 'enable-midiout-other', 'enable-midiout-instrument', 'enable-midiout-virtual-keyboard'].forEach((id) => {
         const input = document.getElementById(id);
         if (!input) return;
-        const shouldDisable = !hasMidiOut || (AppState.mode === 'wait' && id === 'enable-midiout-hand-staves');
+        const shouldDisable = !hasMidiOut;
         input.disabled = shouldDisable;
         input.closest('label')?.classList.toggle('is-disabled', shouldDisable);
     });
@@ -2749,12 +2749,9 @@ function applyModeSettings() {
     if (playbackRightToggle) playbackRightToggle.checked = AppState.playback.right;
     if (lowLatencyPlaybackCheckbox) lowLatencyPlaybackCheckbox.checked = !!AppState.lowLatencyPlaybackEnabled;
 
-    if (isWait) {
-        if (audioHandsToggle) audioHandsToggle.checked = false;
-        AppState.audioEnabled.hands = false;
-        if (midiOutHandsToggle) midiOutHandsToggle.checked = false;
-        AppState.midiOutEnabled.hands = false;
-    }
+    // Keep Audio/Routing hand-staff preferences untouched when switching modes.
+    // Wait mode blocks score playback behaviorally, but it must not rewrite or visually
+    // uncheck the user's saved routing choices in More -> Audio/Routing.
 
     if (practiceLeftToggle) {
         practiceLeftToggle.disabled = false;
@@ -2775,9 +2772,16 @@ function applyModeSettings() {
         playbackRightToggle.closest('label')?.classList.toggle('is-disabled', playbackDisabled);
     }
     playbackRow?.classList.toggle('is-disabled', playbackDisabled);
-    if (audioHandsToggle) audioHandsToggle.disabled = isWait;
+    if (audioHandsToggle) {
+        audioHandsToggle.disabled = false;
+        audioHandsToggle.closest('label')?.classList.toggle('is-disabled', false);
+    }
     if (otherAudioToggle) otherAudioToggle.disabled = isWait;
-    if (midiOutHandsToggle) midiOutHandsToggle.disabled = isWait || !getSelectedMidiOutOutput();
+    if (midiOutHandsToggle) {
+        const disableMidiOutHands = !getSelectedMidiOutOutput();
+        midiOutHandsToggle.disabled = disableMidiOutHands;
+        midiOutHandsToggle.closest('label')?.classList.toggle('is-disabled', disableMidiOutHands);
+    }
     if (midiOutOtherToggle) midiOutOtherToggle.disabled = isWait || !getSelectedMidiOutOutput();
 
     let modeNote = '';
@@ -3016,12 +3020,15 @@ function isFullscreenActive() {
 
 function syncFullscreenUi() {
     const fullscreenActive = isFullscreenActive();
+    const fullscreenLabel = fullscreenActive ? 'Exit full screen' : 'Enter full screen';
     document.body.classList.toggle('app-fullscreen-active', fullscreenActive);
     if (scoreFullscreenButton) {
         scoreFullscreenButton.classList.toggle('is-active', fullscreenActive);
         scoreFullscreenButton.textContent = fullscreenActive ? '🗗' : '⛶';
-        scoreFullscreenButton.setAttribute('aria-label', fullscreenActive ? 'Exit full screen' : 'Enter full screen');
-        scoreFullscreenButton.title = fullscreenActive ? 'Exit full screen' : 'Enter full screen';
+        scoreFullscreenButton.setAttribute('aria-label', fullscreenLabel);
+        scoreFullscreenButton.setAttribute('aria-pressed', fullscreenActive ? 'true' : 'false');
+        scoreFullscreenButton.title = fullscreenLabel;
+        scoreFullscreenButton.dataset.tooltip = fullscreenLabel;
     }
 }
 

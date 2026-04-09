@@ -129,6 +129,7 @@ iOS browsers do not support MIDI.
 3. Open MIDIWeb
 4. Load Piano Trainer (GitHub or local network)
 5. Connect your MIDI device
+- Note: Piano Trainer Studio should be visible on the main midiweb page as well.
 
 🔵 Bluetooth MIDI (Optional)
 - Tap the Bluetooth icon in MIDIWeb
