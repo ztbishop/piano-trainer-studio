@@ -761,7 +761,11 @@ Improved fullscreen button.
 v1.2.3
 Updated readme for new iPad instructions
 
+v1.2.4
+Fixed real-time mode grading
+
 //------------------------------//
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
 VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!
+Also update in index.html - const FALLBACK_ASSET_VERSION = 'x.x.x';
 //------------------------------//

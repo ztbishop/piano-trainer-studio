@@ -1622,6 +1622,64 @@ function tryReserveSingleHandEarlyGrace(midi) {
     return reservation;
 }
 
+
+function tryReserveRealtimeUpcomingHeldNote(midi) {
+    if (!AppState.isPlaying || AppState.mode !== 'realtime') return null;
+    if (!Number.isFinite(midi)) return null;
+    if (!AppState.currentExpectedContext) return null;
+
+    const timeline = ensureLedPreviewTimelineBuilt();
+    if (!Array.isArray(timeline) || timeline.length === 0) return null;
+
+    const ctx = AppState.currentExpectedContext;
+    const currentIndex = findMatchingLedPreviewTimelineIndex(
+        timeline,
+        ctx.measureIndex,
+        ctx.timestamp,
+        ctx.signature,
+        AppState.ledPreviewTraversalIndex >= 0 ? AppState.ledPreviewTraversalIndex : 0
+    );
+    if (currentIndex < 0) return null;
+
+    const maxLookaheadBeats = 1.1;
+
+    for (let i = currentIndex + 1; i < timeline.length; i++) {
+        const event = timeline[i];
+        if (!event?.notes?.length) continue;
+
+        const beatsUntilTarget = window.PTTiming.getTraversalBeatsToWait({
+            currentMeasureIdx: ctx.measureIndex,
+            currentTimestamp: ctx.timestamp,
+            nextMeasureIdx: event.measureIndex,
+            nextTimestamp: event.timestamp,
+            fallbackLength: 0.25,
+            getMeasureTimingInfo
+        });
+
+        if (!Number.isFinite(beatsUntilTarget)) continue;
+        if (beatsUntilTarget > maxLookaheadBeats) break;
+
+        const matched = event.notes.find(note => note.midi === midi && isPracticeHandEnabledForStaff(note.staffId));
+        if (!matched) continue;
+
+        const reservation = {
+            midi,
+            staffId: matched.staffId,
+            measureIndex: event.measureIndex,
+            timestamp: event.timestamp,
+            allowTapCarry: false,
+            beatsUntilTarget
+        };
+
+        AppState.earlyGraceReservations.set(midi, reservation);
+        AppState.heldCorrectNotes.set(midi, matched.staffId);
+        AppState.preExpectedHeldNotes.add(midi);
+        return reservation;
+    }
+
+    return null;
+}
+
 function getFuturePreviewDepth() {
     if (!AppState.futurePreviewEnabled) return 0;
     return AppState.futurePreviewEnabled ? 1 : 0;
@@ -2562,9 +2620,12 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
             const repeatCarryReservation = (!expectedMatch && sustainMatch?.source === 'already-hit')
                 ? tryReserveSingleHandEarlyGrace(midi)
                 : null;
-            const earlyGraceReservation = (!expectedMatch && !sustainMatch)
+            const realtimeUpcomingReservation = (!expectedMatch && !sustainMatch && !repeatCarryReservation)
+                ? tryReserveRealtimeUpcomingHeldNote(midi)
+                : null;
+            const earlyGraceReservation = (!expectedMatch && !sustainMatch && !realtimeUpcomingReservation)
                 ? tryReserveSingleHandEarlyGrace(midi)
-                : repeatCarryReservation;
+                : (realtimeUpcomingReservation || repeatCarryReservation);
             const isCorrect = !!expectedMatch;
             const isAcceptedRepeat = !expectedMatch && !!sustainMatch;
             const isEarlyGraceReserved = !!earlyGraceReservation;
