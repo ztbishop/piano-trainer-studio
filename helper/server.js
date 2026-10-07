@@ -114,7 +114,17 @@ function buildBlackFrame(ledCount) {
   return Array.from({ length: count }, () => [0, 0, 0]);
 }
 
+function isValidWledTarget(ip) {
+  // Only allow a bare IPv4 address, hostname, or [ip]:port style target.
+  // Rejects slashes, '@', '#', '?', whitespace, or scheme prefixes that
+  // could redirect the request away from the intended LAN device.
+  return /^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?(:[0-9]{1,5})?$/.test(ip);
+}
+
 async function sendHttpJsonToWled(wledIp, frame) {
+  if (!isValidWledTarget(wledIp)) {
+    throw new Error("Invalid wledIp");
+  }
   const res = await fetch(`http://${wledIp}/json/state`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
