@@ -767,6 +767,9 @@ Fixed real-time mode grading
 v1.2.5
 Added cross-staff to hand assignment fix for edge cases.  Allows to assign hands to voice, rather than staff. 
 
+v1.2.6
+Added cloudfare analytics tracking
+
 //------------------------------//
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
 VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!
