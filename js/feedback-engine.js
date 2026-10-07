@@ -962,15 +962,14 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
     const mergedVisuals = new Map();
     const mergedOutOfRange = new Map();
 
-    entries.forEach(e => {
-        const sid = window.getResolvedStaffAssignmentIdFromEntry ? window.getResolvedStaffAssignmentIdFromEntry(e) : Number(e.Notes[0]?.ParentStaff?.id);
-        const handRole = window.getAssignedHandRoleForStaff ? window.getAssignedHandRoleForStaff(sid) : null;
+    entries.forEach(e => e.Notes.forEach(n => {
+        const sid = getResolvedStaffAssignmentIdFromNote(n);
+        const handRole = HandAssignment.roleForNote(n);
         const isRH = handRole === 'right';
         const isLH = handRole === 'left';
         const isPracticingThisHand = (isRH && AppState.practice.right) || (isLH && AppState.practice.left);
 
         if (isPracticingThisHand) {
-            e.Notes.forEach(n => {
                 const isInvisibleCue =
                     n.Notehead === 'none' ||
                     n.PrintObject === false ||
@@ -985,11 +984,11 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
 
                     if (!isTieContinuation) {
                         const midi = n.halfTone + 12;
-                        const key = `${sid}|${midi}`;
+                        const key = `${sid}|${handRole}|${midi}`;
 
                         if (!isMidiInPlayerRange(midi)) {
                             if (!mergedOutOfRange.has(key)) {
-                                mergedOutOfRange.set(key, { midi, staffId: sid, mIdx: currentMeasureIdx });
+                                mergedOutOfRange.set(key, { midi, staffId: sid, handRole, mIdx: currentMeasureIdx });
                             }
                             return;
                         }
@@ -1012,14 +1011,14 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
 
                         const existingExpected = mergedExpected.get(key);
                         if (!existingExpected) {
-                            mergedExpected.set(key, { midi, staffId: sid, hit: false, mIdx: currentMeasureIdx, anchor });
+                            mergedExpected.set(key, { midi, staffId: sid, handRole, hit: false, mIdx: currentMeasureIdx, anchor });
                         } else {
                             debugLogAnchorResolution('EXPECTED_NOTE_DEDUPE_COLLISION', {
                                 key,
                                 currentMeasureIdx,
                                 incoming: {
                                     midi,
-                                    staffId: sid,
+                                    staffId: sid, handRole,
                                     anchor: anchor ? { x: anchor.x, y: anchor.y } : null,
                                     note: describeLogicalNoteForDebug(n, currentMeasureIdx, staffIdx)
                                 },
@@ -1038,7 +1037,7 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
                         if (!existingVisual) {
                             mergedVisuals.set(key, {
                                 midi,
-                                staffId: sid,
+                                staffId: sid, handRole,
                                 durationMs: visualDurationMs,
                                 endTimestamp: visualEndTimestamp,
                                 mIdx: currentMeasureIdx
@@ -1053,9 +1052,8 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
                         }
                     }
                 }
-            });
         }
-    });
+    }));
 
     AppState.expectedNotes = Array.from(mergedExpected.values());
     AppState.visualNotesToStart = Array.from(mergedVisuals.values());

@@ -5046,3 +5046,46 @@ input[type="range"] {
 #tempo-midiout-metronome-hint {
     justify-self: start;
 }
+
+/* Score-specific assignment controls, contained within the existing Practice panel. */
+#practice-popup .practice-hand-staff-row { grid-template-columns: 150px minmax(0, 1fr); }
+.assignment-body { min-width: 0; display: grid; gap: 10px; }
+.assignment-mode-label { display: flex; align-items: center; gap: 12px; margin: 0; }
+.assignment-mode-label select { min-width: 100px; }
+.assignment-item { display: grid; grid-template-columns: minmax(0, 1fr) 150px; align-items: center; gap: 12px; margin: 0; }
+.assignment-item span { overflow-wrap: anywhere; }
+#assignment-details { display: grid; gap: 8px; }
+#assignment-details:empty { display: none; }
+.assignment-help { font-size: 12px; line-height: 1.5; color: #526479; margin: 0; }
+.assignment-help span { display: block; }
+.assignment-link { background: none; border: 0; padding: 2px 0; color: #2369a4; text-decoration: underline; font-size: 12px; text-align: left; cursor: pointer; justify-self: start; }
+.assignment-body [hidden] { display: none !important; }
+#practice-popup { max-height: calc(100dvh - 150px); overflow-y: auto; }
+@media (max-width: 760px) {
+    #practice-popup .practice-hand-staff-row { grid-template-columns: 1fr; }
+    .assignment-item { grid-template-columns: minmax(0, 1fr) 150px; }
+    #assignment-compact { display: flex; flex-wrap: wrap; }
+}
+@media (max-width: 760px) {
+    #practice-popup {
+        top: 140px;
+        max-height: calc(100dvh - 160px);
+        overflow-x: hidden;
+    }
+    #fs-practice-popup {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        padding: 14px;
+    }
+    #fs-practice-popup .practice-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+    }
+    #fs-practice-popup .practice-mode-option { min-width: 0; }
+    #fs-practice-popup .practice-mode-desc { grid-column: 2; }
+    #fs-practice-popup .practice-options-stack,
+    #fs-practice-popup .practice-inline-note { min-width: 0; grid-column: auto; }
+    #fs-practice-popup .inline-row-flex { white-space: normal; }
+}

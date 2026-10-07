@@ -19,7 +19,7 @@
 
     <script>
         (function () {
-            const FALLBACK_ASSET_VERSION = '1.2.4';
+            const FALLBACK_ASSET_VERSION = '1.2.5';
             const OVERRIDE_KEY = 'pt_assetVersionOverride';
             const VERSION_JSON_PATH = 'version.json';
             let assetVersion = FALLBACK_ASSET_VERSION;
@@ -693,14 +693,25 @@
                 <div class="practice-divider"></div>
 
                 <div class="practice-row practice-hand-staff-row">
-                    <div class="practice-row-label">Hand → Staff</div>
-                    <div class="practice-hand-staff-controls">
+                    <div class="practice-row-label">Hand assignment</div>
+                    <div class="assignment-body">
+                    <label class="assignment-mode-label">Assign by
+                        <select id="assignment-mode" disabled><option value="staff">Staff</option><option value="voice">Voice</option></select>
+                    </label>
+                    <div class="practice-hand-staff-controls" id="assignment-compact">
                         <label class="practice-hand-staff-control">Left ✋
                             <select id="assign-lh"><option value="2">Staff 2</option></select>
                         </label>
                         <label class="practice-hand-staff-control">Right 🤚
                             <select id="assign-rh"><option value="1">Staff 1</option></select>
                         </label>
+                    </div>
+                    <button type="button" id="assignment-advanced" class="assignment-link" aria-expanded="false" hidden>Edit all assignments</button>
+                    <div id="assignment-details"></div>
+                    <p id="assignment-notice" class="assignment-help" role="status" hidden></p>
+                    <label id="assignment-accompaniment" class="assignment-help" hidden><input type="checkbox" id="play-accompaniment" checked> Play accompaniment <span>(uses Other parts audio/MIDI routing in Settings)</span></label>
+                    <p id="assignment-output" class="assignment-help" hidden></p>
+                    <p id="assignment-storage" class="assignment-help" role="status" hidden></p>
                     </div>
                 </div>
             </div>
@@ -791,6 +802,7 @@
     <script>document.write('<script src="js/feedback-engine.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
     <script>document.write('<script src="js/feedback-debug.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
     <script>document.write('<script src="js/trainer-timing.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
+    <script>document.write('<script src="js/hand-assignment.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
     <script>document.write('<script src="js/trainer-core.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
 </body>
 </html>

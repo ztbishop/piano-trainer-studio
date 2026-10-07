@@ -39,6 +39,7 @@ function formatStaffAssignmentValue(value) {
 }
 
 function getAssignedHandRoleForStaff(staffId) {
+    if (window.HandAssignment?.ready()) return HandAssignment.roleForStaff(staffId);
     const sid = Number(staffId);
     if (!Number.isFinite(sid)) return null;
     if (sid === Number(AppState.hands.right)) return 'right';
@@ -1239,7 +1240,9 @@ async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType
         const osmdLoadPayload = getOsmdLoadPayload(osmdSourceRawData, fileType, fileName);
         await osmd.load(osmdLoadPayload);
         renderScoreAndRefreshGeometry();
+        HandAssignment.deactivate();
         initSongUI();
+        await HandAssignment.initialize(canonicalOriginalMusicXml);
 
         if (osmd.cursor) {
             osmd.cursor.reset();
@@ -1377,7 +1380,12 @@ function syncHandAssignmentFromControls({ refreshCurrentFrame = false } = {}) {
 
     const nextLeft = parseStaffAssignmentValue(lhAssign.value);
     const nextRight = parseStaffAssignmentValue(rhAssign.value);
-    if (nextRight == null) return;
+    if (nextRight == null && !window.HandAssignment?.ready()) return;
+
+    if (window.HandAssignment?.ready()) {
+        HandAssignment.setCompact(nextLeft, nextRight);
+        return;
+    }
 
     AppState.hands.left = nextLeft;
     AppState.hands.right = nextRight;
@@ -1449,11 +1457,11 @@ function initSongUI() {
     lhAssign.innerHTML = ""; rhAssign.innerHTML = "";
     
     lhAssign.innerHTML = '<option value="">-</option>';
-    rhAssign.innerHTML = '';
+    rhAssign.innerHTML = '<option value="">-</option>';
 
     for(let i = 1; i <= stavesCount; i++) {
-        lhAssign.innerHTML += `<option value="${i}">${i}</option>`;
-        rhAssign.innerHTML += `<option value="${i}">${i}</option>`;
+        lhAssign.innerHTML += `<option value="${i}">Staff ${i}</option>`;
+        rhAssign.innerHTML += `<option value="${i}">Staff ${i}</option>`;
     }
 
     const defaults = getDefaultStaffAssignment();
@@ -1492,7 +1500,7 @@ function getSinglePracticedHandRole() {
 
 function getRenderableNotesForHandFromTimelineEvent(event, handRole) {
     if (!event?.notes?.length || !handRole) return [];
-    return event.notes.filter(note => getAssignedHandRoleForStaff(note.staffId) === handRole);
+    return event.notes.filter(note => (note.handRole || getAssignedHandRoleForStaff(note.staffId)) === handRole);
 }
 
 function findSingleHandPracticeTimelineWindow() {
@@ -1610,6 +1618,7 @@ function tryReserveSingleHandEarlyGrace(midi) {
     const reservation = {
         midi,
         staffId: matched.staffId,
+        handRole: matched.handRole,
         measureIndex: nextEvent.measureIndex,
         timestamp: nextEvent.timestamp,
         allowTapCarry,
@@ -1659,12 +1668,13 @@ function tryReserveRealtimeUpcomingHeldNote(midi) {
         if (!Number.isFinite(beatsUntilTarget)) continue;
         if (beatsUntilTarget > maxLookaheadBeats) break;
 
-        const matched = event.notes.find(note => note.midi === midi && isPracticeHandEnabledForStaff(note.staffId));
+        const matched = event.notes.find(note => note.midi === midi && AppState.practice[note.handRole || getAssignedHandRoleForStaff(note.staffId)]);
         if (!matched) continue;
 
         const reservation = {
             midi,
             staffId: matched.staffId,
+        handRole: matched.handRole,
             measureIndex: event.measureIndex,
             timestamp: event.timestamp,
             allowTapCarry: false,
@@ -1728,17 +1738,19 @@ function collectRenderablePreviewNotesFromEntries(entries, previewDepthIndex) {
     (entries || []).forEach(entry => {
         (entry?.Notes || []).forEach(note => {
             const staffId = getResolvedStaffAssignmentIdFromNote(note);
-            if (!isPracticeHandEnabledForStaff(staffId)) return;
+            const handRole = HandAssignment.roleForNote(note);
+            if (!AppState.practice[handRole]) return;
             if (!isRenderableAttackNote(note)) return;
 
             const midi = note.halfTone + 12;
             if (!isMidiInPlayerRange(midi)) return;
-            const key = `${staffId}|${midi}`;
+            const key = `${staffId}|${handRole}|${midi}`;
             if (!mergedNotes.has(key)) {
                 mergedNotes.set(key, {
                     midi,
                     staffId,
-                    state: `future${previewDepthIndex}-${getLedPreviewHandStatePrefix(staffId)}`
+                    handRole,
+                    state: `future${previewDepthIndex}-${handRole === 'left' ? 'l' : 'r'}`
                 });
             }
         });
@@ -1922,7 +1934,7 @@ function collectFutureLedPreviewEvents(currentEntries, currentMeasureIdx, curren
             timestamp: event.timestamp,
             notes: event.notes.map(note => ({
                 ...note,
-                state: `future${depthIndex}-${getLedPreviewHandStatePrefix(note.staffId)}`
+                state: `future${depthIndex}-${note.handRole === 'left' ? 'l' : 'r'}`
             }))
         };
 
@@ -1931,7 +1943,7 @@ function collectFutureLedPreviewEvents(currentEntries, currentMeasureIdx, curren
         debugLogEvent(`LED_FUTURE_${depthIndex}_SELECTED`, {
             measureIndex: previewEvent.measureIndex,
             timestamp: previewEvent.timestamp,
-            notes: previewEvent.notes.map(note => ({ midi: note.midi, staffId: note.staffId, state: note.state }))
+            notes: previewEvent.notes.map(note => ({ midi: note.midi, staffId: note.staffId, handRole: note.handRole, state: note.state }))
         });
     }
 
@@ -2097,12 +2109,12 @@ function renderVirtualKeyboard(currentEntries = null, currentMeasureIdx = null, 
 
     AppState.sustainedVisuals.forEach(n => {
         if (!isMidiInPlayerRange(n.midi)) return;
-        const handRole = getAssignedHandRoleForStaff(n.staffId);
+        const handRole = n.handRole || getAssignedHandRoleForStaff(n.staffId);
         desiredStates.set(n.midi, handRole === 'left' ? 'expected-l' : 'expected-r');
     });
     AppState.visualNotesToStart.forEach(n => {
         if (!isMidiInPlayerRange(n.midi)) return;
-        const handRole = getAssignedHandRoleForStaff(n.staffId);
+        const handRole = n.handRole || getAssignedHandRoleForStaff(n.staffId);
         desiredStates.set(n.midi, handRole === 'left' ? 'expected-l' : 'expected-r');
     });
 
@@ -2161,7 +2173,8 @@ function renderVirtualKeyboard(currentEntries = null, currentMeasureIdx = null, 
             if (hasActiveSustainForMidi) {
                 if (AppState.correctHighlightEnabled) {
                     const staffId = AppState.heldCorrectNotes.get(midi);
-                    desiredStates.set(midi, getAssignedHandRoleForStaff(staffId) === 'left' ? 'pressed-l' : 'pressed-r');
+                    const active = [...AppState.expectedNotes, ...AppState.sustainedVisuals, ...AppState.visualNotesToStart].find(n => n.midi === midi);
+                    desiredStates.set(midi, (active?.handRole || getAssignedHandRoleForStaff(staffId)) === 'left' ? 'pressed-l' : 'pressed-r');
                 } else {
                     desiredStates.delete(midi);
                 }
@@ -2219,7 +2232,7 @@ function startVisualSustains() {
     AppState.visualNotesToStart = [];
 
     const startOneVisual = (n) => {
-        const vis = { midi: n.midi, staffId: n.staffId, mIdx: n.mIdx, endTimestamp: n.endTimestamp };
+        const vis = { midi: n.midi, handRole: n.handRole, staffId: n.staffId, mIdx: n.mIdx, endTimestamp: n.endTimestamp };
         AppState.sustainedVisuals.push(vis);
         renderVirtualKeyboard();
 
@@ -3926,12 +3939,11 @@ function playbackLoop() {
     renderFeedbackOverlay();
     renderVirtualKeyboard(entries, currentMeasureIdx, currentTimestamp);
 
-    entries.forEach(e => {
-        const sid = getResolvedStaffAssignmentIdFromEntry(e);
-        const handRole = getAssignedHandRoleForStaff(sid);
+    entries.forEach(e => e.Notes.forEach(n => {
+        const handRole = HandAssignment.roleForNote(n);
         const isRH = handRole === 'right';
         const isLH = handRole === 'left';
-        const isOther = (!isRH && !isLH);
+        const isOther = handRole === 'accompaniment' && HandAssignment.playAccompaniment();
         const isPracticingThisHand = (isRH && AppState.practice.right) || (isLH && AppState.practice.left);
         const playbackLeftEnabled = !!AppState.playback.left;
         const playbackRightEnabled = !!AppState.playback.right;
@@ -3943,7 +3955,6 @@ function playbackLoop() {
                                (isOther && AppState.midiOutEnabled.other);
 
         if (routeToLocalAudio || routeToMidiOut) {
-            e.Notes.forEach(n => {
                 if (!n.isRest()) {
                     const isTieContinuation = n.NoteTie && n.NoteTie.StartNote !== n;
                     if (!isTieContinuation) {
@@ -3963,9 +3974,8 @@ function playbackLoop() {
                         }
                     }
                 }
-            });
         }
-    });
+    }));
 
     osmd.cursor.Iterator.moveToNext(); 
     

@@ -361,6 +361,8 @@ function buildSettingsBackupPayload() {
         if (value !== null) settings[key] = value;
     });
 
+    Object.keys(localStorage).filter(key => /^pt_handAssignment_v1_[a-f0-9]{32}$/.test(key)).forEach(key => { settings[key] = localStorage.getItem(key); });
+
     return {
         version: 1,
         exportedAt: new Date().toISOString(),
@@ -403,6 +405,10 @@ function importSettingsBackupPayload(payload) {
         const value = rawSettings[key];
         if (value === null || value === undefined) return;
         normalizedSettings[key] = String(value);
+    });
+
+    Object.keys(rawSettings).filter(key => /^pt_handAssignment_v1_[a-f0-9]{32}$/.test(key)).forEach(key => {
+        if (typeof rawSettings[key] === 'string') normalizedSettings[key] = rawSettings[key];
     });
 
     if (Object.keys(normalizedSettings).length === 0) {
