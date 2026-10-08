@@ -770,6 +770,12 @@ Added cross-staff to hand assignment fix for edge cases.  Allows to assign hands
 v1.2.6
 Added cloudfare analytics tracking
 
+v1.2.8
+Added site-map / info to help with Google searching. 
+
+v1.2.9
+Added Google Analytics to monitor site traffic
+
 //------------------------------//
 **KEEP AT BOTTOM OF FILE FOR REFERENCE!**
 VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!

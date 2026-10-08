@@ -21,7 +21,7 @@
 
     <script>
         (function () {
-            const FALLBACK_ASSET_VERSION = '1.2.8';
+            const FALLBACK_ASSET_VERSION = '1.2.9';
             const OVERRIDE_KEY = 'pt_assetVersionOverride';
             const VERSION_JSON_PATH = 'version.json';
             let assetVersion = FALLBACK_ASSET_VERSION;
@@ -809,6 +809,18 @@
     <script>document.write('<script src="js/trainer-core.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
 
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "9ef0ca1099134ab6b1d3f52afe503920"}'></script><!-- End Cloudflare Web Analytics -->
+
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-F4KZ7LN1Y4"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-F4KZ7LN1Y4');
+</script>
+
 
 </body>
 </html>
