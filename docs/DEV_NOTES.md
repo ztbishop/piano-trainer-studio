@@ -1,4 +1,10 @@
-VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!
+# Historical development notes
+
+This file preserves prior investigations and release notes. Old filenames, stable-base labels, setup instructions, and version directives describe their historical context; they are not the current implementation baseline or working rules.
+
+Current rules: [AGENTS.md](../AGENTS.md). Current architecture: [ARCHITECTURE.md](ARCHITECTURE.md). Run/test/release workflow: [DEVELOPMENT.md](DEVELOPMENT.md). Current context: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
+
+Historical version instruction (superseded): update version.json and trainer-state.js before pushing.
 
 
 //Phase 5
@@ -570,7 +576,7 @@ v1.0.2
 - Starter library auto-import once from assets/Starter_Scores.json when the library is empty
 - Fix 'help' menu width
 - Link to more in-depth 'Readme'
-- VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!
+- Historical version instruction (superseded): update version.json and trainer-state.js before pushing.
 
 v1.0.3
 * Fixed update function
@@ -676,7 +682,7 @@ Updated menu polish (close by licking anywhere outside of menu)
 
 Transpose menu - resetting now puts slider / dropdown to default positions. 
 
-Version control - only need to update version number in version.json for each update going forward. 
+Historical version instruction (superseded): update only version.json.
 
 Rendering updates
 - If a player hits a wrong note and does NOT play the correct note, the anticipated note is no longer marked red as well. 
@@ -777,7 +783,5 @@ v1.2.9
 Added Google Analytics to monitor site traffic
 
 //------------------------------//
-**KEEP AT BOTTOM OF FILE FOR REFERENCE!**
-VERSION CONTROL - you MUST update the version in version.json and trainer-state.js prior to pushing to github!
-Also update in index.html - const FALLBACK_ASSET_VERSION = 'x.x.x';
+Historical release reminders retained for reference only. Current version/release policy is in DEVELOPMENT.md; trainer-state.js now derives its version. Documentation-only updates do not bump application versions. The user handles commits and pushes.
 //------------------------------//

@@ -1,52 +1,28 @@
-PROJECT: Piano Trainer Web App
-You are helping develop a piano training web app that renders sheet music and MIDI feedback notes.
+PIANO TRAINER STUDIO - NEW CHAT ENTRY POINT
 
-/js
-  trainer-core.js
-  trainer-state.js
-  toolbar-ui.js
-  scores-ui.js
-  score-library.js
-  midi.js
-  led.js
-  feedback-engine.js
-  feedback-debug.js
+The canonical repository instructions are in ../AGENTS.md.
+Strict rendering, feedback, timing, input, hand-assignment, storage, and Git
+requirements are maintained there rather than duplicated in this file.
 
-/assets
-/docs
-index.html
-style.css
+Read PROJECT_CONTEXT.md for current capabilities and decisions.
+Read ARCHITECTURE.md for module ownership and data flow.
+Read DEVELOPMENT.md for Live Server, run commands, regression checks,
+version guidance, and the required suggested commit title/description.
+DEV_NOTES.md and Repeat marker delays - fixes.txt preserve historical context.
+Historical attachments and old stable-base filenames are not the current baseline.
 
-DO NOT reintroduce old score logic or UI elements.
-Only modify files I provide.
-Do not assume missing files.
-Preserve feedback-engine and rendering behavior.
+Suggested prompt for a new Codex chat opened in this project:
 
+Read AGENTS.md and the relevant project documentation, check Git status,
+and help implement: [describe changes]. Preserve existing behavior except
+for the changes requested. Leave commits and pushes to me, and provide
+a suggested commit title and description.
 
+The former "only modify files I provide" rule belonged to the upload-based
+ChatGPT workflow. In this repository, inspect the real working tree and edit
+files needed for the authorized task, preserving unrelated user changes.
+Future practice-tool ideas are context, not implementation requests.
 
-There are strict historical bugs that must NEVER return:
-Rendering system rules (DO NOT BREAK):
-1. Beam groups must never drift when the window resizes.
-2. Feedback notes must anchor to the original VexFlow note positions.
-3. MIDI fallback notes must not place sharps/flats on incorrect staff lines.
-4. Clef changes must not affect feedback note placement.
-5. Debug overlays must not interfere with rendering layers.
-6. Rendering is done with VexFlow and MIDI input via WebMIDI.
-7. Important rule: Feedback notes must always anchor to the original rendered note positions, never recalculated positions.
-Never modify beam layout logic or anchor coordinate systems.
-
-Known stable fixes:
-- Beam drift solved by anchoring beams to original stave note X positions
-- Feedback notes must use cached layout coordinates instead of recalculated ones
-- Rendering must not recompute beam layout on resize
-
-DO NOT:
-- Recalculate beam groups during resize
-- Change anchor coordinate system
-- Re-layout VexFlow beams after initial render
-
-// CRITICAL:
-// .mxl files must NOT go through converter normalization.
-// OSMD handles .mxl natively, and that preserves correct engraving.
-// Sending .mxl through normalize/convert before render can break
-// slurs, grace notes, grouping, and layout fidelity.
+Keep current documentation updated alongside relevant project changes.
+These files carry context with the repository; they do not automatically
+synchronize independent chats or push changes to GitHub.

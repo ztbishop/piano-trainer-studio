@@ -166,7 +166,7 @@ If future notes don’t appear → increase slightly
 
 ### HTTP JSON (Default)
 
-- Works everywhere (desktop + iPad)  
+- Sends directly to WLED; verify device/browser/network access on desktop or iPad
 - No helper required  
 - Slightly higher latency  
 
@@ -178,7 +178,7 @@ If future notes don’t appear → increase slightly
 
 Run helper:
 
-Launchers/Windows/WLED Helper - Low Latency (DDP).bat
+Windows Launchers/WLED Helper - Low Latency (DDP).bat
 
 - Faster response  
 - Better for advanced setups  
@@ -187,6 +187,8 @@ Launchers/Windows/WLED Helper - Low Latency (DDP).bat
 - Requires Node.js  
 - Not supported on iPad  
 - Uses localhost bridge  
+
+The helper runs on the same computer as the browser using DDP. The iPad Wi-Fi launcher hosts the app only; it does not expose this localhost bridge. HTTP JSON sends directly to the WLED controller, so verify it on the actual device/browser/network. See [Development](DEVELOPMENT.md) for transport details.
 
 ---
 

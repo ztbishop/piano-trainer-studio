@@ -72,14 +72,16 @@ You can download and run Piano Trainer Studio locally without cloning the reposi
 
 ## ⚡ Quick Start (Desktop)
 
-### 1. Install Node.js (Required)
+For development in VS Code, open `index.html` with **Live Server**. There is no frontend build or dependency-install step. Node.js is required only for the optional launchers/server and WLED helper below. See [Development and regression checks](docs/DEVELOPMENT.md).
+
+### 1. Install Node.js (Required for launchers)
 
 Download and install Node.js (LTS recommended):  
 https://nodejs.org/en
 
 ### 2. Run the app
 Open:
-`Launchers/Windows/Piano Trainer - Desktop.bat`
+`Windows Launchers/Piano Trainer - Desktop.bat`
 
 (or Mac equivalent)
 
@@ -134,12 +136,13 @@ iOS browsers do not support MIDI.
 - Connect your device
 - It will appear in Piano Trainer
 
-**WLED light strips** will NOT work on iOS without a helper.
-- Open the following on a Mac/PC on your local network:
-- `Launchers/Windows/Piano Trainer - iPad (Wi-Fi).bat`
+For local LAN hosting, open the following on a Mac/PC on your local network:
+- `Windows Launchers/Piano Trainer - iPad (Wi-Fi).bat`
 - (or Mac equivalent)
 - Using the MIDIWeb app, connect to the resulting URL/IP displayed on your Mac/PC browser
 - Be sure to use **http** (NOT https) when putting this URL into MIDIWeb
+
+This launcher hosts the app only. WLED HTTP JSON sends directly from the browser to the controller; verify connectivity in MIDIWeb on your network. The DDP helper binds to localhost on its computer and is not exposed to the iPad by this launcher.
 
 ---
 
@@ -184,12 +187,12 @@ LEDs are optional but provide powerful real-time visual guidance while practicin
 ## 🔹 Connection Modes
 
 **HTTP JSON (default)**
-- Works everywhere (desktop + iPad)
+- Sends directly to WLED; verify device/browser/network access on desktop or iPad
 - Recommended for most users  
 
 **DDP (low latency)**
 - Run:
-  `Launchers/Windows/WLED Helper - Low Latency (DDP).bat`
+  `Windows Launchers/WLED Helper - Low Latency (DDP).bat`
 - Faster response  
 - Not supported on iPad  
 
@@ -274,7 +277,7 @@ Songs are stored in your browser (IndexedDB).
 ### iPad
 - No Web MIDI in Safari/Chrome
 - Requires MIDIWeb app
-- Requires PC/Mac host for WLED support
+- Local LAN app hosting uses a PC/Mac; WLED HTTP JSON connectivity depends on the device/browser/network. The localhost DDP helper is not available from the iPad.
 
 ### WLED
 - DDP not supported on iPad
@@ -329,6 +332,20 @@ Songs are stored in your browser (IndexedDB).
 ## 📌 Project Status
 
 Actively developed. Feedback and suggestions welcome.
+
+## Development and New Chats
+
+- [AGENTS.md](AGENTS.md): project rules, strict regression protections, and suggested commit text for every update.
+- [Project context](docs/PROJECT_CONTEXT.md): current capabilities, decisions, limitations, and future ideas.
+- [Architecture](docs/ARCHITECTURE.md): module ownership and data flow.
+- [Development and regression checks](docs/DEVELOPMENT.md): Live Server, Node launchers, testing, and version guidance.
+- [Historical development notes](docs/DEV_NOTES.md): past investigations and fixes.
+
+For a new Codex chat opened in this project:
+
+> Read AGENTS.md and the relevant project documentation, check Git status, and help implement: [describe changes]. Preserve existing behavior except for the changes requested. Leave commits and pushes to me, and provide a suggested commit title and description.
+
+Keep current documentation updated when behavior or workflows change. Commits and pushes remain the project owner's responsibility.
 
 ---
 
