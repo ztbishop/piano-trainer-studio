@@ -1241,6 +1241,14 @@ body.app-fullscreen-active .score-overlay-controls {
     pointer-events: none;
 }
 
+/* Narrow only the painted OSMD cursor: feedback fallbacks read its native bounds.
+   The soft blue band is 16px at 100% zoom and scales with OSMD's 30px image. */
+#osmd-container img[id^="cursorImg-"] {
+    -webkit-mask-image: linear-gradient(to right, transparent 23.333333%, #000 40%, #000 60%, transparent 76.666667%);
+    mask-image: linear-gradient(to right, transparent 23.333333%, #000 40%, #000 60%, transparent 76.666667%);
+    pointer-events: none;
+}
+
 #feedback-layer { z-index: 10; }
 #cursor-layer,
 #looper-layer { z-index: 9; }

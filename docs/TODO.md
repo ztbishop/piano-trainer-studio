@@ -14,12 +14,12 @@ This backlog tracks requested enhancements and outstanding review findings. Addi
 - [ ] Keep slider and numeric display synchronized without silently rounding a manually entered value to a multiple of five. Preserve each setting's valid range and persistence behavior.
 - [ ] Verify direct entry, slider dragging, both arrows, bounds, keyboard operation, and layout in the user's Live Server/browser workflow. Define how a slider/stepper proceeds from an off-grid typed value when implementing.
 
-### UI-002: Thinner blue score cursor, using Piano Marvel as a visual reference
+### UI-002: Thinner blue score cursor, matching Guitar Trainer Studio
 
-- [ ] Added October 20, 2026. Change the score cursor from green to **blue** and make it **thinner**, using Piano Marvel's appearance as the visual reference.
-- [ ] Confirm the intended blue shade and width against a reference when implementing; no exact color or dimension is specified yet.
-- [ ] Preserve native OSMD/VexFlow cursor position, navigation, timing, engraving, and feedback-anchor behavior. Keep this a cursor appearance change; do not change hand/note/LED colors.
-- [ ] Verify appearance and alignment at relevant zoom levels/viewports and during Realtime, Wait for Me, Follow Me, repeats, and looping.
+- [x] Implemented October 20, 2026. The user's Guitar Trainer Studio screenshots/current local CSS supersede the earlier Piano Marvel reference: blue **#4DAEEA**, soft edges, approximately **16px** painted width at 100% score zoom, scaling with score zoom.
+- [x] Retain OSMD's standard cursor geometry and follow behavior; narrow only its paint with a CSS mask. No changes to navigation, timing, engraving, feedback anchors, or hand/note/LED color rules.
+- [x] Live Server browser smoke checks used built-in Mary Had a Little Lamb, Fur Elise Easy Piano, and Minuet in G Major: score zoom, narrow/desktop viewports, resize/beaming, all three mode appearances, virtual input/feedback, seek/reset, a Realtime loop, and a backward repeat. See [actual validation and limitations](CHANGELOG.md#2026-10-20-thinner-blue-score-cursor-no-application-release).
+- [ ] Owner visual acceptance on the usual browser/display and physical MIDI/LED setup. Full protected-score geometry cases and Wait/Follow loop-gate/timing acceptance were not established by these smoke checks; existing review issues remain separate.
 
 ## Outstanding reproduced issues
 

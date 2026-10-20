@@ -13,6 +13,18 @@ For future work:
 
 Versions identify chosen releases; commits preserve implementation history. Detailed messages are useful, but old broad version-only messages do not erase their diffs. Do not rewrite old commits/tags to invent a finer history. `git log -- path`, `git show <commit> -- path`, and `git blame` can still investigate the recorded snapshots. Uncommitted/intermediate edits never saved in Git cannot be reconstructed reliably from version labels.
 
+## 2026-10-20: thinner blue score cursor (no application release)
+
+- Matched Guitar Trainer Studio's blue `#4DAEEA` and soft narrow appearance, using 0.4 cursor alpha and a painted band approximately 16px wide at 100% score zoom. Width scales with OSMD zoom. The user authorized this focused appearance change; no version bump was requested.
+- Retained OSMD's standard cursor type, native image bounds/center, height, and follow behavior. A CSS mask narrows paint only because feedback fallbacks and auto-scroll read the cursor's bounding rectangle. Engraving, timing, matching, routing, source loading, and other colors were not edited.
+- Updated [rendering documentation](RENDERING_AND_TRANSPOSE.md#score-cursor-appearance) and [UI-002](TODO.md#ui-002-thinner-blue-score-cursor-matching-guitar-trainer-studio), replacing its earlier Piano Marvel reference with the user's supplied Guitar Trainer Studio reference.
+- Validation: `node --check js/trainer-core.js` and `git diff --check` passed. No application automated test suite exists; the unrelated review probes were not rerun.
+- Browser: separate Codex in-app browser tab at the existing `http://127.0.0.1:5500/index.html`; no server restart or storage clearing. Tested at 825x728 and 1440x900. Built-in Mary Had a Little Lamb rendered with blue cursor in Realtime, Wait for Me, and Follow Me; virtual E4/D4/C4 input exercised progression and feedback as a smoke check, not comprehensive matching/timing acceptance. Pause/reset worked. Native cursor widths measured 15/30/45px at 50/100/150% score zoom; the mask remained applied.
+- Built-in Fur Elise Easy Piano showed the full two-staff cursor and attached beams after narrowing/widening the viewport and letting the existing resize lifecycle settle. Realtime loop measures 1-2, loop count-in off: observed the cursor return from late measure 2 to earlier in the loop, retaining its blue appearance. Loop enable/count-in choices were restored afterward.
+- Built-in Minuet in G Major: clicked measure 16, started Realtime, and observed the backward repeat return to the first system with aligned cursor/feedback. No measured timing or audio-sync claim is made.
+- Console review found the documented misleading `File loaded successfully.` error messages and unavailable WebMIDI warnings; no new cursor-related errors were observed.
+- Pending: owner shade/width acceptance on the usual browser/display; physical MIDI, LED, and audible sync acceptance (MIDI permission unavailable in the test browser); full protected-score cases for side-shifted chords, clef changes, hidden notes, ornaments/lead-ins, and original-MXL comparisons. Wait/Follow final-loop gating and prior-run callback issues remain outstanding review items, not fixes or passing regressions from this appearance work.
+
 ## 2026-10-20: requested UI backlog (no application release)
 
 - Added [TODO.md](TODO.md) and linked it from the developer index.

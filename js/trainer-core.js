@@ -393,7 +393,8 @@ function restoreDefaultPreferences({ reloadDevices = true } = {}) {
 
 let osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("osmd-container", {
     autoResize: false, 
-    drawTitle: true
+    drawTitle: true,
+    cursorsOptions: [{ type: 0, color: '#4DAEEA', alpha: 0.4, follow: true }]
 });
 
 const FOLLOW_ME_TONE_LATENCY_PROFILE = Object.freeze({

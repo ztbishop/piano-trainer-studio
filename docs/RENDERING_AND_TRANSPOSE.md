@@ -34,6 +34,12 @@ Overlay groups disable pointer events. OSMD's score/cursor remain distinct. `ren
 
 The matching engine currently merges same-staff/same-role/same-pitch expectations even if multiple XML notes exist. That is separate from geometric note identity. See `SCORES_AND_STORAGE.md` and the review before deciding whether unison notation requires multiple anchors versus one playable target.
 
+### Score cursor appearance
+
+The OSMD constructor in `trainer-core.js` retains the standard cursor type and follow behavior, with blue `#4DAEEA` at 0.4 alpha. The visual reference is Guitar Trainer Studio's soft blue cursor. A scoped CSS mask on OSMD cursor images narrows the painted band to approximately 16px at 100% score zoom (8px at 50%, 24px at 150%).
+
+Keep the native cursor image dimensions, position, and center intact: feedback fallbacks and auto-scroll read its bounding rectangle. The mask affects paint only; do not narrow the actual element or shift it to achieve this appearance. OSMD continues to own cursor height, movement, rendering, and zoom. Hand/note/LED colors are independent of this styling. Browser evidence and pending acceptance are recorded in the [change history](CHANGELOG.md#2026-10-20-thinner-blue-score-cursor-no-application-release).
+
 ## Debugging a placement problem
 
 1. Record the score/edition, measure, pitch, staff/voice role, mode, zoom, and whether resize triggered it.
