@@ -201,6 +201,9 @@ function populateMIDIDevices() {
     }
     if (savedOut && [...midiOutSelect.options].some(o => o.value === savedOut)) {
         midiOutSelect.value = savedOut;
+        // Preference initialization runs before MIDI access; apply CC11 once the
+        // saved destination is available, including after a device reconnects.
+        if (typeof sendMidiOutExpressionLevel === 'function') sendMidiOutExpressionLevel();
     }
     if (savedLights && [...midiLightsSelect.options].some(o => o.value === savedLights)) {
         midiLightsSelect.value = savedLights;

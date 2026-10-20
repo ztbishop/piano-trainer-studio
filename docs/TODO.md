@@ -38,6 +38,11 @@ Evidence and suggested fix boundaries are in the [October 20 code review, findin
 - [x] **FIX-006 / F6 — Define update/manifest behavior for nested hosting and local installs.** Update/installation paths are deployment-relative. Local checks are explicitly labeled as local files and reload newer local assets; saved remote overrides retain download behavior. Root/subpath URL tests, local browser previews and HTTP icon/manifest checks passed. See [scope](DEVELOPMENT.md#hosting-and-update-check-scope) and the [change record](CHANGELOG.md#2026-10-20-deployment-relative-update-and-install-paths-no-application-release).
 - [ ] **FIX-006 acceptance:** deployed custom-domain/GitHub Pages checks, install/relaunch and existing shortcuts remain pending. Remote newer-release/CORS/download behavior was tested with mocks; no live remote endpoint was selected or tested. Hardware/timing regressions were not rerun for these update-path changes.
 
+## GitHub follow-up fixes
+
+- [x] **FIX-007 / [GitHub #17](https://github.com/ztbishop/piano-trainer-studio/issues/17) — Apply saved MIDI output volume at startup.** Isolated reproduction confirmed that saved output restoration sent no CC11 until the volume was touched. Restoration now sends the current level when its destination becomes available, including reconnect. Automated setup/reconnect/output/channel regressions and no-device Live Server smoke passed; see the [change record](CHANGELOG.md#2026-10-20-saved-midi-output-volume-initialization-no-application-release).
+- [ ] **FIX-007 acceptance:** audible startup/reconnect volume on a real MIDI piano remains pending. Original reporter participation is not required; owner verification can establish device acceptance. GitHub issue status was not changed by this code update.
+
 ## Investigations requiring further evidence
 
 The [review's conditional risks/design questions](CODE_REVIEW_2026-10-20.md) hold the detailed rationale. Reproduce the real score/device case before choosing a fix.

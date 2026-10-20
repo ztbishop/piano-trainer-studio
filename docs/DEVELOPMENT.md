@@ -63,6 +63,8 @@ Optional-server regressions: `node tests/local-web-server.cjs` runs the actual s
 
 Hosting/update regressions: `node tests/hosting-paths.cjs` tests actual update helpers with in-memory storage, fetch/navigation mocks and URL resolution for localhost root/nested, custom-domain root and GitHub Pages subpath. Checks manifest start/scope/icons, local-file labels/reload action, saved remote-manifest overrides/download action, error/missing-version handling and hosted auto-reload. These are not deployed-site or installed-app tests.
 
+MIDI output initialization: `node tests/midi-output-init.cjs` exercises actual asynchronous setup, output restoration, expression helpers and manual output/channel listeners with in-memory devices/storage. Covers all modes, 0/65/100% levels, channels, reconnect, missing/disconnected/None outputs, separate LED destinations and unchanged routing flags. It captures CC11 bytes without opening hardware or modifying browser data; audible piano acceptance remains separate.
+
 The read-only diagnostic probes added under docs can be rerun separately:
 
 ```powershell

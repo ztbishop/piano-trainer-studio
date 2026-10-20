@@ -13,6 +13,13 @@ For future work:
 
 Versions identify chosen releases; commits preserve implementation history. Detailed messages are useful, but old broad version-only messages do not erase their diffs. Do not rewrite old commits/tags to invent a finer history. `git log -- path`, `git show <commit> -- path`, and `git blame` can still investigate the recorded snapshots. Uncommitted/intermediate edits never saved in Git cannot be reconstructed reliably from version labels.
 
+## 2026-10-20: saved MIDI output volume initialization (no application release)
+
+- FIX-007 / GitHub #17: restoring a saved MIDI Out destination now sends its current CC11 expression level. Preferences initialize before asynchronous MIDI access, and the prior restoration selected the output without sending its saved volume. This explains why reapplying the same slider value could reduce startup loudness. Reconnection/repopulation also reapplies the level; manual output/channel changes retain their existing behavior. No note velocity, scheduler, engraving, routing preference, WLED or MIDI-input path changes.
+- Added `node tests/midi-output-init.cjs`. It failed on the baseline missing startup message and passes with the focused restoration change. Actual setup/restoration/expression/listener functions with isolated devices/storage cover Realtime/Wait/Follow, 0/65/100%, channel 1/16 initialization, disconnect/reconnect/removal/reappearance, manual output and channel switching, None/missing devices, separate LED destination and unchanged routing flags. A restored 65% output receives CC11=83 without moving the slider. Syntax and diff whitespace checked; existing playback-lifecycle and numeric-control regressions passed.
+- Browser: separate Codex in-app tab on existing Live Server, app boot and Settings/MIDI selectors remained usable. WebMIDI permission was unavailable in that profile, so the restored-device path was verified by captured mock MIDI messages, not actual hardware. No storage clearing, server replacement or physical-device interaction. Physical startup/reconnect loudness is pending and can be checked on the owner's piano; the original reporter is not required. No GitHub issue/comment changes.
+- Updated MIDI/development/backlog documentation. Application version remains 1.3.0; no new release, commit or push.
+
 ## 2026-10-20: deployment-relative update and install paths (no application release)
 
 - FIX-006: default update manifest is now `version.json` relative to the app, matching bootstrap. Web manifest start URL/scope and icons resolve within the deployment directory at root or nested hosting. No new remote endpoint, storage migration, service worker, application version or deployment.
