@@ -13,6 +13,15 @@ For future work:
 
 Versions identify chosen releases; commits preserve implementation history. Detailed messages are useful, but old broad version-only messages do not erase their diffs. Do not rewrite old commits/tags to invent a finer history. `git log -- path`, `git show <commit> -- path`, and `git blame` can still investigate the recorded snapshots. Uncommitted/intermediate edits never saved in Git cannot be reconstructed reliably from version labels.
 
+## 2026-10-20: requested UI backlog (no application release)
+
+- Added [TODO.md](TODO.md) and linked it from the developer index.
+- Recorded five-step sliders/stacked numeric arrows with unrestricted valid numeric typing, and a thinner blue score cursor using Piano Marvel as a visual reference.
+- Recorded scope/visual details to settle during implementation and the relevant regression checks. Neither enhancement has been implemented.
+- Expanded the backlog with all six reproduced review findings, eight investigations, and six testing/maintenance recommendations. They remain outstanding; no application fixes were made.
+- Made ongoing developer-documentation and backlog maintenance explicit in AGENTS.md, including evidence levels, completion validation, and scope limits.
+- Validation: relative documentation links and diff whitespace checked. Application files/version unchanged; browser tests are not required for this backlog-only update.
+
 ## 2026-10-20: documentation deep dive (no application release)
 
 - Added a developer index and focused practice/timing, score/storage, rendering/transpose, and MIDI/audio/LED documents based on revision `b40e412`.

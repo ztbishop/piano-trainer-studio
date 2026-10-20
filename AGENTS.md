@@ -42,6 +42,7 @@
 - For work affecting protected systems, verify the relevant regression cases. If required scores/hardware are unavailable, identify the outstanding verification in the handoff.
 - Keep fixes to fragile systems focused. Avoid unrelated refactors, vendor-library changes, dependency additions, and UI redesigns.
 - Update the relevant current documentation when behavior, architecture, workflows, limitations, or project rules change. Avoid duplicating rules across documents; link to their canonical location.
+- Maintain `docs/TODO.md` during authorized work: add or update material outstanding bugs, requested enhancements, and necessary follow-up checks; distinguish reproduced defects, unverified risks, and recommendations, and link to supporting evidence. Check affected entries when starting a task and record completion/validation or pending acceptance when finishing. Do not implement unrelated backlog items or mark an issue fixed from documentation or syntax checks alone.
 - Historical notes in `docs/DEV_NOTES.md` explain past fixes, not current setup or release policy.
 - Do not bump application versions for documentation-only changes. Follow `docs/DEVELOPMENT.md` when a release/version update is requested.
 
