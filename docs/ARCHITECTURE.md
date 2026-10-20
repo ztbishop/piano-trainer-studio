@@ -24,6 +24,7 @@ The frontend is static HTML/CSS/JavaScript with ordered classic scripts and shar
 - `js/trainer-state.js` = shared state and persisted preference helpers
 - `js/trainer-timing.js` = shared timing math for traversal waits, measure remainder checks, and playback scheduling inputs
 - `js/toolbar-ui.js` = toolbar/menu shell
+- `js/numeric-controls.js` = presentation-only coarse numeric buttons; existing modules retain setting application. See [Menu controls](UI_CONTROLS.md).
 - `js/scores-ui.js` = score browser UI shell
 - `js/score-library.js` = score library shell
 - `js/led.js` = LED simulator, calibration, and hardware/WLED output

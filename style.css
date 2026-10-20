@@ -5097,3 +5097,90 @@ input[type="range"] {
     #fs-practice-popup .practice-inline-note { min-width: 0; grid-column: auto; }
     #fs-practice-popup .inline-row-flex { white-space: normal; }
 }
+
+/* Coarse numeric controls: keep range thumbs/tracks styled by the existing rules.
+   Ownership and affected rows: docs/UI_CONTROLS.md. */
+.number-stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+.toolbar-popup .number-stepper .number-step-button,
+#options-overlay .number-stepper .number-step-button {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    margin: 0;
+    border: 1px solid rgba(70, 88, 108, 0.22);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.82);
+    color: #36495f;
+    font-family: inherit;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    cursor: pointer;
+}
+.number-stepper .num-input { flex: 0 0 auto; }
+.number-step-button:disabled { opacity: 0.5; cursor: default; }
+.number-step-button:focus-visible { outline: 2px solid #2f80ed; outline-offset: 2px; }
+.number-step-button:hover:not(:disabled) { background: #fff; }
+.number-step-row input[type="range"] { min-width: 0; }
+.display-zoom-row.number-step-row {
+    grid-template-columns: 72px minmax(0, 1fr) auto !important;
+}
+.routing-volume-row.number-step-row {
+    display: grid;
+    grid-template-columns: auto minmax(48px, 1fr) auto;
+    gap: 8px;
+}
+.routing-volume-row.number-step-row input[type="range"] { width: 100%; }
+#options-overlay .compact-led-grid .brightness-row.number-step-row {
+    grid-template-columns: 74px minmax(0, 1fr) auto;
+}
+@media (max-width: 760px) {
+    #display-popup,
+    #audio-popup,
+    #tempo-popup {
+        box-sizing: border-box;
+        width: calc(100vw - 32px) !important;
+        max-width: calc(100vw - 32px) !important;
+    }
+    #display-popup #fs-display-popup,
+    #audio-popup #fs-audio-popup,
+    #tempo-popup #fs-tempo-popup {
+        box-sizing: border-box;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+    .routing-volume-row.number-step-row:not(.hidden),
+    .display-zoom-row.number-step-row,
+    #options-overlay .compact-led-grid .brightness-row.number-step-row {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
+    }
+    .number-step-row.routing-volume-row > label,
+    .number-step-row.display-zoom-row > label,
+    #options-overlay .brightness-row.number-step-row > label {
+        grid-column: 1 / -1;
+    }
+    .display-zoom-row.number-step-row #slider-zoom { grid-column: 1; }
+    .display-zoom-row.number-step-row .display-zoom-value { grid-column: 2; }
+    #fs-tempo-popup .speed-row.number-step-row {
+        grid-template-columns: minmax(0, 1fr) auto !important;
+    }
+    #fs-tempo-popup .speed-row.number-step-row > label { grid-column: 1 / -1; }
+    #fs-tempo-popup .metro-row.number-step-row {
+        grid-template-columns: minmax(0, 1fr) auto !important;
+    }
+    #fs-tempo-popup .metro-row.number-step-row > label { grid-column: auto; }
+}

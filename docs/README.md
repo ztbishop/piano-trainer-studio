@@ -10,6 +10,7 @@ The October 20, 2026 review used local revision `b40e412` (application version 1
 | --- | --- |
 | Start a new chat or understand product scope | [Project context](PROJECT_CONTEXT.md) |
 | Find module ownership, initialization, or integration boundaries | [Architecture](ARCHITECTURE.md) |
+| Change menu sliders, numeric buttons, layout, or their setting handlers | [Menu numeric controls](UI_CONTROLS.md) |
 | Run locally, test, prepare an update | [Development](DEVELOPMENT.md) |
 | Find requested enhancements, outstanding fixes, and investigations | [To-do list](TODO.md) |
 | Change modes, grading, repeats, loops, early input, or metronome timing | [Practice engine](PRACTICE_ENGINE.md) |

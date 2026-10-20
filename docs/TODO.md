@@ -6,13 +6,13 @@ This backlog tracks requested enhancements and outstanding review findings. Addi
 
 ## Requested UI enhancements
 
-### UI-001: Five-step sliders and numeric steppers with free numeric entry
+### UI-001: One-step sliders with coarse numeric buttons and free numeric entry
 
-- [ ] Added October 20, 2026. For the applicable menu controls, have sliders move in increments of **5**, while allowing users to type any valid number directly into the associated numeric box.
-- [ ] Provide vertically stacked up/down arrows beside or within the numeric box; each arrow changes the value by **5**.
-- [ ] Identify the specific affected controls before implementation; do not apply five-step increments indiscriminately to every numeric setting.
-- [ ] Keep slider and numeric display synchronized without silently rounding a manually entered value to a multiple of five. Preserve each setting's valid range and persistence behavior.
-- [ ] Verify direct entry, slider dragging, both arrows, bounds, keyboard operation, and layout in the user's Live Server/browser workflow. Define how a slider/stepper proceeds from an off-grid typed value when implementing.
+- [x] Revised with user approval October 20, 2026: keep sliders at **1**, retain valid typed integers, and add horizontal **minus/plus** buttons moving to the previous/next multiple of five (73 → 70/75).
+- [x] Implement for BPM, Speed, metronome volume/level, App Audio volume, MIDI Out volume, MIDI In Boost, Zoom and Master LED brightness. Preserve Master minimum 1. Leave Looper/hold-to-repeat, transpose and Future brightness unchanged.
+- [x] Reuse original setting handlers and preserve Zoom preview-on-input/apply-on-change. Document [control ownership and scoped layout](UI_CONTROLS.md).
+- [x] Focused adapter/zoom-source regressions and Live Server UI smoke checks completed; see the [change record](CHANGELOG.md#2026-10-20-coarse-numeric-menu-buttons-no-application-release) for exact coverage and limits.
+- [ ] Owner layout acceptance on the usual display/browser, physical audio/MIDI/WLED checks, and full protected timing/engraving acceptance remain pending. Do not infer these from mocked tests or smoke checks.
 
 ### UI-002: Thinner blue score cursor, matching Guitar Trainer Studio
 
