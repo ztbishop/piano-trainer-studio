@@ -546,7 +546,7 @@ function playScheduledPlaybackNote(midi, velocity = 100, durationMs = null) {
         playLowLatencyPlaybackNote(midi, velocity, durationMs);
         return;
     }
-    playLocalPianoNote(midi, velocity, durationMs);
+    playLocalPianoNote(midi, velocity, durationMs, { playbackRunId });
 }
 
 const metronomeSynth = new Tone.MembraneSynth({
@@ -613,7 +613,7 @@ function playMetronomeClick(isDownbeat, timeSec = null) {
     if (shouldUseMidiOutMetronome()) {
         const clickSpec = getMetronomeMidiClickSpec(isDownbeat);
         const delayMs = pulseTime == null ? 0 : Math.max(0, ((pulseTime - Tone.now()) * 1000) - 2);
-        window.setTimeout(() => {
+        schedulePlaybackTimeout(() => {
             if (!document.getElementById('check-metronome')?.checked) return;
             sendMidiOutMetronomeClick(clickSpec.note, clickSpec.velocity);
         }, delayMs);
@@ -2482,6 +2482,8 @@ function playLocalPianoNote(midi, velocity = 100, durationMs = null, options = {
     const noteName = getSamplerNoteName(midi);
     if (!noteName) return;
 
+    if (options.playbackRunId != null && (options.playbackRunId !== playbackRunId || !AppState.isPlaying)) return;
+
     if (!pianoSamplerReady) {
         ensurePianoSamplerLoaded()
             .then(() => {
@@ -2499,7 +2501,8 @@ function playLocalPianoNote(midi, velocity = 100, durationMs = null, options = {
     }
     pianoSampler.triggerAttack(noteName, liveTime, normalized.gain);
     if (Number.isFinite(durationMs) && durationMs > 0) {
-        setTimeout(() => pianoSampler.triggerRelease(noteName, getLiveAudioTime()), durationMs);
+        const scheduleRelease = options.playbackRunId != null ? schedulePlaybackTimeout : setTimeout;
+        scheduleRelease(() => pianoSampler.triggerRelease(noteName, getLiveAudioTime()), durationMs);
     }
 }
 
@@ -2596,7 +2599,7 @@ function schedulePlaybackForDestinations(midi, durationMs, velocity = 100, optio
     }
 
     if (options.toMidiOut && sendMidiOutNoteOn(midi, velocity)) {
-        setTimeout(() => {
+        schedulePlaybackTimeout(() => {
             sendMidiOutNoteOff(midi);
         }, durationMs);
     }
@@ -2774,7 +2777,7 @@ function checkWaitModeAdvance() {
                 followInfo.beatsToWait
             );
             const delayMs = Math.max(0, Math.round(effectiveWaitSeconds * 1000));
-            setTimeout(() => {
+            schedulePlaybackTimeout(() => {
                 if (AppState.isPlaying && AppState.mode === 'follow') {
                     osmd.cursor.update(); 
                     handleAutoScroll();
@@ -2784,7 +2787,7 @@ function checkWaitModeAdvance() {
             return;
         }
 
-        setTimeout(() => {
+        schedulePlaybackTimeout(() => {
             if (AppState.isPlaying && AppState.mode === 'wait') {
                 osmd.cursor.update(); 
                 handleAutoScroll();
@@ -2953,7 +2956,7 @@ document.querySelectorAll('input[name="practice-mode"]').forEach((radio) => {
         if (!e.target.checked) return;
 
         const nextMode = e.target.value;
-        if (AppState.isPlaying || AppState.countInActive) {
+        if (AppState.isPlaying || AppState.countInActive || playbackStartPending) {
             pausePlaybackFromToolbar();
         }
         AppState.mode = nextMode;
@@ -2990,6 +2993,42 @@ function consumeImmediateResumeStartFlag() {
     return shouldBypass;
 }
 
+// Stop invalidates callbacks even if another run starts before they dispatch.
+let playbackRunId = 0;
+const playbackTimeouts = new Set();
+const playbackFrames = new Set();
+let playbackStartPending = false;
+
+function cancelPlaybackRun() {
+    playbackRunId++;
+    playbackStartPending = false;
+    playbackTimeouts.forEach(id => clearTimeout(id));
+    playbackTimeouts.clear();
+    playbackFrames.forEach(id => cancelAnimationFrame(id));
+    playbackFrames.clear();
+}
+
+function schedulePlaybackTimeout(callback, delayMs) {
+    const runId = playbackRunId;
+    const id = setTimeout(() => {
+        playbackTimeouts.delete(id);
+        if (runId !== playbackRunId || !AppState.isPlaying) return;
+        callback();
+    }, delayMs);
+    playbackTimeouts.add(id);
+    return id;
+}
+
+function schedulePlaybackFrame(callback) {
+    const runId = playbackRunId;
+    const id = requestAnimationFrame(() => {
+        playbackFrames.delete(id);
+        if (runId !== playbackRunId || !AppState.isPlaying) return;
+        callback();
+    });
+    playbackFrames.add(id);
+}
+
 function doCountInAndStart(callback) {
     const mIdx = osmd.cursor.Iterator.CurrentMeasureIndex;
     let beats = 4; 
@@ -3017,9 +3056,9 @@ function doCountInAndStart(callback) {
         beatCount++;
         
         if (beatCount < beats) {
-            setTimeout(tick, beatDurationSeconds * 1000);
+            schedulePlaybackTimeout(tick, beatDurationSeconds * 1000);
         } else {
-            setTimeout(() => {
+            schedulePlaybackTimeout(() => {
                 if (!AppState.isPlaying) {
                     AppState.countInActive = false;
                     AppState.lastLedPreviewEvents = [];
@@ -3179,45 +3218,53 @@ function preserveMusicAreaScroll(callback) {
 }
 
 async function startPlaybackFromToolbar() {
-    if (!osmd.cursor || AppState.isPlaying) return;
+    if (!osmd.cursor || AppState.isPlaying || playbackStartPending) return;
+    const runId = playbackRunId;
+    playbackStartPending = true;
+    try {
 
-    if (AppState.fullscreenOnPlay && !isFullscreenActive()) {
-        await requestAppFullscreen();
-    }
-
-    await ensureLiveAudioReady();
-
-    AppState.isPlaying = true;
-    updatePlayPauseButton();
-
-    hideToolbarPanels();
-    Tone.Transport.stop();
-    clearScheduledMetronomeEvents();
-    stopWaitModeMetronome();
-
-    AppState.lastLedPreviewEvents = [];
-    AppState.ledPreviewTraversalIndex = -1;
-
-    // WARNING:
-    // Building the LED preview timeline temporarily resets/traverses the OSMD cursor.
-    // Preserve the user's pre-play viewport so auto-scroll does not jump to measure 1 during count-in.
-    preserveMusicAreaScroll(() => {
-        ensureLedPreviewTimelineBuilt();
-    });
-
-    applyToneLatencyProfileForMode();
-
-    doCountInAndStart(() => {
-        AppState.anchorTime = Tone.now();
-        osmd.cursor.show();
-        handleAutoScroll();
-        Tone.Transport.bpm.value = AppState.baseBpm * AppState.speedPercent;
-        Tone.Transport.start();
-        if (AppState.mode === 'wait' && document.getElementById('check-metronome')?.checked) {
-            startWaitModeMetronome(osmd?.cursor?.Iterator?.CurrentMeasureIndex ?? 0);
+        if (AppState.fullscreenOnPlay && !isFullscreenActive()) {
+            await requestAppFullscreen();
         }
-        playbackLoop();
-    });
+
+        if (runId !== playbackRunId) return;
+        await ensureLiveAudioReady();
+        if (runId !== playbackRunId) return;
+
+        AppState.isPlaying = true;
+        updatePlayPauseButton();
+
+        hideToolbarPanels();
+        Tone.Transport.stop();
+        clearScheduledMetronomeEvents();
+        stopWaitModeMetronome();
+
+        AppState.lastLedPreviewEvents = [];
+        AppState.ledPreviewTraversalIndex = -1;
+
+        // WARNING:
+        // Building the LED preview timeline temporarily resets/traverses the OSMD cursor.
+        // Preserve the user's pre-play viewport so auto-scroll does not jump to measure 1 during count-in.
+        preserveMusicAreaScroll(() => {
+            ensureLedPreviewTimelineBuilt();
+        });
+
+        applyToneLatencyProfileForMode();
+
+        doCountInAndStart(() => {
+            AppState.anchorTime = Tone.now();
+            osmd.cursor.show();
+            handleAutoScroll();
+            Tone.Transport.bpm.value = AppState.baseBpm * AppState.speedPercent;
+            Tone.Transport.start();
+            if (AppState.mode === 'wait' && document.getElementById('check-metronome')?.checked) {
+                startWaitModeMetronome(osmd?.cursor?.Iterator?.CurrentMeasureIndex ?? 0);
+            }
+            playbackLoop();
+        });
+    } finally {
+        if (runId === playbackRunId) playbackStartPending = false;
+    }
 }
 
 function silencePlaybackOutputsImmediately() {
@@ -3258,6 +3305,7 @@ function clearTransientPlaybackState({ clearVisualState = false } = {}) {
 }
 
 function stopPlaybackState({ pauseTransport = true } = {}) {
+    cancelPlaybackRun();
     AppState.isPlaying = false;
     AppState.countInActive = false;
     AppState.lastLedPreviewEvents = [];
@@ -3308,6 +3356,7 @@ if (playPauseButton) {
 }
 
 document.getElementById('btn-reset').onclick = () => { 
+    cancelPlaybackRun();
     AppState.isPlaying = false; 
     AppState.countInActive = false;
 
@@ -3917,7 +3966,7 @@ function playbackLoop() {
     if (!entries || entries.length === 0) {
         osmd.cursor.Iterator.moveToNext();
         osmd.cursor.update();
-        requestAnimationFrame(playbackLoop);
+        schedulePlaybackFrame(playbackLoop);
         return;
     }
 
@@ -4028,7 +4077,7 @@ function playbackLoop() {
     
     if (isLoopEnabled && (isEndReached || (osmd.cursor.Iterator.CurrentMeasureIndex + 1 > maxLoop))) {
         
-        setTimeout(() => {
+        schedulePlaybackTimeout(() => {
             if (!AppState.isPlaying) return;
             
             processMissedNotes(); 
@@ -4096,7 +4145,7 @@ function playbackLoop() {
                 // a new expected group is built. In wait/follow modes, that means this step
                 // is already satisfied before any fresh keydown event occurs, so we need to
                 // advance immediately instead of deadlocking on an already-hit group.
-                setTimeout(() => {
+                schedulePlaybackTimeout(() => {
                     if (!AppState.isPlaying || (AppState.mode !== 'wait' && AppState.mode !== 'follow')) return;
                     checkWaitModeAdvance();
                 }, 0);
@@ -4114,7 +4163,7 @@ function playbackLoop() {
                     beatsToWait
                 );
             }
-            setTimeout(() => {
+            schedulePlaybackTimeout(() => {
                 if (AppState.isPlaying && (AppState.mode === 'wait' || AppState.mode === 'follow')) {
                     processMissedNotes();
                     osmd.cursor.update(); 
@@ -4125,7 +4174,7 @@ function playbackLoop() {
         }
     } else {
         startVisualSustains(); 
-        setTimeout(() => {
+        schedulePlaybackTimeout(() => {
             if (AppState.isPlaying) {
                 processMissedNotes();
                 osmd.cursor.update(); 

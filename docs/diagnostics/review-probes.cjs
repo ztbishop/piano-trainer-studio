@@ -51,14 +51,16 @@ const starts = [];
 const appState = { isPlaying: true, baseBpm: 120, speedPercent: 1 };
 const countContext = vm.createContext({
     AppState: appState,
+    clearTimeout() {},
     osmd: { cursor: { Iterator: { CurrentMeasureIndex: 0 } },
         Sheet: { SourceMeasures: [{ ActiveTimeSignature: { Numerator: 2 } }] } },
     playMetronomeClick() {},
     setTimeout(callback) { timerQueue.push(callback); return timerQueue.length; }
 });
-vm.runInContext(section(core, 'function doCountInAndStart(',
+vm.runInContext(section(core, '// Stop invalidates callbacks',
     "document.getElementById('canvas-wrapper')"), countContext);
 countContext.doCountInAndStart(() => starts.push('old attempt'));
+countContext.cancelPlaybackRun(); // same invalidation used by pause/reset
 appState.isPlaying = false; // pause before the first pending callback
 appState.isPlaying = true;  // restart before that callback fires
 countContext.doCountInAndStart(() => starts.push('new attempt'));
@@ -94,7 +96,7 @@ const loopContext = vm.createContext({
     scheduleMetronomeForPlaybackWindow() {}, handleAutoScroll() {}, clearVisuals() {},
     updateScoreDisplay() {}, GeometryEngine: { clearSvgFeedback() {} },
     processMissedNotes() { missedAtLoop += loopState.expectedNotes.filter(note => !note.hit).length; },
-    setTimeout(callback) { loopTimers.push(callback); return loopTimers.length; }
+    schedulePlaybackTimeout(callback) { loopTimers.push(callback); return loopTimers.length; }
 });
 vm.runInContext(section(core, 'function playbackLoop()', 'const backupSettingsButton'), loopContext);
 loopContext.playbackLoop();

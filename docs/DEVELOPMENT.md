@@ -47,9 +47,11 @@ The iPad Wi-Fi launcher starts only the app server. It does not start a WLED hel
 
 ## Checks available today
 
-There is no checked-in automated test suite, test runner, or CI test workflow. Do not invent an `npm test` command.
+There is no unified application test runner or CI test workflow. Standalone focused regressions are available below; do not invent an `npm test` command.
 
 The focused numeric-button adapter regression is standalone: `node tests/numeric-controls.cjs`. See [Menu controls](UI_CONTROLS.md) for its scope and browser checks; it does not verify real rendering or hardware.
+
+Playback lifecycle regressions: `node tests/playback-lifecycle.cjs` covers actual core functions with fake timers/frames, stale count-in callbacks, loop count-in cancellation, score MIDI note-off ownership and asynchronous startup cancellation/rejection. These mocks do not establish real browser/device timing or output cleanup.
 
 The read-only diagnostic probes added under docs can be rerun separately:
 

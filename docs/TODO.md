@@ -2,7 +2,7 @@
 
 This backlog tracks requested enhancements and outstanding review findings. Adding an item records follow-up work; it does not authorize implementation. Follow [AGENTS.md](../AGENTS.md), inspect the current code, and agree on the scope when starting an item. Mark completion only after recording actual validation and pending checks in [CHANGELOG.md](CHANGELOG.md).
 
-**Status as of October 20, 2026:** the review findings below remain outstanding. The review/documentation work did not fix application code. Reproduced issues, conditional risks, and maintenance recommendations have different evidence levels; do not present them all as proven live-user failures.
+**Status as of October 20, 2026:** UI-001/UI-002 owner acceptance is complete. FIX-004 is implemented with focused regressions and browser smoke validation; further device/timing acceptance remains pending. Other review findings remain outstanding. Reproduced issues, conditional risks, and maintenance recommendations have different evidence levels; do not present them all as proven live-user failures.
 
 ## Requested UI enhancements
 
@@ -13,14 +13,14 @@ This backlog tracks requested enhancements and outstanding review findings. Addi
 - [x] Follow-up clarification October 20: Future note brightness also gets matching horizontal minus/plus buttons, with **one-unit** steps and the existing 0–100 bounds. This supersedes leaving that row unchanged.
 - [x] Reuse original setting handlers and preserve Zoom preview-on-input/apply-on-change. Document [control ownership and scoped layout](UI_CONTROLS.md).
 - [x] Focused adapter/zoom-source regressions and Live Server UI smoke checks completed; see the [change record](CHANGELOG.md#2026-10-20-coarse-numeric-menu-buttons-no-application-release) for exact coverage and limits.
-- [ ] Owner layout acceptance on the usual display/browser, physical audio/MIDI/WLED checks, and full protected timing/engraving acceptance remain pending. Do not infer these from mocked tests or smoke checks.
+- [x] Owner confirmed usual-display layout and physical audio/MIDI/WLED acceptance complete on October 20, 2026. This is owner-reported acceptance, separate from the earlier automated/browser smoke checks.
 
 ### UI-002: Thinner blue score cursor, matching Guitar Trainer Studio
 
 - [x] Implemented October 20, 2026. The user's Guitar Trainer Studio screenshots/current local CSS supersede the earlier Piano Marvel reference: blue **#4DAEEA**, soft edges, approximately **16px** painted width at 100% score zoom, scaling with score zoom.
 - [x] Retain OSMD's standard cursor geometry and follow behavior; narrow only its paint with a CSS mask. No changes to navigation, timing, engraving, feedback anchors, or hand/note/LED color rules.
 - [x] Live Server browser smoke checks used built-in Mary Had a Little Lamb, Fur Elise Easy Piano, and Minuet in G Major: score zoom, narrow/desktop viewports, resize/beaming, all three mode appearances, virtual input/feedback, seek/reset, a Realtime loop, and a backward repeat. See [actual validation and limitations](CHANGELOG.md#2026-10-20-thinner-blue-score-cursor-no-application-release).
-- [ ] Owner visual acceptance on the usual browser/display and physical MIDI/LED setup. Full protected-score geometry cases and Wait/Follow loop-gate/timing acceptance were not established by these smoke checks; existing review issues remain separate.
+- [x] Owner confirmed visual/device acceptance and remaining protected geometry/timing checks complete on October 20, 2026. This acceptance covers UI-002; separately recorded review defects remain separate.
 
 ## Outstanding reproduced issues
 
@@ -29,7 +29,8 @@ Evidence and suggested fix boundaries are in the [October 20 code review, findin
 - [ ] **FIX-001 / F1 — Handle malformed URL encoding in the optional Node server.** Return a controlled error instead of letting a request terminate the process; verify a subsequent valid request succeeds.
 - [ ] **FIX-002 / F2 — Enforce real site-root containment in the optional Node server.** Reject traversal into sibling paths sharing the site's name prefix; test Windows/path-separator cases.
 - [ ] **FIX-003 / F3 — Preserve the final required-note gate at Wait loop boundaries.** Do not restart an unsatisfied loop on a timer. Verify Follow Me too; preserve Realtime's timed looping, count-in, sustain, scoring, and preview. The original intent is unconfirmed; an optional time-driven rehearsal feature would need a separate request.
-- [ ] **FIX-004 / F4 — Prevent callbacks from a prior playback run from reviving after pause/restart.** The count-in probe invoked both old and new starts. Define run ownership/cancellation and verify pause/start, reset/load, mode changes, loop count-in, and note-off cleanup.
+- [x] **FIX-004 / F4 — Prevent callbacks from a prior playback run from reviving after pause/restart.** Implemented run-owned count-in/advance timers, frames, score-note releases and async startup cancellation. Focused regressions and Live Server smoke checks passed; see the [change record](CHANGELOG.md#2026-10-20-playback-callback-ownership-no-application-release).
+- [ ] **FIX-004 acceptance:** physical MIDI/audio/LED cleanup, measured metronome/count-in synchronization, real-score loop count-in/repeats/endings/ties and full Wait/Follow early-input progression remain pending for this lifecycle change. UI acceptance above predates this patch.
 - [ ] **FIX-005 / F5 — Correct enharmonic octave-boundary transposition.** B-sharp 4 plus one semitone produced C-sharp 4 rather than C-sharp 5. Cover C-flat/B-sharp, both directions, double accidentals, and actual OSMD reload/playback.
 - [ ] **FIX-006 / F6 — Define update/manifest behavior for nested hosting and local installs.** Fix or explicitly scope root-relative URLs; distinguish remote release detection from checking a local manifest. Verify localhost, the custom-domain root, and the supported GitHub Pages subpath.
 

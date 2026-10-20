@@ -37,7 +37,7 @@ Selecting Follow Me applies a lower Tone look-ahead/update interval/latency prof
 
 Input boost affects local MIDI monitoring velocity. MIDI output volume is CC11 expression on the selected output channel; note velocities are separately normalized. Metronome output uses channel 10, independent of that selected channel. Devices differ in whether channel 10 produces percussion; verify on the user's instrument.
 
-Pause/reset attempts local release-all and MIDI CC64=0, CC123=0, and CC120=0. Individual scheduled note-offs are not all run-owned/cancelled; the review records the related lifecycle risk. Output-device/channel changes during a scheduled note need acceptance checks on the old and new destinations.
+Pause/reset attempts local release-all and MIDI CC64=0, CC123=0, and CC120=0. Scheduled score MIDI note-offs and sampled-score releases are now run-owned and cancelled on stop, preventing a previous run from releasing the next run's repeated pitch. Short channel-10 metronome note-offs still complete against their captured output to release clicks. See [playback lifecycle](PRACTICE_ENGINE.md#stopreset-boundaries-and-verification). Output-device/channel changes during a scheduled note still need acceptance checks on the old and new destinations.
 
 `getSelectedMidiOutOutput()`, `sendMidiOutNoteOn()`, and `sendMidiOutNoteOff()` are declared in both `midi.js` and the later core script. Classic-script load order means the core declarations win at runtime. Consolidating them requires deliberate comparison of velocity/channel/echo behavior, not deleting a seemingly unused duplicate blindly.
 
