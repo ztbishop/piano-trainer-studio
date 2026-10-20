@@ -13,6 +13,14 @@ For future work:
 
 Versions identify chosen releases; commits preserve implementation history. Detailed messages are useful, but old broad version-only messages do not erase their diffs. Do not rewrite old commits/tags to invent a finer history. `git log -- path`, `git show <commit> -- path`, and `git blame` can still investigate the recorded snapshots. Uncommitted/intermediate edits never saved in Git cannot be reconstructed reliably from version labels.
 
+## 2026-10-20: Future brightness one-unit buttons (no application release)
+
+- Added the same horizontal minus/plus layout as Master brightness to Future note brightness. Its buttons change by **1**, preserving the 0–100 range, slider, typed entry, and existing brightness setter/persistence. Other controls retain their coarse five-step behavior. No LED transport, calibration, rendering, or timing changes.
+- Extended the presentation adapter with a per-control step and accessible one-unit labels. Reused existing brightness-row styling; no CSS or markup changes were needed. Updated UI-001 and [control ownership](UI_CONTROLS.md).
+- Validation: changed JavaScript syntax, `node tests/numeric-controls.cjs` (including new Future 1 → 2 → 1 → 0 and 99 → 100 bound/no-op cases, existing coarse controls and zoom-source regressions), and `git diff --check` passed.
+- Browser: separate Codex in-app tab on existing Live Server origin, 1440x900 and 390x844. Verified both buttons, 0/100 bounds, native 37 entry with slider synchronization, keyboard button activation 37 → 38, slider keyboard increment 1 → 2, saved 38 after reload, and matching desktop/narrow layouts. Master remained 25. Restored Future to 1 and LED mode to None after testing; no storage clearing.
+- Pending: physical WLED brightness acceptance and owner visual acceptance in the usual browser. No LED device was connected in the test profile; calibration/transport were not exercised. No application version bump, commit or push.
+
 ## 2026-10-20: coarse numeric menu buttons (no application release)
 
 - Added horizontal 40px minus/plus buttons to BPM, Speed, metronome volume/level, App Audio volume, MIDI Out volume, MIDI In Boost, Zoom and Master LED brightness. Buttons move to the next/previous multiple of five; sliders retain one-unit steps and typed integers retain the existing validation/ranges. Master brightness still stops at 1. Looper, hold-to-repeat, Future brightness and transpose were not edited.
