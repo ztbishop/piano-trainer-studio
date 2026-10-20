@@ -55,6 +55,8 @@ Playback lifecycle regressions: `node tests/playback-lifecycle.cjs` covers actua
 
 Loop-gate regressions: `node tests/loop-gate.cjs` exercises actual playback and Wait/Follow advance functions with a fake iterator/clock. Covers unsatisfied/partial chords at range and score-end boundaries, early/late satisfaction, accompaniment release, sustain startup, count-in, cancellation, score reset, rests/inactive hands, Realtime and interior Wait timing. For the historical isolated reproduction only, use `node tests/loop-gate.cjs --baseline=ee9bd60`; do not use a post-fix revision as a known-bug baseline. Real-score/device acceptance remains separate.
 
+Transpose octave regressions: `node tests/transpose-octaves.cjs` exercises actual pitch/harmony helpers using minimal node mocks: 2,352 combinations of step, integer alter, octave, direction and spelling bias, explicit boundary spellings, malformed-alter fallback, harmony wrapping and public zero-shift text preservation. Browser DOMParser/OSMD checks use the original [enharmonic fixture and instructions](../tests/fixtures/README.md); helper mocks do not establish full MusicXML compatibility or physical playback.
+
 The read-only diagnostic probes added under docs can be rerun separately:
 
 ```powershell

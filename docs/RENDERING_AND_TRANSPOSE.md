@@ -68,7 +68,7 @@ Transforming pitch changes the score intentionally, but durations, ties, slurs, 
 
 - The transformation implementation iterates part children that are measures. Recognizing a timewise root is not evidence of complete timewise transformation support.
 - Source detection and spelling use simplified key/pitch-class logic. Mid-score key changes, multiple staff-specific keys, explicit accidental elements, enharmonic spelling, instrument transposition, and microtonal alters need real-score fixtures before broad compatibility claims.
-- `rewritePitchNode()` currently normalizes pitch class before calculating octave. The read-only probe reproduces B-sharp 4 plus one semitone becoming C-sharp 4 instead of C-sharp 5. C-flat/B-sharp octave boundaries need a focused fix and fixtures.
+- `rewritePitchNode()` calculates absolute pitch from octave, natural step and the unwrapped integer alter before deriving the new pitch class/octave. This preserves B-sharp/C-flat and double-accidental octave crossings. Harmony remains pitch-class-only; key/spelling selection is unchanged. The original octave-loss defect is fixed; see [validation](CHANGELOG.md#2026-10-20-enharmonic-transpose-octaves-no-application-release), `tests/transpose-octaves.cjs` and the [fixture instructions](../tests/fixtures/README.md). Integer parsing/microtonal limitations and the existing output-range behavior are unchanged.
 - A transposed save stores the transformed score, not a persistent original/transform history. Reopening it establishes a new original source.
 - Assignment identity normally remains tied to the preserved canonical source during a transpose session. Verify hand roles when saving/reopening transformed scores.
 

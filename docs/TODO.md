@@ -2,7 +2,7 @@
 
 This backlog tracks requested enhancements and outstanding review findings. Adding an item records follow-up work; it does not authorize implementation. Follow [AGENTS.md](../AGENTS.md), inspect the current code, and agree on the scope when starting an item. Mark completion only after recording actual validation and pending checks in [CHANGELOG.md](CHANGELOG.md).
 
-**Status as of October 20, 2026:** UI-001/UI-002 owner acceptance is complete. FIX-003/FIX-004 are implemented with focused regressions and browser validation; further device/timing acceptance remains pending as listed below. Other review findings remain outstanding. Reproduced issues, conditional risks, and maintenance recommendations have different evidence levels; do not present them all as proven live-user failures.
+**Status as of October 20, 2026:** UI-001/UI-002 owner acceptance is complete. FIX-003/FIX-004/FIX-005 are implemented with focused regressions and browser validation; further acceptance remains pending as listed below. Other review findings remain outstanding. Reproduced issues, conditional risks, and maintenance recommendations have different evidence levels; do not present them all as proven live-user failures.
 
 ## Requested UI enhancements
 
@@ -32,7 +32,8 @@ Evidence and suggested fix boundaries are in the [October 20 code review, findin
 - [ ] **FIX-003 acceptance:** physical MIDI/audio/LED and measured metronome/final-note sustain; browser loop count-in, early-input chords, rests/hidden notes, long ties, original MXL and complex repeats/endings remain pending. Mocked coverage does not establish these real-score/device cases.
 - [x] **FIX-004 / F4 — Prevent callbacks from a prior playback run from reviving after pause/restart.** Implemented run-owned count-in/advance timers, frames, score-note releases and async startup cancellation. Focused regressions and Live Server smoke checks passed; see the [change record](CHANGELOG.md#2026-10-20-playback-callback-ownership-no-application-release).
 - [ ] **FIX-004 acceptance:** physical MIDI/audio/LED cleanup, measured metronome/count-in synchronization, real-score loop count-in/repeats/endings/ties and full Wait/Follow early-input progression remain pending for this lifecycle change. UI acceptance above predates this patch.
-- [ ] **FIX-005 / F5 — Correct enharmonic octave-boundary transposition.** B-sharp 4 plus one semitone produced C-sharp 4 rather than C-sharp 5. Cover C-flat/B-sharp, both directions, double accidentals, and actual OSMD reload/playback.
+- [x] **FIX-005 / F5 — Correct enharmonic octave-boundary transposition.** Absolute pitch now retains octave crossings before pitch-class normalization. Integer-alter/double-accidental regressions passed; actual OSMD reload, key/semitone/reset and virtual matching checked with a CC0 fixture. See [validation](CHANGELOG.md#2026-10-20-enharmonic-transpose-octaves-no-application-release).
+- [ ] **FIX-005 acceptance:** physical MIDI/audio playback and transformed save/reopen/hand-assignment/loop acceptance remain pending. Complex keys, explicit accidental elements, microtones/timewise and original-MXL regression coverage remain separate; this focused fix does not close INV-008 or establish all engraving cases.
 - [ ] **FIX-006 / F6 — Define update/manifest behavior for nested hosting and local installs.** Fix or explicitly scope root-relative URLs; distinguish remote release detection from checking a local manifest. Verify localhost, the custom-domain root, and the supported GitHub Pages subpath.
 
 ## Investigations requiring further evidence

@@ -220,7 +220,8 @@
         const octave = Number.parseInt(octaveNode.textContent || '0', 10);
         if (!Number.isFinite(octave) || !(step in STEP_TO_SEMITONE)) return;
 
-        const absoluteSemitone = (octave * 12) + pitchSemitone(step, alter) + Number(semitoneDelta || 0);
+        // Keep B-sharp/C-flat octave crossings until absolute pitch is calculated.
+        const absoluteSemitone = (octave * 12) + STEP_TO_SEMITONE[step] + Number(alter || 0) + Number(semitoneDelta || 0);
         const nextPitchClass = mod(absoluteSemitone, 12);
         const nextOctave = Math.floor(absoluteSemitone / 12);
         const spelling = chooseSpellingForPitchClass(nextPitchClass, keyBias);
