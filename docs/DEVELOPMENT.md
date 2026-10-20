@@ -61,6 +61,8 @@ Transpose octave regressions: `node tests/transpose-octaves.cjs` exercises actua
 
 Optional-server regressions: `node tests/local-web-server.cjs` runs the actual source with Windows/POSIX resolver cases and a real temporary loopback HTTP listener using generated fixture files. Tests malformed requests followed by valid requests, encoded/mixed-separator traversal, normalized allowlisting, junction/symlink escapes, valid assets/MIME/query strings, directory indexes, HEAD and `/connection-info`. It closes its own listener and removes only its generated OS-temp directory; existing servers, launchers, browser data and the WLED helper are untouched. Restricted environments may need permission for loopback connections. If junction creation is denied, the test reports a mocked canonical-target check instead of claiming a physical junction pass. LAN/iPad and launcher execution remain separate acceptance checks.
 
+Hosting/update regressions: `node tests/hosting-paths.cjs` tests actual update helpers with in-memory storage, fetch/navigation mocks and URL resolution for localhost root/nested, custom-domain root and GitHub Pages subpath. Checks manifest start/scope/icons, local-file labels/reload action, saved remote-manifest overrides/download action, error/missing-version handling and hosted auto-reload. These are not deployed-site or installed-app tests.
+
 The read-only diagnostic probes added under docs can be rerun separately:
 
 ```powershell
@@ -148,7 +150,15 @@ Historical score examples in `DEV_NOTES.md` include Mozart Fantasy in D minor K.
 - GitHub commits, pushes, tags, and releases remain the user's responsibility unless explicitly delegated.
 - Historical version instructions in `DEV_NOTES.md` are superseded by this section.
 
-The default update manifest is root-relative and local runs read the local manifest; see review finding F6 before assuming that Check for Updates discovers remote GitHub releases or supports nested hosting. `site.webmanifest` has root-relative URLs too. Release tests should distinguish localhost root, custom-domain root, and a GitHub Pages project subpath.
+### Hosting and update-check scope
+
+The default `version.json` URL is relative to the app document, matching bootstrap asset-version loading. It supports a site root or a directory such as `/piano-trainer-studio/` (or its `index.html`). Hosts should use the directory's trailing slash when serving a directory URL. The web manifest's start URL, scope and icons are relative to the manifest, so an installed app stays within that deployment directory. There is still no service-worker/offline-update system.
+
+On localhost/127.0.0.1, the default check compares the running version with files served by that local copy. UI labels are **Check Local Files** / **Local Files Current**, with an explicit note that remote releases were not checked. If newer local files are found, the action is **Reload to Update**, retaining confirmation, asset cache-busting and URL query/hash behavior. Local startup does not auto-reload. On hosted sites, the existing update labels and automatic reload for a newer served manifest remain in place.
+
+The existing `pt_updateManifestUrl` localStorage override remains supported and is not migrated or cleared. A different manifest endpoint preserves the existing release-check behavior: on a local runtime, a newer version offers **Download Latest**, using that manifest's download/release URL. Remote endpoints require suitable CORS; no new remote URL is selected automatically. A saved absolute `/version.json` override remains absolute, so its scope can differ from the corrected relative default on nested hosting. Checking this deployment's manifest is not independently checking GitHub releases.
+
+Release acceptance must distinguish local root, custom-domain root and GitHub Pages subpath. Local simulations/URL tests do not establish public-host configuration or installed-app launch behavior; test those after deployment, including existing shortcuts/installs. No release/version change is implied by this path correction.
 
 ## Completion and suggested commit text
 

@@ -10,10 +10,10 @@ const APP_MANIFEST = window.__PT_APP_MANIFEST__ || {};
 const APP_REPO_SLUG = 'ztbishop/piano-trainer-studio';
 const APP_VERSION = String(window.__PT_ASSET_VERSION__ || APP_MANIFEST.version || 'dev').trim();
 
-// Use relative path (works on custom domain, localhost, and GitHub Pages)
-// Allows override via localStorage for testing if needed
+// Check this deployment's manifest, including nested hosting. This default does
+// not query GitHub releases; preserve the saved override for remote manifests.
 const UPDATE_MANIFEST_URL =
-  localStorage.getItem('pt_updateManifestUrl') || '/version.json';
+  localStorage.getItem('pt_updateManifestUrl') || 'version.json';
 const UPDATE_MANIFEST_URL_STORAGE_KEY = 'pt_updateManifestUrl';
 const UPDATE_RELEASES_URL = String(
   APP_MANIFEST.releaseUrl || `https://github.com/${APP_REPO_SLUG}/releases/latest`

@@ -614,6 +614,20 @@ function isLocalAppRuntime() {
     return window.location.protocol === 'file:' || host === 'localhost' || host === '127.0.0.1';
 }
 
+function isAppManifestCheck() {
+    try {
+        const checked = new URL(AppState.updateManifestUrl, window.location.href);
+        const appManifest = new URL('version.json', window.location.href);
+        return checked.origin === appManifest.origin && checked.pathname === appManifest.pathname;
+    } catch (_) {
+        return false;
+    }
+}
+
+function shouldDownloadUpdate() {
+    return isLocalAppRuntime() && !isAppManifestCheck();
+}
+
 function getUpdateActionUrl() {
     const downloadUrl = String(AppState.updateInfo?.downloadUrl || '').trim();
     const releaseUrl = String(AppState.updateInfo?.releaseUrl || '').trim();
@@ -686,11 +700,11 @@ function syncUpdateControls() {
     if (button) {
         button.disabled = false;
         if (AppState.updateInfo?.updateAvailable) {
-            button.textContent = isLocalAppRuntime() ? 'Download Latest' : 'Reload to Update';
+            button.textContent = shouldDownloadUpdate() ? 'Download Latest' : 'Reload to Update';
         } else if (AppState.updateInfo && AppState.updateInfo.remoteVersion) {
-            button.textContent = 'Up to Date';
+            button.textContent = isLocalAppRuntime() && isAppManifestCheck() ? 'Local Files Current' : 'Up to Date';
         } else {
-            button.textContent = 'Check for Updates';
+            button.textContent = isLocalAppRuntime() && isAppManifestCheck() ? 'Check Local Files' : 'Check for Updates';
         }
     }
 }
@@ -738,7 +752,9 @@ async function checkForUpdates({ manual = false } = {}) {
                 return;
             }
         } else {
-            AppState.updateStatus = 'Up to date.';
+            AppState.updateStatus = isLocalAppRuntime() && isAppManifestCheck()
+                ? 'Local files are current. Remote releases were not checked.'
+                : 'Up to date.';
             clearAssetVersionOverrideIfCurrent();
         }
     } catch (err) {
@@ -761,7 +777,7 @@ function initUpdateControls() {
         button.dataset.boundCheckUpdates = 'true';
         button.addEventListener('click', async () => {
             if (AppState.updateInfo?.updateAvailable) {
-                if (isLocalAppRuntime()) {
+                if (shouldDownloadUpdate()) {
                     const releaseUrl = getUpdateActionUrl();
                     if (releaseUrl) window.open(releaseUrl, '_blank', 'noopener');
                     else window.alert('No release URL is configured yet.');

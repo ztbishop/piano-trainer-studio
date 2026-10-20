@@ -2,7 +2,7 @@
 
 This backlog tracks requested enhancements and outstanding review findings. Adding an item records follow-up work; it does not authorize implementation. Follow [AGENTS.md](../AGENTS.md), inspect the current code, and agree on the scope when starting an item. Mark completion only after recording actual validation and pending checks in [CHANGELOG.md](CHANGELOG.md).
 
-**Status as of October 20, 2026:** UI-001/UI-002 owner acceptance is complete. FIX-001 through FIX-005 are implemented with focused regressions and browser validation; further acceptance remains pending as listed below. FIX-006 remains outstanding. Reproduced issues, conditional risks, and maintenance recommendations have different evidence levels; do not present them all as proven live-user failures.
+**Status as of October 20, 2026:** UI-001/UI-002 owner acceptance is complete. All six reproduced review findings (FIX-001 through FIX-006) have implementations with focused regressions and browser validation; further acceptance remains pending as listed below. Investigations and recommendations are separate from those fixes. Reproduced issues, conditional risks, and maintenance recommendations have different evidence levels; do not present them all as proven live-user failures.
 
 ## Requested UI enhancements
 
@@ -35,7 +35,8 @@ Evidence and suggested fix boundaries are in the [October 20 code review, findin
 - [ ] **FIX-004 acceptance:** physical MIDI/audio/LED cleanup, measured metronome/count-in synchronization, real-score loop count-in/repeats/endings/ties and full Wait/Follow early-input progression remain pending for this lifecycle change. UI acceptance above predates this patch.
 - [x] **FIX-005 / F5 — Correct enharmonic octave-boundary transposition.** Absolute pitch now retains octave crossings before pitch-class normalization. Integer-alter/double-accidental regressions passed; actual OSMD reload, key/semitone/reset and virtual matching checked with a CC0 fixture. See [validation](CHANGELOG.md#2026-10-20-enharmonic-transpose-octaves-no-application-release).
 - [ ] **FIX-005 acceptance:** physical MIDI/audio playback and transformed save/reopen/hand-assignment/loop acceptance remain pending. Complex keys, explicit accidental elements, microtones/timewise and original-MXL regression coverage remain separate; this focused fix does not close INV-008 or establish all engraving cases.
-- [ ] **FIX-006 / F6 — Define update/manifest behavior for nested hosting and local installs.** Fix or explicitly scope root-relative URLs; distinguish remote release detection from checking a local manifest. Verify localhost, the custom-domain root, and the supported GitHub Pages subpath.
+- [x] **FIX-006 / F6 — Define update/manifest behavior for nested hosting and local installs.** Update/installation paths are deployment-relative. Local checks are explicitly labeled as local files and reload newer local assets; saved remote overrides retain download behavior. Root/subpath URL tests, local browser previews and HTTP icon/manifest checks passed. See [scope](DEVELOPMENT.md#hosting-and-update-check-scope) and the [change record](CHANGELOG.md#2026-10-20-deployment-relative-update-and-install-paths-no-application-release).
+- [ ] **FIX-006 acceptance:** deployed custom-domain/GitHub Pages checks, install/relaunch and existing shortcuts remain pending. Remote newer-release/CORS/download behavior was tested with mocks; no live remote endpoint was selected or tested. Hardware/timing regressions were not rerun for these update-path changes.
 
 ## Investigations requiring further evidence
 
