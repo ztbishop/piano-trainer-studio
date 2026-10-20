@@ -100,8 +100,8 @@ const loopContext = vm.createContext({
 });
 vm.runInContext(section(core, 'function playbackLoop()', 'const backupSettingsButton'), loopContext);
 loopContext.playbackLoop();
-assert(loopTimers.length, 'Expected an observable loop-boundary callback');
-loopTimers.shift()();
+// A fixed gate has no boundary timer until the practiced group is satisfied.
+if (loopTimers.length) loopTimers.shift()();
 report('WAIT-LOOP-GATE', { loopResets, missedAtLoop },
     'No loop restart until the final practiced note is satisfied', loopResets > 0 && missedAtLoop > 0);
 

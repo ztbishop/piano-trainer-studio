@@ -30,7 +30,9 @@ For a nonempty event, `playbackLoop()`:
 5. Handles loop boundaries, metronome scheduling, and mode-specific waiting.
 6. On advancement, processes missed notes, updates the visible cursor, scrolls if enabled, and enters the next event.
 
-Empty-entry traversal uses animation-frame continuation. A score ending without an enabled loop pauses playback. Loop restarts clear feedback and reset correct/wrong totals; optional loop count-in precedes the next pass. See the review's `WAIT-LOOP-GATE` finding: the current loop-boundary branch occurs before the Wait/Follow gate and can restart with an unsatisfied final event.
+Empty-entry traversal uses animation-frame continuation. A score ending without an enabled loop pauses playback. Loop restarts clear feedback and reset correct/wrong totals; optional loop count-in precedes the next pass.
+
+At a loop boundary with required notes, Wait/Follow retain a `pendingLoopRestart` continuation and enter the ordinary satisfaction gate. The last required group remains the matching/grading target until every note is hit. Then pending accompaniment and sustain visuals start; Wait preserves the full final-event duration before restart, while Follow uses its existing adaptive remaining/full interval. Already-satisfied early-input groups enter this gate automatically. Realtime and boundaries without required notes retain their timed restart. Stop/reset/load/mode changes clear the pending continuation through transient-state cleanup, and scheduled completion uses run-owned cancellation. This fixes the review's `WAIT-LOOP-GATE` finding; future-note preview and production geometry are unchanged. See the [change record](CHANGELOG.md#2026-10-20-final-loop-note-gate-no-application-release) for actual validation and pending checks.
 
 ## Modes and routing
 

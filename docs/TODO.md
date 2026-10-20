@@ -2,7 +2,7 @@
 
 This backlog tracks requested enhancements and outstanding review findings. Adding an item records follow-up work; it does not authorize implementation. Follow [AGENTS.md](../AGENTS.md), inspect the current code, and agree on the scope when starting an item. Mark completion only after recording actual validation and pending checks in [CHANGELOG.md](CHANGELOG.md).
 
-**Status as of October 20, 2026:** UI-001/UI-002 owner acceptance is complete. FIX-004 is implemented with focused regressions and browser smoke validation; further device/timing acceptance remains pending. Other review findings remain outstanding. Reproduced issues, conditional risks, and maintenance recommendations have different evidence levels; do not present them all as proven live-user failures.
+**Status as of October 20, 2026:** UI-001/UI-002 owner acceptance is complete. FIX-003/FIX-004 are implemented with focused regressions and browser validation; further device/timing acceptance remains pending as listed below. Other review findings remain outstanding. Reproduced issues, conditional risks, and maintenance recommendations have different evidence levels; do not present them all as proven live-user failures.
 
 ## Requested UI enhancements
 
@@ -28,7 +28,8 @@ Evidence and suggested fix boundaries are in the [October 20 code review, findin
 
 - [ ] **FIX-001 / F1 — Handle malformed URL encoding in the optional Node server.** Return a controlled error instead of letting a request terminate the process; verify a subsequent valid request succeeds.
 - [ ] **FIX-002 / F2 — Enforce real site-root containment in the optional Node server.** Reject traversal into sibling paths sharing the site's name prefix; test Windows/path-separator cases.
-- [ ] **FIX-003 / F3 — Preserve the final required-note gate at Wait loop boundaries.** Do not restart an unsatisfied loop on a timer. Verify Follow Me too; preserve Realtime's timed looping, count-in, sustain, scoring, and preview. The original intent is unconfirmed; an optional time-driven rehearsal feature would need a separate request.
+- [x] **FIX-003 / F3 — Preserve the final required-note gate at Wait loop boundaries.** Wait/Follow now require the entire final practiced group before restarting. Realtime and boundaries without required notes retain timed looping. See the [baseline reproduction, validation and limitations](CHANGELOG.md#2026-10-20-final-loop-note-gate-no-application-release). The owner authorized retaining this fix after clarifying the observed behavior.
+- [ ] **FIX-003 acceptance:** physical MIDI/audio/LED and measured metronome/final-note sustain; browser loop count-in, early-input chords, rests/hidden notes, long ties, original MXL and complex repeats/endings remain pending. Mocked coverage does not establish these real-score/device cases.
 - [x] **FIX-004 / F4 — Prevent callbacks from a prior playback run from reviving after pause/restart.** Implemented run-owned count-in/advance timers, frames, score-note releases and async startup cancellation. Focused regressions and Live Server smoke checks passed; see the [change record](CHANGELOG.md#2026-10-20-playback-callback-ownership-no-application-release).
 - [ ] **FIX-004 acceptance:** physical MIDI/audio/LED cleanup, measured metronome/count-in synchronization, real-score loop count-in/repeats/endings/ties and full Wait/Follow early-input progression remain pending for this lifecycle change. UI acceptance above predates this patch.
 - [ ] **FIX-005 / F5 — Correct enharmonic octave-boundary transposition.** B-sharp 4 plus one semitone produced C-sharp 4 rather than C-sharp 5. Cover C-flat/B-sharp, both directions, double accidentals, and actual OSMD reload/playback.

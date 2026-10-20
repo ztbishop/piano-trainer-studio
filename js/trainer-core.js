@@ -2749,6 +2749,17 @@ function checkWaitModeAdvance() {
         // longer expected or visually sustained.
         startVisualSustains();
 
+        const loopRestart = AppState.pendingLoopRestart;
+        AppState.pendingLoopRestart = null;
+        const advance = () => {
+            if (loopRestart) {
+                loopRestart.callback();
+            } else {
+                osmd.cursor.update();
+                handleAutoScroll();
+                playbackLoop();
+            }
+        };
         const followInfo = AppState.followAdvanceInfo || null;
         const shouldFollow = AppState.mode === 'follow' && followInfo && Number.isFinite(followInfo.waitSeconds);
         if (shouldFollow) {
@@ -2779,9 +2790,7 @@ function checkWaitModeAdvance() {
             const delayMs = Math.max(0, Math.round(effectiveWaitSeconds * 1000));
             schedulePlaybackTimeout(() => {
                 if (AppState.isPlaying && AppState.mode === 'follow') {
-                    osmd.cursor.update(); 
-                    handleAutoScroll();
-                    playbackLoop();
+                    advance();
                 }
             }, delayMs);
             return;
@@ -2789,11 +2798,9 @@ function checkWaitModeAdvance() {
 
         schedulePlaybackTimeout(() => {
             if (AppState.isPlaying && AppState.mode === 'wait') {
-                osmd.cursor.update(); 
-                handleAutoScroll();
-                playbackLoop();       
+                advance();
             }
-        }, 10); 
+        }, loopRestart ? Math.max(0, loopRestart.waitSeconds * 1000) : 10);
     }
 }
 
@@ -3291,6 +3298,7 @@ function silencePlaybackOutputsImmediately() {
 
 function clearTransientPlaybackState({ clearVisualState = false } = {}) {
     AppState.pendingAudio = [];
+    AppState.pendingLoopRestart = null;
     AppState.followAdvanceInfo = null;
     AppState.currentExpectedContext = null;
     AppState.earlyGraceReservations.clear();
@@ -4077,7 +4085,7 @@ function playbackLoop() {
     
     if (isLoopEnabled && (isEndReached || (osmd.cursor.Iterator.CurrentMeasureIndex + 1 > maxLoop))) {
         
-        schedulePlaybackTimeout(() => {
+        const finishLoop = () => {
             if (!AppState.isPlaying) return;
             
             processMissedNotes(); 
@@ -4109,7 +4117,23 @@ function playbackLoop() {
                 restartLoopPlayback();
             }
             
-        }, timeToWaitMs);
+        };
+
+        // Final practiced groups use the same input gate as interior groups.
+        // Keep the final duration before restarting, including optional count-in.
+        if ((AppState.mode === 'wait' || AppState.mode === 'follow') && AppState.expectedNotes.length > 0) {
+            AppState.anchorTime = Tone.now() + waitSeconds;
+            AppState.isAudioBusy = true;
+            AppState.pendingLoopRestart = { callback: finishLoop, waitSeconds };
+            AppState.followAdvanceInfo = AppState.mode === 'follow' ? {
+                currentMeasureIdx, currentTimestamp, waitSeconds, beatsToWait
+            } : null;
+            if (AppState.expectedNotes.every(note => note.hit)) {
+                schedulePlaybackTimeout(checkWaitModeAdvance, 0);
+            }
+        } else {
+            schedulePlaybackTimeout(finishLoop, timeToWaitMs);
+        }
         
         return; 
     }

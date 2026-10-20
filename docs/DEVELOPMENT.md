@@ -53,6 +53,8 @@ The focused numeric-button adapter regression is standalone: `node tests/numeric
 
 Playback lifecycle regressions: `node tests/playback-lifecycle.cjs` covers actual core functions with fake timers/frames, stale count-in callbacks, loop count-in cancellation, score MIDI note-off ownership and asynchronous startup cancellation/rejection. These mocks do not establish real browser/device timing or output cleanup.
 
+Loop-gate regressions: `node tests/loop-gate.cjs` exercises actual playback and Wait/Follow advance functions with a fake iterator/clock. Covers unsatisfied/partial chords at range and score-end boundaries, early/late satisfaction, accompaniment release, sustain startup, count-in, cancellation, score reset, rests/inactive hands, Realtime and interior Wait timing. For the historical isolated reproduction only, use `node tests/loop-gate.cjs --baseline=ee9bd60`; do not use a post-fix revision as a known-bug baseline. Real-score/device acceptance remains separate.
+
 The read-only diagnostic probes added under docs can be rerun separately:
 
 ```powershell
@@ -109,7 +111,7 @@ Run checks relevant to the changed area. Timing/input/rendering changes need the
 
 Additional regression cases identified during the deep dive:
 
-- Leave the final practiced note/chord of an enabled loop unplayed in Wait and Follow; verify it does not restart until satisfied. Compare Realtime's intended timed behavior. This currently exposes a documented defect.
+- Leave the final practiced note/chord of an enabled loop unplayed in Wait and Follow; verify it does not restart until satisfied. Compare Realtime's intended timed behavior. FIX-003 addresses the former boundary-gate defect; retain this regression case.
 - Pause during count-in, immediately Play again, then test reset/load/mode change before old callbacks fire. Observe cursor, clicks, notes, and count-in starts, not only the button label.
 - Transpose B-sharp/C-flat around octave boundaries and test a tie extending over at least three score events.
 - Reopen with different hand toggles and test both backup types, preserving the distinction between in-memory choices, routing flags, and assignment keys.
