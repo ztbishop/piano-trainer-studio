@@ -13,6 +13,12 @@ For future work:
 
 Versions identify chosen releases; commits preserve implementation history. Detailed messages are useful, but old broad version-only messages do not erase their diffs. Do not rewrite old commits/tags to invent a finer history. `git log -- path`, `git show <commit> -- path`, and `git blame` can still investigate the recorded snapshots. Uncommitted/intermediate edits never saved in Git cannot be reconstructed reliably from version labels.
 
+## 2026-10-20: v1.3.1 version preparation
+
+- Updated `version.json` and the index bootstrap fallback together to 1.3.1 for the saved MIDI output volume initialization fix described below. Historical version references remain unchanged.
+- Validated matching version values, JSON and inline-script parsing, and diff whitespace. Live Server version display and new playback/hardware acceptance were not checked for this version-only update; the device check below remains pending.
+- Commit, tag, push and GitHub Release publication remain owner actions; no Git mutation or publication performed by the agent.
+
 ## 2026-10-20: saved MIDI output volume initialization (no application release)
 
 - FIX-007 / GitHub #17: restoring a saved MIDI Out destination now sends its current CC11 expression level. Preferences initialize before asynchronous MIDI access, and the prior restoration selected the output without sending its saved volume. This explains why reapplying the same slider value could reduce startup loudness. Reconnection/repopulation also reapplies the level; manual output/channel changes retain their existing behavior. No note velocity, scheduler, engraving, routing preference, WLED or MIDI-input path changes.
