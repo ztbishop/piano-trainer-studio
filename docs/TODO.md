@@ -2,7 +2,7 @@
 
 This backlog tracks requested enhancements and outstanding review findings. Adding an item records follow-up work; it does not authorize implementation. Follow [AGENTS.md](../AGENTS.md), inspect the current code, and agree on the scope when starting an item. Mark completion only after recording actual validation and pending checks in [CHANGELOG.md](CHANGELOG.md).
 
-**Status as of October 20, 2026:** UI-001/UI-002 owner acceptance is complete. FIX-003/FIX-004/FIX-005 are implemented with focused regressions and browser validation; further acceptance remains pending as listed below. Other review findings remain outstanding. Reproduced issues, conditional risks, and maintenance recommendations have different evidence levels; do not present them all as proven live-user failures.
+**Status as of October 20, 2026:** UI-001/UI-002 owner acceptance is complete. FIX-001 through FIX-005 are implemented with focused regressions and browser validation; further acceptance remains pending as listed below. FIX-006 remains outstanding. Reproduced issues, conditional risks, and maintenance recommendations have different evidence levels; do not present them all as proven live-user failures.
 
 ## Requested UI enhancements
 
@@ -26,8 +26,9 @@ This backlog tracks requested enhancements and outstanding review findings. Addi
 
 Evidence and suggested fix boundaries are in the [October 20 code review, findings F1–F6](CODE_REVIEW_2026-10-20.md). These were isolated source/control-flow reproductions, not full browser/MIDI acceptance tests. The optional Node server findings do not describe VS Code Live Server.
 
-- [ ] **FIX-001 / F1 — Handle malformed URL encoding in the optional Node server.** Return a controlled error instead of letting a request terminate the process; verify a subsequent valid request succeeds.
-- [ ] **FIX-002 / F2 — Enforce real site-root containment in the optional Node server.** Reject traversal into sibling paths sharing the site's name prefix; test Windows/path-separator cases.
+- [x] **FIX-001 / F1 — Handle malformed URL encoding in the optional Node server.** Malformed paths now return 400; real HTTP tests confirm a subsequent valid request succeeds. See the [change record](CHANGELOG.md#2026-10-20-optional-server-request-and-path-protection-no-application-release).
+- [x] **FIX-002 / F2 — Enforce real site-root containment in the optional Node server.** Separator-aware normalized and canonical containment rejects sibling-prefix traversal and external junction/symlink targets. Windows/POSIX resolver cases, real Windows junction and HTTP checks passed; see the same change record.
+- [ ] **FIX-001/FIX-002 acceptance:** actual desktop/LAN launcher execution and remote iPad access remain pending. Loopback app boot, starter score rendering and connection-info were checked; Live Server, launchers and WLED helper were not changed.
 - [x] **FIX-003 / F3 — Preserve the final required-note gate at Wait loop boundaries.** Wait/Follow now require the entire final practiced group before restarting. Realtime and boundaries without required notes retain timed looping. See the [baseline reproduction, validation and limitations](CHANGELOG.md#2026-10-20-final-loop-note-gate-no-application-release). The owner authorized retaining this fix after clarifying the observed behavior.
 - [ ] **FIX-003 acceptance:** physical MIDI/audio/LED and measured metronome/final-note sustain; browser loop count-in, early-input chords, rests/hidden notes, long ties, original MXL and complex repeats/endings remain pending. Mocked coverage does not establish these real-score/device cases.
 - [x] **FIX-004 / F4 — Prevent callbacks from a prior playback run from reviving after pause/restart.** Implemented run-owned count-in/advance timers, frames, score-note releases and async startup cancellation. Focused regressions and Live Server smoke checks passed; see the [change record](CHANGELOG.md#2026-10-20-playback-callback-ownership-no-application-release).

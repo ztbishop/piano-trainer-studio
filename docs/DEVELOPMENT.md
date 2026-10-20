@@ -31,6 +31,8 @@ Default app URL: `http://127.0.0.1:8080/`. Node is needed for this server and th
 - Server configuration: `PIANO_TRAINER_APP_HOST` and `PIANO_TRAINER_APP_PORT`.
 - LAN hosting binds the app to `0.0.0.0`; `/connection-info` lists available addresses. For iPad MIDI practice, use the documented MIDIWeb workflow rather than the server page's generic Safari wording.
 
+The optional server returns HTTP 400 for malformed URL encoding/parsing or decoded NUL paths, and 404 for disallowed/missing files or paths escaping the site root. It treats URL/Windows separators consistently, checks the normalized path against both the site boundary and existing root allowlist, and checks the actual file's canonical path before reading (including directory indexes and junction/symlink targets). Root names sharing the site's prefix do not count as contained. Normal asset query strings, MIME types and `/connection-info` remain supported. These checks belong to `local-web-server.js`; they do not change VS Code Live Server or the separate WLED helper.
+
 ## Optional WLED helper
 
 The helper requires Node.js 18 or newer and has no external npm dependencies:
@@ -56,6 +58,8 @@ Playback lifecycle regressions: `node tests/playback-lifecycle.cjs` covers actua
 Loop-gate regressions: `node tests/loop-gate.cjs` exercises actual playback and Wait/Follow advance functions with a fake iterator/clock. Covers unsatisfied/partial chords at range and score-end boundaries, early/late satisfaction, accompaniment release, sustain startup, count-in, cancellation, score reset, rests/inactive hands, Realtime and interior Wait timing. For the historical isolated reproduction only, use `node tests/loop-gate.cjs --baseline=ee9bd60`; do not use a post-fix revision as a known-bug baseline. Real-score/device acceptance remains separate.
 
 Transpose octave regressions: `node tests/transpose-octaves.cjs` exercises actual pitch/harmony helpers using minimal node mocks: 2,352 combinations of step, integer alter, octave, direction and spelling bias, explicit boundary spellings, malformed-alter fallback, harmony wrapping and public zero-shift text preservation. Browser DOMParser/OSMD checks use the original [enharmonic fixture and instructions](../tests/fixtures/README.md); helper mocks do not establish full MusicXML compatibility or physical playback.
+
+Optional-server regressions: `node tests/local-web-server.cjs` runs the actual source with Windows/POSIX resolver cases and a real temporary loopback HTTP listener using generated fixture files. Tests malformed requests followed by valid requests, encoded/mixed-separator traversal, normalized allowlisting, junction/symlink escapes, valid assets/MIME/query strings, directory indexes, HEAD and `/connection-info`. It closes its own listener and removes only its generated OS-temp directory; existing servers, launchers, browser data and the WLED helper are untouched. Restricted environments may need permission for loopback connections. If junction creation is denied, the test reports a mocked canonical-target check instead of claiming a physical junction pass. LAN/iPad and launcher execution remain separate acceptance checks.
 
 The read-only diagnostic probes added under docs can be rerun separately:
 

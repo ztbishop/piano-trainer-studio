@@ -35,9 +35,13 @@ const serverContext = vm.createContext({
 });
 vm.runInContext(read('local-web-server.js'), serverContext);
 let malformedError = null;
-try { requestHandler({ url: '/%', method: 'GET' }, {}); }
+let malformedStatus = null;
+try { requestHandler({ url: '/%', method: 'GET' }, {
+    writeHead(status) { malformedStatus = status; }, end() {}
+}); }
 catch (error) { malformedError = error.name; }
-report('SERVER-URI', malformedError, 'No uncaught error; controlled 4xx response', !!malformedError);
+report('SERVER-URI', { error: malformedError, status: malformedStatus },
+    'No uncaught error; controlled 4xx response', !!malformedError || !(malformedStatus >= 400 && malformedStatus < 500));
 const siblingName = path.basename(root) + '-audit-probe';
 const traversal = `/assets/../../${siblingName}/probe.txt`;
 const resolved = vm.runInContext(`safeResolve(${JSON.stringify(traversal)})`, serverContext);

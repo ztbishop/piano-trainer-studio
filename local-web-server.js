@@ -10,6 +10,7 @@ const os = require("os");
 const HOST = process.env.PIANO_TRAINER_APP_HOST || "127.0.0.1";
 const PORT = process.env.PIANO_TRAINER_APP_PORT ? Number(process.env.PIANO_TRAINER_APP_PORT) : 8080;
 const SITE_DIR = __dirname;
+const REAL_SITE_DIR = fs.realpathSync(SITE_DIR);
 const ALLOWED_ROOT_PATHS = new Set([
   "index.html",
   "style.css",
@@ -170,9 +171,22 @@ function renderConnectionInfoPage() {
 </html>`;
 }
 
+function isWithinSite(root, filePath) {
+  const relative = path.relative(root, filePath);
+  return relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
 function safeResolve(requestPath) {
-  const parsed = url.parse(requestPath);
-  let pathname = decodeURIComponent(parsed.pathname || "/");
+  let pathname;
+  try {
+    const parsed = url.parse(requestPath);
+    pathname = decodeURIComponent(parsed.pathname || "/");
+  } catch {
+    return { type: "bad-request" };
+  }
+  if (pathname.includes("\0")) return { type: "bad-request" };
+  // Treat URL and Windows separators alike before checking containment/allowlisting.
+  pathname = pathname.replace(/\\/g, "/");
 
   if (pathname === "/connection-info") {
     return { type: "connection-info" };
@@ -184,8 +198,10 @@ function safeResolve(requestPath) {
   const topLevel = relativePath.split("/")[0];
   if (!ALLOWED_ROOT_PATHS.has(topLevel)) return null;
 
-  const fullPath = path.normalize(path.join(SITE_DIR, relativePath));
-  if (!fullPath.startsWith(SITE_DIR)) return null;
+  const fullPath = path.resolve(SITE_DIR, relativePath);
+  if (!isWithinSite(SITE_DIR, fullPath)) return null;
+  const resolvedTopLevel = path.relative(SITE_DIR, fullPath).split(path.sep)[0];
+  if (!ALLOWED_ROOT_PATHS.has(resolvedTopLevel)) return null;
 
   return { type: "file", fullPath };
 }
@@ -193,6 +209,7 @@ function safeResolve(requestPath) {
 const server = http.createServer((req, res) => {
   const resolved = safeResolve(req.url || "/");
   if (!resolved) return send(res, 404, "Not found");
+  if (resolved.type === "bad-request") return send(res, 400, "Bad request");
 
   if (resolved.type === "connection-info") {
     return send(res, 200, renderConnectionInfoPage(), "text/html; charset=utf-8");
@@ -205,11 +222,15 @@ const server = http.createServer((req, res) => {
     let finalPath = filePath;
     if (stats.isDirectory()) finalPath = path.join(filePath, "index.html");
 
-    fs.readFile(finalPath, (readErr, data) => {
-      if (readErr) return send(res, 404, "Not found");
-      const ext = path.extname(finalPath).toLowerCase();
-      const type = MIME_TYPES[ext] || "application/octet-stream";
-      send(res, 200, data, type);
+    // Check the actual file too, including directory indexes and junction/symlink targets.
+    fs.realpath(finalPath, (realErr, realPath) => {
+      if (realErr || !isWithinSite(REAL_SITE_DIR, realPath)) return send(res, 404, "Not found");
+      fs.readFile(realPath, (readErr, data) => {
+        if (readErr) return send(res, 404, "Not found");
+        const ext = path.extname(finalPath).toLowerCase();
+        const type = MIME_TYPES[ext] || "application/octet-stream";
+        send(res, 200, data, type);
+      });
     });
   });
 });
