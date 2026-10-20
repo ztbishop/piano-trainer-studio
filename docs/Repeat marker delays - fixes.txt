@@ -1,3 +1,8 @@
+HISTORICAL FIX RATIONALE
+Current timing ownership and mode behavior are documented in PRACTICE_ENGINE.md.
+Keep the playable-measure-remainder rule below when fixing structural traversal.
+The October 20 review records separate current issues; it does not undo this fix.
+
 Realtime repeat + ending traversal timing fixes
 
 Fix: eliminate delay on backward repeat jumps (Realtime mode)

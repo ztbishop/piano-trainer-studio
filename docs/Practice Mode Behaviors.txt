@@ -1,3 +1,9 @@
+HISTORICAL BEHAVIOR NOTES
+For the current source-level behavior, see PRACTICE_ENGINE.md and DEVELOPMENT.md.
+The October 20 review documents differences such as Follow Me tap carry,
+late-hit waits, and the final-loop gate issue. The text below is retained
+as historical context; "Current" refers to the time those notes were written.
+
 Follow Me Mode – Behavior (Current)
 Hybrid mode: waits for correct input but stays loosely aligned to tempo
 Designed primarily for one-hand practice with other-hand playback

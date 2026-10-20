@@ -2,6 +2,8 @@
 
 This file records durable context for new chats. Verify changing details against the working tree rather than relying on prior chat history.
 
+The [developer index](README.md) links subsystem guides. The [October 20 review](CODE_REVIEW_2026-10-20.md) records verified findings at revision `b40e412`; [CHANGELOG.md](CHANGELOG.md) separates actual Git anchors from future change records. Do not assume review findings have been fixed unless a later change records that evidence.
+
 ## Project and workflow
 
 - Browser-based piano practice with MIDI input, MusicXML notation, scoring, optional audio/MIDI playback, and LED guidance.
@@ -42,9 +44,11 @@ This file records durable context for new chats. Verify changing details against
 - Scores are stored in IndexedDB and settings in localStorage. Different browser origins have separate data; there is no account/cloud synchronization.
 - Timing remains iterator-driven with an accumulated realtime anchor. Browser timers and complex structural navigation remain important regression areas; no scheduler rewrite is planned by default.
 - Rendering relies on OSMD/VexFlow internals and stabilized feedback geometry heuristics. See `../AGENTS.md` for strict protections.
-- No automated test suite is checked in. Browser, MIDI, audio, and hardware verification require the manual workflow in `DEVELOPMENT.md`.
+- No application test runner/suite is checked in. `docs/diagnostics/review-probes.cjs` contains limited read-only source probes, not browser acceptance tests. Browser, MIDI, audio, and hardware verification require the manual workflow in `DEVELOPMENT.md`.
 - Existing guidance uses MIDIWeb for iPad/iPhone MIDI. The DDP bridge binds to localhost on the computer running it; LAN app hosting does not expose that bridge to another device.
 - Core libraries and samples are bundled, but analytics and the Markdown renderer in `README.html` use external scripts. Do not assume all online/help functionality works offline.
+- Mode-specific practice/playback hand choices are in-memory; persistent routing flags and score-local assignments are separate. See [Scores and storage](SCORES_AND_STORAGE.md) for actual backup/reset behavior.
+- Smaller keyboard sizes derive symmetric pitch ranges rather than configurable device endpoints. Verify the physical key range before assuming every keyboard with that key count fits the model.
 
 ## Future ideas, not implementation requests
 
@@ -57,3 +61,5 @@ Open the current project checkout in Codex and use:
 > Read AGENTS.md and the relevant project documentation, check Git status, and help implement: [describe changes]. Preserve existing behavior except for the changes requested. Leave commits and pushes to me, and provide a suggested commit title and description.
 
 Repository guidance must be accessible to the new chat. A separate ChatGPT chat needs repository access or the relevant files supplied to it. Documentation is maintained with changes; it does not automatically synchronize separate chats, checkouts, or GitHub.
+
+After each meaningful update, record purpose, resulting behavior, validation, and pending acceptance in the relevant current doc and concise change history. Keep commits descriptive; a new application release/version is not required for every small change. Do not invent missing historical details.

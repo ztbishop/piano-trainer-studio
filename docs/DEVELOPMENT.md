@@ -2,6 +2,8 @@
 
 Project rules live in `../AGENTS.md`; module ownership lives in `ARCHITECTURE.md`. This guide describes the development workflow and verification evidence expected for future changes.
 
+Use the [developer index](README.md) for task-specific guides. The [October 20 review](CODE_REVIEW_2026-10-20.md) lists known reproduced defects and conditional risks; do not treat them as passing regression checks. Record meaningful future changes using [CHANGELOG.md](CHANGELOG.md).
+
 ## Run with VS Code Live Server
 
 1. Open this repository folder in VS Code.
@@ -47,6 +49,14 @@ The iPad Wi-Fi launcher starts only the app server. It does not start a WLED hel
 
 There is no checked-in automated test suite, test runner, or CI test workflow. Do not invent an `npm test` command.
 
+The read-only diagnostic probes added under docs can be rerun separately:
+
+```powershell
+node docs/diagnostics/review-probes.cjs
+```
+
+These source-extraction/mocked probes report observed issues, not application pass/fail. `issueObserved: true` identifies a reproduced issue; a zero process exit only means the diagnostics completed. They neither replace tests for a future fix nor verify real rendering/MIDI. See [the review](CODE_REVIEW_2026-10-20.md) for each finding's evidence level.
+
 Read-only application/helper syntax checks from the repository root:
 
 ```powershell
@@ -60,6 +70,19 @@ git status --short --branch
 ```
 
 For documentation-only changes, review links, commands, and consistency and run `git diff --check`; browser/hardware checks are unnecessary unless runtime files changed. Syntax checks do not test DOM integration or inline HTML scripts.
+
+Do not launch, close, restart, or replace the user's Live Server or browser session unnecessarily. Prefer a separate test browser/tab on the supplied origin. Its MIDI permissions, browser storage, and devices can differ from the user's usual browser; describe that limitation. Opening the app can seed first-run defaults/starter scores in the test profile, and opening a library song updates its recent-open timestamp.
+
+## Verification layers and a useful first test suite
+
+| Layer | What it establishes | What it does not establish |
+| --- | --- | --- |
+| JS syntax, inline-script parsing, diff/link checks | Parsable code and internally consistent documentation | DOM behavior, sound, musical timing, or device correctness |
+| Isolated deterministic source probes/unit tests | Behavior for explicit inputs and mocked clocks/data | Real OSMD object topology or full browser lifecycle |
+| Browser smoke/integration | Actual script boot, controls, SVG score loading, affected UI behavior | Physical MIDI/LED output or measured audio latency |
+| Owner device acceptance | Behavior on the actual piano/browser/controller/network | Every score/browser/device combination |
+
+Prioritize focused tests for final Wait-loop gating, timer-run ownership, transpose octave crossings, server path/request handling, and `PTTiming` structural jumps. Then add small redistributable MusicXML fixtures for hidden notes, clef changes, cross-staff voices, unisons, and multi-segment ties. Keep production scheduler/rendering changes separate from test harness setup; do not copy Guitar Trainer's renderer or MIDI policies into this app.
 
 ## Manual regression checklist
 
@@ -80,6 +103,28 @@ Run checks relevant to the changed area. Timing/input/rendering changes need the
 | Library/settings | Starter import, add/open/rename/move, folders, bulk import, both backup types, and restore preserve data. Test intentional deletions only with disposable data. |
 | LEDs | Simulator and hardware colors match expected/correct/wrong/future states. Test calibration, brightness, test-stop cleanup, HTTP JSON, DDP helper availability/fallback, and clear on pause/reset. |
 
+Additional regression cases identified during the deep dive:
+
+- Leave the final practiced note/chord of an enabled loop unplayed in Wait and Follow; verify it does not restart until satisfied. Compare Realtime's intended timed behavior. This currently exposes a documented defect.
+- Pause during count-in, immediately Play again, then test reset/load/mode change before old callbacks fire. Observe cursor, clicks, notes, and count-in starts, not only the button label.
+- Transpose B-sharp/C-flat around octave boundaries and test a tie extending over at least three score events.
+- Reopen with different hand toggles and test both backup types, preserving the distinction between in-memory choices, routing flags, and assignment keys.
+- Test a 61-key or other smaller instrument's actual endpoints, not only the selected key count.
+
+### Evidence record template
+
+```text
+Revision and change:
+Browser/profile/origin/viewport:
+Score/edition and exact measure/event:
+Mode, hand/voice roles, tempo, loop/count-in:
+MIDI device/channel and audio/LED routing (or explicitly unavailable):
+Steps and expected behavior:
+Observed result and diagnostic evidence:
+Checks completed:
+Checks pending and why:
+```
+
 Historical score examples in `DEV_NOTES.md` include Mozart Fantasy in D minor K.397 around measures 53–56 (ghost notes) and 69 (lead-in anchoring), plus Chopin Nocturne Op. 9 No. 2 measures 8, 14, and 16 (anchoring). These are references, not checked-in regression fixtures; numbering can differ between editions. Future bug fixes should record the exact score/edition and a reproducible case, adding redistributable minimal fixtures where appropriate.
 
 ## Version and release policy
@@ -90,6 +135,8 @@ Historical score examples in `DEV_NOTES.md` include Mozart Fantasy in D minor K.
 - Asset URLs are cache-busted using the bootstrap version. URL `appv` and stored overrides can affect it; check these when investigating stale assets.
 - GitHub commits, pushes, tags, and releases remain the user's responsibility unless explicitly delegated.
 - Historical version instructions in `DEV_NOTES.md` are superseded by this section.
+
+The default update manifest is root-relative and local runs read the local manifest; see review finding F6 before assuming that Check for Updates discovers remote GitHub releases or supports nested hosting. `site.webmanifest` has root-relative URLs too. Release tests should distinguish localhost root, custom-domain root, and a GitHub Pages project subpath.
 
 ## Completion and suggested commit text
 

@@ -4,6 +4,8 @@ This file preserves prior investigations and release notes. Old filenames, stabl
 
 Current rules: [AGENTS.md](../AGENTS.md). Current architecture: [ARCHITECTURE.md](ARCHITECTURE.md). Run/test/release workflow: [DEVELOPMENT.md](DEVELOPMENT.md). Current context: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
 
+The [developer index](README.md) now routes subsystem work. The [October 20 review](CODE_REVIEW_2026-10-20.md) records current evidence and recommendations; [CHANGELOG.md](CHANGELOG.md) owns concise future change records. Keep the historical entries below as historical evidence rather than prepending new architecture snapshots here.
+
 Historical version instruction (superseded): update version.json and trainer-state.js before pushing.
 
 

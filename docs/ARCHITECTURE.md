@@ -2,6 +2,8 @@
 
 Current project rules: [AGENTS.md](../AGENTS.md). Workflow and regression checks: [DEVELOPMENT.md](DEVELOPMENT.md). Capabilities and decisions: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
 
+Use the [developer index](README.md) to route a task to focused subsystem docs. Verified against local revision `b40e412` during the October 20, 2026 review; findings are recorded separately in [the dated review](CODE_REVIEW_2026-10-20.md).
+
 ## Application model and dependencies
 
 The frontend is static HTML/CSS/JavaScript with ordered classic scripts and shared globals, principally `AppState`. There is no frontend build step, framework, account service, or required application backend. OSMD uses VexFlow for engraving; Tone.js provides audio and metronome scheduling. Core libraries, Salamander piano samples, and webmscore/WASM conversion assets are bundled locally.
@@ -9,14 +11,16 @@ The frontend is static HTML/CSS/JavaScript with ordered classic scripts and shar
 `index.html` reads `version.json` during bootstrap and applies version query strings to app assets. It loads Tone.js and OSMD first, then state, transpose engine/UI, toolbar, library/UI, LEDs, MIDI, import conversion, feedback/debug, timing, hand assignment, and finally the trainer core. Preserve dependency order: earlier modules can define callbacks that are invoked only after core initialization.
 
 ## Current structure
+
 - `/assets/js` = local third-party vendor libraries kept separate for offline use
 - `/assets/audio` = static audio assets such as Salamander samples
 - `/assets/vendor/webmscore` = browser-side score converter and WASM/data assets
 - `/js` = extracted app modules with focused ownership
-- `trainer-core.js` = remaining integration layer for rendering lifecycle, playback scheduling, metronome flow, repeat/jump handling, and cross-module orchestration
+- `js/trainer-core.js` = remaining integration layer for rendering lifecycle, playback scheduling, metronome flow, repeat/jump handling, and cross-module orchestration
 - `/docs` = architecture notes and development notes
 
 ## Current modules
+
 - `js/trainer-state.js` = shared state and persisted preference helpers
 - `js/trainer-timing.js` = shared timing math for traversal waits, measure remainder checks, and playback scheduling inputs
 - `js/toolbar-ui.js` = toolbar/menu shell
@@ -34,6 +38,35 @@ The frontend is static HTML/CSS/JavaScript with ordered classic scripts and shar
 - `quick-start.html` and `js/quick-start-content.js` = supplementary help content; neither is referenced by the current index script chain. Current in-app help markup is in `index.html`.
 - `local-web-server.js` = optional Node static server and LAN connection-info page
 - `helper/server.js` = optional transport-only localhost WLED HTTP/DDP bridge
+- `debug-overlay.js` = supplementary root diagnostic file; not loaded by the current app index. Do not assume it owns the production feedback debug layer.
+- `style.css` and `index.html` = actual interface/layout/controls and static welcome content; toolbar code owns panel state rather than the entire markup
+
+## Startup and integration boundaries
+
+1. The inline index bootstrap synchronously reads the relative version manifest, chooses the newest of fallback/manifest/URL/stored versions, and writes CSS/vendor script tags.
+2. State initialization reads/seeds storage. Most modules register listeners at evaluation time because control markup already exists; transpose/hand-assignment also perform deferred setup. Keep this timing in mind when moving script tags.
+3. Core constructs OSMD with `autoResize: false`, Tone sampler/synths, timing/visual state, and the remaining control listeners.
+4. Core boot initializes virtual keys/LEDs, applies stored preferences, requests MIDI, renders output/status, applies the mode, and starts the animation-frame LED output loop. The library initializes/loads its starter data through score-drawer refresh rather than a separate backend.
+5. User score selection goes through the existing load lifecycle. There is no automatically loaded current song at first boot.
+
+Classic script declarations share a global lexical environment; not every top-level `const`/`let` is a property on `window`. Explicit `window.*` APIs coexist with global functions. Duplicate global function declarations can be replaced by later scripts: MIDI output helpers are an existing example. Script extraction/reordering therefore needs integration tests, not just independent syntax checks.
+
+There is a web manifest but no registered service worker in the reviewed app scripts. Do not assume a complete offline/PWA caching architecture.
+
+## Core navigation map
+
+The core intentionally still spans several responsibilities. Use function names to locate the affected seam rather than extracting unrelated code during a feature fix.
+
+| Area | Useful entry points | Detailed guide |
+| --- | --- | --- |
+| Mode/default/routing UI state | `getCurrentModeSettings`, `syncActiveHandStateFromMode`, `applyPersistedTrainerAndSettingsPreferences`, `applyModeSettings` | [Practice](PRACTICE_ENGINE.md), [Storage](SCORES_AND_STORAGE.md) |
+| Audio/context/metronome | `applyToneLatencyProfileForMode`, `ensurePianoSamplerLoaded`, `scheduleMetronomeForPlaybackWindow`, `startWaitModeMetronome` | [MIDI/audio/LED](MIDI_AUDIO_LED.md) |
+| Score/MXL lifecycle | `readScoreFile`, `extractMusicXmlFromMxl`, `getCanonicalMusicXmlForTranspose`, `getOsmdLoadPayload`, `loadScoreIntoApp`, `initSongUI` | [Scores](SCORES_AND_STORAGE.md) |
+| Staff and hand resolution | `rebuildGlobalStaffIdentityMap`, `getResolvedStaffAssignmentIdFromNote`, `HandAssignment.roleForNote` | [Scores](SCORES_AND_STORAGE.md) |
+| Preview/early input | `ensureLedPreviewTimelineBuilt`, `findSingleHandPracticeTimelineWindow`, `tryReserveSingleHandEarlyGrace`, `tryReserveRealtimeUpcomingHeldNote` | [Practice](PRACTICE_ENGINE.md) |
+| Key/audio/output state | `triggerVirtualKey`, `renderVirtualKeyboard`, `schedulePlaybackForDestinations`, `startVisualSustains`, `clearVisuals` | [MIDI/audio/LED](MIDI_AUDIO_LED.md) |
+| Transport/navigation | `startPlaybackFromToolbar`, `doCountInAndStart`, `stopPlaybackState`, `checkWaitModeAdvance`, `playbackLoop` | [Practice](PRACTICE_ENGINE.md) |
+| Render/zoom/seek integration | `renderScoreAndRefreshGeometry`, resize handler, `applyZoom`, canvas click handler | [Rendering](RENDERING_AND_TRANSPOSE.md) |
 
 ## Data and event flow
 
@@ -58,6 +91,7 @@ Display staff and clef remain owned by OSMD. `HandAssignment` resolves left/righ
 
 
 ## Timing module boundary
+
 - `js/trainer-timing.js` is shared infrastructure for all practice modes
 - It answers **how long** structural traversal should wait
 - It must not directly move the cursor, render feedback, or update UI
@@ -77,6 +111,7 @@ Keeping those areas together is safer while playback/navigation behavior is stil
 Realtime uses an accumulated anchor with iterator-driven traversal and browser timers. Wait mode depends on satisfied input; Follow Me adapts remaining waits to player timing. A monotonic/hybrid scheduler was discussed historically but is not the current implementation or an authorized refactor.
 
 ## Fragile systems
+
 - Feedback-note anchor positioning and resize stability
 - Beam/layout rendering stability
 - Playback repeat/jump timing
