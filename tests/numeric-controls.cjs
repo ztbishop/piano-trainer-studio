@@ -24,10 +24,11 @@ for (const [id, value, min, max] of [
     ['val-speed', '73', '10', '200'], ['slider-speed', '73', '10', '200'],
     ['val-zoom', '103', '50', '150'], ['slider-zoom', '103', '50', '150'],
     ['val-led-master', '1', '1', '100'], ['slider-led-master', '1', '1', '100'],
+    ['val-led-future1', '1', '0', '100'], ['slider-led-future1', '1', '0', '100'],
     ['val-bpm', '1', '', '']
 ]) controls.set(id, new Element(id, value, min, max));
 const commits = [];
-for (const id of ['val-speed', 'val-zoom', 'val-led-master', 'val-bpm']) {
+for (const id of ['val-speed', 'val-zoom', 'val-led-master', 'val-led-future1', 'val-bpm']) {
     controls.get(id).addEventListener('change', event => commits.push([id, controls.get(id).value, event.bubbles]));
 }
 vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../js/numeric-controls.js'), 'utf8'), {
@@ -53,6 +54,21 @@ click('val-led-master', 'increase');
 assert.equal(controls.get('val-led-master').value, '5');
 click('val-bpm', 'decrease');
 assert.equal(controls.get('val-bpm').value, '1');
+click('val-led-future1', 'increase');
+assert.equal(controls.get('val-led-future1').value, '2');
+click('val-led-future1', 'decrease');
+assert.equal(controls.get('val-led-future1').value, '1');
+click('val-led-future1', 'decrease');
+assert.equal(controls.get('val-led-future1').value, '0');
+const atFutureMin = commits.length;
+click('val-led-future1', 'decrease');
+assert.equal(commits.length, atFutureMin);
+controls.get('val-led-future1').value = '99';
+click('val-led-future1', 'increase');
+assert.equal(controls.get('val-led-future1').value, '100');
+const atFutureMax = commits.length;
+click('val-led-future1', 'increase');
+assert.equal(commits.length, atFutureMax);
 const beforeZoom = commits.length;
 click('val-zoom', 'increase');
 assert.equal(controls.get('val-zoom').value, '105');

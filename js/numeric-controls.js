@@ -1,4 +1,4 @@
-// Presentation-only coarse buttons. Existing setting handlers own validation,
+// Presentation-only numeric buttons. Existing setting handlers own validation,
 // persistence and application; range input/change semantics stay untouched.
 (() => {
     const controls = [
@@ -9,10 +9,11 @@
         ['val-midiout-vol', 'slider-midiout-vol', 'MIDI output volume'],
         ['val-midiin-boost', 'slider-midiin-boost', 'MIDI input boost'],
         ['val-zoom', 'slider-zoom', 'Score zoom'],
-        ['val-led-master', 'slider-led-master', 'Master LED brightness']
+        ['val-led-master', 'slider-led-master', 'Master LED brightness'],
+        ['val-led-future1', 'slider-led-future1', 'Future note brightness', 0, 1]
     ];
 
-    for (const [inputId, sliderId, label, minimum] of controls) {
+    for (const [inputId, sliderId, label, minimum, step = 5] of controls) {
         const input = document.getElementById(inputId);
         const slider = sliderId ? document.getElementById(sliderId) : null;
         if (!input) continue;
@@ -30,7 +31,9 @@
             button.id = `${inputId}-${direction < 0 ? 'decrease' : 'increase'}`;
             button.className = 'number-step-button';
             button.textContent = direction < 0 ? '−' : '+';
-            button.setAttribute('aria-label', `${action} ${label} to the ${direction < 0 ? 'previous' : 'next'} multiple of five`);
+            button.setAttribute('aria-label', step === 1
+                ? `${action} ${label} by 1`
+                : `${action} ${label} to the ${direction < 0 ? 'previous' : 'next'} multiple of five`);
             button.addEventListener('click', () => {
                 if (input.disabled || input.value.trim() === '') return;
                 const current = Number(input.value);
@@ -40,8 +43,8 @@
                 const min = minText ? Number(minText) : (minimum ?? -Infinity);
                 const max = maxText ? Number(maxText) : Infinity;
                 const next = direction > 0
-                    ? (Math.floor(current / 5) + 1) * 5
-                    : (Math.ceil(current / 5) - 1) * 5;
+                    ? (Math.floor(current / step) + 1) * step
+                    : (Math.ceil(current / step) - 1) * step;
                 const value = Math.min(max, Math.max(min, next));
                 if (value === current) return;
                 input.value = String(value);

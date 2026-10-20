@@ -10,6 +10,7 @@ This backlog tracks requested enhancements and outstanding review findings. Addi
 
 - [x] Revised with user approval October 20, 2026: keep sliders at **1**, retain valid typed integers, and add horizontal **minus/plus** buttons moving to the previous/next multiple of five (73 → 70/75).
 - [x] Implement for BPM, Speed, metronome volume/level, App Audio volume, MIDI Out volume, MIDI In Boost, Zoom and Master LED brightness. Preserve Master minimum 1. Leave Looper/hold-to-repeat, transpose and Future brightness unchanged.
+- [x] Follow-up clarification October 20: Future note brightness also gets matching horizontal minus/plus buttons, with **one-unit** steps and the existing 0–100 bounds. This supersedes leaving that row unchanged.
 - [x] Reuse original setting handlers and preserve Zoom preview-on-input/apply-on-change. Document [control ownership and scoped layout](UI_CONTROLS.md).
 - [x] Focused adapter/zoom-source regressions and Live Server UI smoke checks completed; see the [change record](CHANGELOG.md#2026-10-20-coarse-numeric-menu-buttons-no-application-release) for exact coverage and limits.
 - [ ] Owner layout acceptance on the usual display/browser, physical audio/MIDI/WLED checks, and full protected timing/engraving acceptance remain pending. Do not infer these from mocked tests or smoke checks.
