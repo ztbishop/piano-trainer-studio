@@ -1,0 +1,87 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Isolated library stress checks</title>
+<link rel="stylesheet" href="../../style.css">
+<style>body{height:auto;overflow:auto;display:block;padding:20px}pre{white-space:pre-wrap}#preview-result{margin:12px 0}</style>
+<h1>Isolated library stress checks</h1>
+<p>Generated data only: 3,000 XML entries (4 KiB each), 200 binary entries (32 KiB each), and 100 folders. Uses and removes one uniquely named test database. Does not open application storage or fill the site's shared quota.</p>
+<p>The 64 KiB write-budget test injects QuotaExceededError into a real transaction. It tests rollback and recovery, not physical disk exhaustion. An opaque-origin iframe separately tests actual storage denial.</p>
+<button id="run">Run isolated stress checks</button>
+<button id="preview" disabled>Review large preview (cancel only)</button>
+<div id="preview-result" role="status"></div><pre id="results" role="status"></pre>
+<script>
+const AppState = {};
+function getScoreFileTypeFromName(name) { return name.endsWith('.mxl') ? 'mxl' : 'xml'; }
+let largePreview;
+const install = text => { const script = document.createElement('script'); script.textContent = text; document.body.appendChild(script); };
+document.getElementById('run').onclick = async function () {
+    this.disabled = true;
+    const result = document.getElementById('results');
+    const name = 'pt-stress-test-' + crypto.randomUUID();
+    let db, checks = 0;
+    const check = (pass, label) => { if (!pass) throw Error(label); result.textContent += `PASS: ${label}\n`; checks++; };
+    const measure = async (label, action) => { const start = performance.now(); const value = await action(); result.textContent += `${label}: ${Math.round(performance.now()-start)} ms\n`; return value; };
+    try {
+        const source = await (await fetch('../../js/score-library.js')).text();
+        if (!source.includes("const SCORE_LIBRARY_DB_NAME = 'pianoTrainerLibrary';")) throw Error('Isolation boundary changed');
+        install(source.replace("const SCORE_LIBRARY_DB_NAME = 'pianoTrainerLibrary';", `const SCORE_LIBRARY_DB_NAME = '${name}';`));
+        const library = window.ScoreLibrary;
+        db = await library.init();
+        const folders = Array.from({length:100},(_,i)=>({id:`folder-${i}`,name:`Folder ${i}`}));
+        const scores = Array.from({length:3200},(_,i)=>({id:`score-${i}`,title:`Score ${i}`,fileName:`${i}.${i<3000?'xml':'mxl'}`,fileType:i<3000?'xml':'mxl',folderId:`folder-${i%100}`,
+            rawData:i<3000?{kind:'text',text:`<score>${i}${'x'.repeat(4096)}</score>`}:{kind:'arraybuffer',bytes:Array.from({length:32768},(_,j)=>(i+j)%256)}}));
+        const payload = {version:1,folders,scores};
+        const first = await measure('Initial 3,200-entry import',()=>library.importBackup(payload));
+        check(first.added===3200 && first.foldersAdded===100,'Large mixed library imported');
+        const repeat = await measure('Repeat import',()=>library.importBackup(payload));
+        check(repeat.added===0 && repeat.skipped===3200,'Repeated import preserves count');
+        const legacy = {...payload,scores:scores.slice(0,3000).map(score=>({...score,id:'legacy-'+score.id}))};
+        largePreview = await measure('Prepare 3,000 uncertain entries',()=>library.prepareBackupMerge(legacy));
+        const plan = await measure('Plan 3,000 uncertain entries',()=>library.planBackupMerge(largePreview));
+        check(plan.added===3000 && plan.uncertain===3000,'Legacy entries remain separate by default');
+        const before = library.mergeSnapshotKey(await library.readMergeSnapshot());
+        const limited = {version:1,folders:[{id:'budget-folder',name:'Budget'}],scores:Array.from({length:20},(_,i)=>({id:'budget-'+i,title:'Budget '+i,fileName:i+'.xml',fileType:'xml',folderId:'budget-folder',rawData:{kind:'text',text:'<score>'+ 'z'.repeat(8192)+'</score>'}}))};
+        const prepared = await library.prepareBackupMerge(limited);
+        const original = library.transaction; let used = 0, writes = 0;
+        library.transaction = function(names,mode,execute) {
+            return original.call(this,names,mode,(stores,tx)=>execute({...stores,scores:new Proxy(stores.scores,{get(target,key){
+                if(key==='add')return value=>{used+=value.rawData.length*2;if(used>65536)throw new DOMException('Isolated test write budget exceeded','QuotaExceededError');writes++;return target.add(value);};
+                const value=target[key];return typeof value==='function'?value.bind(target):value;
+            }})},tx));
+        };
+        let quota;
+        try { await library.applyBackupMerge(prepared); } catch(error) { quota=error; }
+        finally { library.transaction=original; }
+        check(quota?.name==='QuotaExceededError' && writes>0,'Bounded quota failure occurs after earlier writes');
+        check(library.mergeSnapshotKey(await library.readMergeSnapshot())===before,'Quota abort preserves all original records and removes partial additions');
+        const recovery = await library.importBackup(limited);
+        check(recovery.added===20,'Retry succeeds after test budget is removed');
+        const exported = await library.exportBackup();
+        check(exported.scores.length===3220 && exported.scores.find(score=>score.id==='score-3000').rawData.bytes.length===32768,'Large export retains text and binary entries');
+        // This sandbox has an opaque origin; IndexedDB is genuinely denied by the browser.
+        const denied = await new Promise((resolve,reject)=>{
+            const frame=document.createElement('iframe');frame.hidden=true;frame.sandbox='allow-scripts';
+            const timer=setTimeout(()=>{frame.remove();window.removeEventListener('message',receive);reject(Error('Storage-denial check timed out'));},10000);
+            const receive=event=>{if(event.source!==frame.contentWindow || event.data?.test!=='storage-denied')return;clearTimeout(timer);window.removeEventListener('message',receive);frame.remove();resolve(event.data.name);};
+            window.addEventListener('message',receive);
+            frame.srcdoc='<base href="'+location.origin+'/"><script>'+source.replaceAll('</script','<\\/script')+'\nwindow.ScoreLibrary.init().then(()=>parent.postMessage({test:"storage-denied",name:"unexpected success"},"*"),error=>parent.postMessage({test:"storage-denied",name:error.name},"*"));<\/script>';
+            document.body.appendChild(frame);
+        });
+        check(denied==='SecurityError','Actual opaque-origin storage denial is handled');
+        const ui=await(await fetch('../../js/scores-ui.js')).text();
+        if(!ui.includes('\ninitScoresDrawerShell();'))throw Error('UI isolation boundary changed');
+        install(ui.split('\ninitScoresDrawerShell();')[0]);
+        document.getElementById('preview').disabled=false;
+        result.textContent+=`Completed ${checks} checks.\n`;
+    } catch(error) { result.textContent+='FAIL: '+error.stack+'\n'; }
+    finally {
+        if(db)db.close();
+        await new Promise((resolve,reject)=>{const request=indexedDB.deleteDatabase(name);request.onsuccess=resolve;request.onerror=()=>reject(request.error);});
+        result.textContent+='Temporary test database removed; application database never opened.';
+    }
+};
+document.getElementById('preview').onclick=async()=>{
+    const start=performance.now();
+    const pending=previewLibraryMerge(largePreview);
+    document.getElementById('preview-result').textContent=`Preview opened in ${Math.round(performance.now()-start)} ms; ${document.querySelectorAll('.scores-merge-rows select').length} selects rendered. Test database is already removed; this preview writes nothing.`;
+    await pending;
+};
+</script></html>

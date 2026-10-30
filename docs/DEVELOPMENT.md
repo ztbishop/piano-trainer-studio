@@ -186,3 +186,9 @@ Pending: State any browser/MIDI/hardware verification not performed.
 ```
 
 Scale the description to the change. Avoid claiming manual validation from syntax checks, or describing changes not present in the final diff. Review `git diff` and Git status before handing work back.
+
+### Isolated large-library and storage-failure checks
+
+Run `node tests/library-scale.cjs` and `node tests/library-storage.cjs`. The scale test counts exact-content comparisons as a deterministic regression guard; optional `PIANO_SCALE_COUNT=10000` increases the generated fixture. `--baseline=da96116` on either script reports the pre-fix behavior without enforcing the new assertions. Failure-event mocks verify retry, original error preservation and waiting for rollback.
+
+Open `docs/diagnostics/library-stress.html` through the existing server and run its button. It substitutes a unique disposable database name before loading the library code, creates 3,200 mixed text/binary scores and 100 folders, and removes only that database afterward. The optional preview uses in-memory data after database removal; cancel it. The test injects QuotaExceededError after a bounded 64 KiB test-write budget into a real transaction, checks rollback and retry, and uses an opaque-origin sandbox for actual storage denial. It never opens the app database or changes preferences. This is not physical quota exhaustion: do not fill shared-origin storage to test failure. Record fixture timings, browser/environment and remaining limits rather than extrapolating to unlimited libraries.

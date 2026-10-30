@@ -82,7 +82,7 @@ const ScoreLibrary = {
                     }
                 };
                 request.onsuccess = () => resolve(request.result);
-            });
+            }).catch(error => { this.dbPromise = null; throw error; });
         }
 
         return this.dbPromise;
@@ -93,17 +93,22 @@ const ScoreLibrary = {
         return new Promise((resolve, reject) => {
             const tx = db.transaction(storeNames, mode);
             const stores = Object.fromEntries(storeNames.map(name => [name, tx.objectStore(name)]));
-            let result;
+            let result, failure;
 
             tx.oncomplete = () => resolve(result);
-            tx.onerror = () => reject(tx.error || new Error('Library transaction failed.'));
-            tx.onabort = () => reject(tx.error || new Error('Library transaction was aborted.'));
+            // Request errors bubble before tx.error is populated. Keep their cause, but
+            // don't release the UI busy guard until rollback has actually completed.
+            tx.onerror = event => { failure ||= event.target?.error || tx.error; };
+            tx.onabort = () => reject(failure || tx.error || new Error('Library transaction was aborted.'));
 
             try {
                 result = executor(stores, tx);
+                // Read helpers can reject before the transaction abort event arrives.
+                // Observe that promise immediately; the transaction still owns completion.
+                if (result && typeof result.catch === 'function') result.catch(() => {});
             } catch (err) {
-                reject(err);
-                try { tx.abort(); } catch (e) {}
+                failure = err;
+                try { tx.abort(); } catch (e) { reject(err); }
             }
         });
     },
@@ -378,29 +383,50 @@ const ScoreLibrary = {
 
     planBackupMerge(prepared, choices = {}) {
         const { incoming, snapshot } = prepared;
-        const identities = item => new Set([item.id, ...(item.mergeIds || [])]);
-        const related = (a, b) => [...identities(a)].some(id => identities(b).has(id));
+        const identities = item => [...new Set([item.id, ...(item.mergeIds || [])])];
         const nameKey = name => name.trim().toLowerCase();
+        const indexBy = (items, keys) => {
+            const index = new Map();
+            for (const item of items) for (const key of keys(item)) {
+                if (!index.has(key)) index.set(key, []);
+                index.get(key).push(item);
+            }
+            return index;
+        };
+        const folderById = new Map(snapshot.folders.map(item => [item.id, item]));
+        const scoreById = new Map(snapshot.scores.map(item => [item.id, item]));
+        const folderAliases = indexBy(snapshot.folders, identities), scoreAliases = indexBy(snapshot.scores, identities);
+        const folderNames = indexBy(snapshot.folders, item => [nameKey(item.name)]);
+        const incomingNames = indexBy(incoming.folders, item => [nameKey(item.name)]);
+        const scoreOrder = new Map(snapshot.scores.map((item, i) => [item.id, i]));
+        const folderOrder = new Map(snapshot.folders.map((item, i) => [item.id, i]));
+        const relatedEntries = (item, aliases, order) => [...new Set(identities(item).flatMap(id => aliases.get(id) || []))]
+            .sort((a, b) => order.get(a.id) - order.get(b.id));
+        const metadataKey = (item, folderId = item.folderId) => JSON.stringify([item.title, item.fileName, item.fileType, folderId ?? null]);
+        const scoreMetadata = indexBy(snapshot.scores, item => [metadataKey(item)]);
         const folderRows = [], scoreRows = [], folderMap = new Map();
         const reservedFolders = new Set(), reservedScores = new Set();
         const knownFolder = new Map(), knownScore = new Map();
-        // Reserve exact IDs before aliases, so an older imported version cannot steal a copy's identity.
+        // Reserve direct IDs first, then search only related identities. Exact data
+        // equality still decides a match; indexes never normalize or hash the music.
         for (const direct of [true, false]) {
             for (const folder of incoming.folders) {
                 if (knownFolder.has(folder.id)) continue;
-                const match = snapshot.folders.find(local => !reservedFolders.has(local.id) && (direct ? local.id === folder.id : related(local, folder)));
+                const candidates = direct ? [folderById.get(folder.id)].filter(Boolean) : relatedEntries(folder, folderAliases, folderOrder);
+                const match = candidates.find(local => !reservedFolders.has(local.id));
                 if (match) { knownFolder.set(folder.id, match); reservedFolders.add(match.id); }
             }
             for (const score of incoming.scores) {
                 if (knownScore.has(score.id)) continue;
-                const match = snapshot.scores.find(local => !reservedScores.has(local.id) && this.sameScoreData(local.rawData, score.rawData) && (direct ? local.id === score.id : related(local, score)));
+                const candidates = direct ? [scoreById.get(score.id)].filter(Boolean) : relatedEntries(score, scoreAliases, scoreOrder);
+                const match = candidates.find(local => !reservedScores.has(local.id) && this.sameScoreData(local.rawData, score.rawData));
                 if (match) { knownScore.set(score.id, match); reservedScores.add(match.id); }
             }
         }
         for (const folder of incoming.folders) {
             const known = knownFolder.get(folder.id);
-            const sameName = snapshot.folders.filter(local => nameKey(local.name) === nameKey(folder.name));
-            const uniqueIncoming = incoming.folders.filter(other => nameKey(other.name) === nameKey(folder.name)).length === 1;
+            const sameName = folderNames.get(nameKey(folder.name)) || [];
+            const uniqueIncoming = incomingNames.get(nameKey(folder.name)).length === 1;
             const suggestion = !known && uniqueIncoming && sameName.length === 1 && !reservedFolders.has(sameName[0].id) ? sameName[0] : null;
             const target = known || (choices.folders?.[folder.id] === 'separate' ? null : suggestion);
             if (target) reservedFolders.add(target.id);
@@ -409,10 +435,9 @@ const ScoreLibrary = {
         }
         for (const score of incoming.scores) {
             const known = knownScore.get(score.id);
-            const knownDifferent = !known && snapshot.scores.some(local => related(local, score));
-            const candidates = known || knownDifferent ? [] : snapshot.scores.filter(local => !reservedScores.has(local.id)
-                && this.sameScoreData(local.rawData, score.rawData) && local.title === score.title && local.fileName === score.fileName
-                && local.fileType === score.fileType && (local.folderId ?? null) === (folderMap.get(score.folderId) ?? null));
+            const knownDifferent = !known && identities(score).some(id => scoreAliases.has(id));
+            const candidates = known || knownDifferent ? [] : (scoreMetadata.get(metadataKey(score, folderMap.get(score.folderId) ?? null)) || [])
+                .filter(local => !reservedScores.has(local.id) && this.sameScoreData(local.rawData, score.rawData));
             const choice = Object.prototype.hasOwnProperty.call(choices.scores || {}, score.id) ? choices.scores[score.id] : null;
             const target = known || (choice ? candidates.find(local => local.id === choice) : null);
             if (choice && !known && !target) throw new Error('A selected existing entry is unavailable or used twice. Review the matches again.');

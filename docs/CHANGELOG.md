@@ -1,5 +1,13 @@
 # Change history and future update records
 
+## 2026-10-30 — Large-library and storage-failure checks (no application release)
+
+- Index backup identity, folder-name and score-metadata lookups before exact content comparison. Preserve matching order, intentional copies and uncertain-match defaults. A 2,000-entry legacy fixture dropped from 12 million content comparisons to 2,000 (about 1,595 ms to 10 ms in Node on the test machine); a 10,000-entry fixture took about 42 ms. These are fixture measurements, not universal performance guarantees.
+- Allow retry after a failed IndexedDB open. Preserve the original request error (including QuotaExceededError), wait for transaction abort/rollback before rejecting, and observe early read-promise failures while rollback completes.
+- Browser validation through the existing 127.0.0.1:5500 server used only a uniquely named disposable database: 3,200 scores, 100 folders, mixed XML/binary content; initial import 290 ms, repeated import 685 ms, 3,000-entry legacy preparation 284 ms and planning 7 ms. Eight checks passed, including bounded quota-error injection after real writes, actual transaction rollback, unchanged prior records, successful retry, export integrity and actual opaque-origin storage denial. A 3,000-choice preview opened in 250 ms and was cancelled. The existing isolated workflow harness passed all 19 automatic checks.
+- Added reproducible scale/storage Node tests and an isolated browser stress page. Application scores/settings were not opened or altered. Physical disk/browser quota exhaustion was deliberately not induced; app-wide unavailable-storage handling and extreme duplicate-heavy/memory-pressure cases remain follow-up work. Rendering, playback and hardware paths were not changed or retested.
+
+
 ## 2026-10-30 — Safe library backup merging (no application release)
 
 - Replace unconditional backup duplication with a preview and identity-aware merge. Preserve existing score content, titles, placement and intentional copies; skip known identities only when exact content also matches. Changed versions remain separate and are recognized on repeat import. Unknown older entries default to separate copies; explicit Use existing entry choices record import identity. Matching is one-to-one, never many incoming copies to one local score.

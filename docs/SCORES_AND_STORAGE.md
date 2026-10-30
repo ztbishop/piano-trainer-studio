@@ -33,7 +33,7 @@ Database: `pianoTrainerLibrary`, schema version 1. IDs use `crypto.randomUUID()`
 | `folders` | `id`, `name`, `createdAt`, `updatedAt` | `by_name` |
 | `scores` | `id`, `title`, `folderId`, `fileName`, `fileType`, `rawData`, `createdAt`, `updatedAt`, `lastOpenedAt` | `by_folderId`, `by_lastOpenedAt`, `by_title` |
 
-`ScoreLibrary.transaction()` owns IndexedDB transaction completion/errors. Keep asynchronous work such as conversion outside an active write transaction; queue IDB requests through the existing transaction pattern.
+`ScoreLibrary.transaction()` owns IndexedDB transaction completion/errors. It preserves the original request failure and waits for abort/rollback before reporting failure; failed database opens may be retried. Keep asynchronous work such as conversion outside an active write transaction; queue IDB requests through the existing transaction pattern.
 
 Folder/score lists are loaded and sorted in JavaScript. Recent scores are selected by last-opened time. UI folder IDs `__all__` and `__unfiled__` represent views; real unfiled records have `folderId: null`. Multi-select move/delete and folder-with-scores deletion are explicit operations; ordinary `deleteFolder()` requires an empty folder.
 
@@ -61,7 +61,7 @@ Matching reserves exact IDs first, then remembered identities, one-to-one. A sco
 
 Older imports that regenerated IDs cannot be linked with certainty. Exact content, title, filename, file type and resolved folder identify possible matches. The preview defaults to Keep separate, with an explicit Use existing entry option; that choice is remembered. A reused folder is matched by identity first, otherwise a unique case-insensitive trimmed name can be suggested. Users can keep a suggested folder separate instead. Ambiguous names and multiple distinct same-name incoming folders are not collapsed; empty folders are retained.
 
-Preview totals update as choices change. Cancel/Escape writes nothing. Validation and comparison do not parse, normalize, transpose or re-render music. MXL bytes and XML text remain exact. Commit rechecks both stores against the preview snapshot inside a single read/write transaction: intervening edits require a fresh preview; failed writes abort all folder, score and association changes. Settings, hand assignments and demos are not imported by a library backup.
+Identity, folder-name and score-metadata indexes narrow candidate searches; exact content comparison and one-to-one reservation still decide matches. Preview totals update as choices change. Cancel/Escape writes nothing. Validation and comparison do not parse, normalize, transpose or re-render music. MXL bytes and XML text remain exact. Commit rechecks both stores against the preview snapshot inside a single read/write transaction: intervening edits require a fresh preview; failed writes abort all folder, score and association changes. Settings, hand assignments and demos are not imported by a library backup.
 
 Use disposable data and backups for restore/deletion tests. Never clear the user's browser storage for routine debugging.
 
