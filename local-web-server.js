@@ -8,7 +8,7 @@ const url = require("url");
 const os = require("os");
 
 const HOST = process.env.PIANO_TRAINER_APP_HOST || "127.0.0.1";
-const PORT = process.env.PIANO_TRAINER_APP_PORT ? Number(process.env.PIANO_TRAINER_APP_PORT) : 8080;
+const PORT = process.env.PIANO_TRAINER_APP_PORT ? Number(process.env.PIANO_TRAINER_APP_PORT) : 5500;
 const SITE_DIR = __dirname;
 const REAL_SITE_DIR = fs.realpathSync(SITE_DIR);
 const ALLOWED_ROOT_PATHS = new Set([
@@ -233,6 +233,15 @@ const server = http.createServer((req, res) => {
       });
     });
   });
+});
+
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. If Live Server is running, use http://127.0.0.1:${PORT}/ or stop Live Server before using this launcher. No existing server was stopped. For LAN access, stop Live Server and run the Wi-Fi launcher.`);
+  } else {
+    console.error(`Could not start Piano Trainer: ${error.message}`);
+  }
+  process.exitCode = 1;
 });
 
 server.listen(PORT, HOST, () => {

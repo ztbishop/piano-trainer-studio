@@ -11,7 +11,7 @@ const SCORE_LIBRARY_DB_VERSION = 1;
 const SCORE_LIBRARY_FOLDER_STORE = 'folders';
 const SCORE_LIBRARY_SCORE_STORE = 'scores';
 const STARTER_LIBRARY_ASSET_PATH = new URL('assets/Starter_Scores.json', document.baseURI).toString();
-const STARTER_LIBRARY_IMPORT_STORAGE_KEY = 'pt_starterLibraryImported_v1';
+
 
 
 // ===== Score library + drawer workflow =====
@@ -292,14 +292,14 @@ const ScoreLibrary = {
         return ids.length;
     },
 
-    async exportBackup() {
+    async exportBackup(folderId = null) {
         const folders = await this.getAllFolders();
         const scores = await this.getAllScores();
         return {
             version: 1,
             exportedAt: new Date().toISOString(),
-            folders: folders.map(folder => ({ ...folder })),
-            scores: scores.map(score => ({
+            folders: folders.filter(folder => !folderId || folder.id === folderId).map(folder => ({ ...folder })),
+            scores: scores.filter(score => !folderId || score.folderId === folderId).map(score => ({
                 ...score,
                 rawData: serializeScoreRawData(score.rawData)
             }))
@@ -339,30 +339,26 @@ const ScoreLibrary = {
         });
     },
 
-    async importStarterLibraryOnce() {
-        if (localStorage.getItem(STARTER_LIBRARY_IMPORT_STORAGE_KEY) === 'true') return false;
-
-        const existingScores = await this.getAllScores();
-        if (existingScores.length > 0) {
-            localStorage.setItem(STARTER_LIBRARY_IMPORT_STORAGE_KEY, 'true');
-            return false;
+    demoPromise: null,
+    async getDemoScores() {
+        if (!this.demoPromise) {
+            this.demoPromise = fetch(STARTER_LIBRARY_ASSET_PATH).then(response => {
+                if (!response.ok) throw new Error('Could not load demo scores.');
+                return response.json();
+            }).then(payload => payload.scores.map((score, index) => ({
+                ...score, id: '__demo_' + index, folderId: '__demos__', isDemo: true,
+                rawData: deserializeScoreRawData(score.rawData)
+            }))).catch(error => { this.demoPromise = null; throw error; });
         }
-
-        const response = await fetch(STARTER_LIBRARY_ASSET_PATH, { cache: 'no-store' });
-        if (!response.ok) {
-            throw new Error(`Could not load starter library (${response.status}).`);
-        }
-
-        const payload = await response.json();
-        await this.importBackup(payload);
-        localStorage.setItem(STARTER_LIBRARY_IMPORT_STORAGE_KEY, 'true');
-        return true;
+        return this.demoPromise;
     }
+
 };
 
 
 function getScoreLibraryFolderLabel(folderId, folders) {
     if (folderId === '__all__') return 'All Scores';
+    if (folderId === '__demos__') return 'Demo Scores';
     if (folderId == null || folderId === '__unfiled__') return 'Unfiled';
     const folder = (folders || []).find(item => item.id === folderId);
     return folder?.name || 'Unknown Folder';

@@ -1,10 +1,44 @@
 // scores-ui.js
 // UI for displaying and selecting available scores.
-// Does not parse files or control playback directly.
+// Reads search metadata; rendering and playback stay in the existing score-loading path.
 
 // ⚠️ WARNING:
 // Preserve current score-opening behavior from the active baseline only.
 // Do not reintroduce older score browser or open-score logic during future edits.
+
+// Metadata is a read-only session cache; never rewrite old library titles or MXL payloads.
+const scoreSearchTitles = new Map();
+let scoresDrawerRefreshGeneration = 0;
+async function cacheScoreSearchTitle(score) {
+    // The drawer can initialize before the core classic script has loaded.
+    // Do not cache that temporary lack of an MXL extractor as missing metadata.
+    if (score.fileType === 'mxl' && typeof extractMusicXmlFromMxl !== 'function') return;
+    const cached = scoreSearchTitles.get(score.id);
+    if (cached && cached.updatedAt === score.updatedAt) return;
+    let title = '';
+    try {
+        const xml = score.fileType === 'mxl' ? await extractMusicXmlFromMxl(score.rawData) : score.rawData;
+        if (typeof xml === 'string') {
+            const doc = new DOMParser().parseFromString(xml, 'application/xml');
+            if (!doc.querySelector('parsererror')) {
+                title = ['work-title', 'movement-title'].map(tag => doc.getElementsByTagName(tag)[0]?.textContent || '').join(' ').trim();
+            }
+        }
+    } catch (_) { /* A failed metadata read must not prevent opening the original score. */ }
+    scoreSearchTitles.set(score.id, { updatedAt: score.updatedAt, title });
+}
+
+function downloadLibraryData(data, fileName, type) {
+    const url = URL.createObjectURL(new Blob([data], { type }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = String(fileName || 'score.musicxml').replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
+    link.addEventListener('click', event => event.stopPropagation());
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
 
 async function promptForLibraryFolderChoice({ allowAll = false, title = 'Choose a folder:', folders = null } = {}) {
     const availableFolders = Array.isArray(folders) ? folders : await ScoreLibrary.getAllFolders();
@@ -147,7 +181,7 @@ function toggleFolderLibrarySelection(folderId) {
 }
 
 function isSystemFolderOption(folderId) {
-    return folderId === '__all__' || folderId === '__unfiled__' || folderId == null;
+    return folderId === '__demos__' || folderId === '__all__' || folderId === '__unfiled__' || folderId == null;
 }
 
 function buildActionMenu({ titleText = '', items = [] } = {}) {
@@ -203,6 +237,7 @@ function showFolderRowActionMenu(folder) {
         titleText: String(folder?.name || 'New Folder').trim() || 'New Folder',
         items: [
             { value: 'rename', label: 'Rename' },
+            { value: 'export', label: 'Export folder' },
             { value: 'delete', label: 'Delete', danger: true }
         ]
     });
@@ -353,6 +388,7 @@ function createFolderListRow(option, { activeFolderId = '__all__', folders = [],
     btn.textContent = option.label;
     btn.addEventListener('click', async () => {
         AppState.scoreLibrarySelectedFolderId = option.value;
+        setScoreLibraryManageMode(false);
         AppState.scoreLibraryView = 'scores';
         await refreshScoresDrawer();
     });
@@ -375,6 +411,12 @@ function createFolderListRow(option, { activeFolderId = '__all__', folders = [],
         e.stopPropagation();
 
         const action = await showFolderRowActionMenu(folder);
+        if (action === 'export') {
+            try {
+                downloadLibraryData(JSON.stringify(await ScoreLibrary.exportBackup(folder.id), null, 2), folder.name + '.json', 'application/json');
+            } catch (error) { window.alert(error.message || 'Could not export folder.'); }
+            return;
+        }
         if (action === 'rename') {
             const nextName = window.prompt('Rename folder:', folder.name || 'New Folder');
             if (nextName == null) return;
@@ -474,7 +516,9 @@ function toggleScoreLibrarySelection(scoreId) {
 
 function getFilteredLibraryScores(scores, activeFolderId) {
     return (scores || []).filter(score => {
-        if (activeFolderId === '__all__') return true;
+        const query = String(AppState.scoreLibrarySearch || '').trim().toLowerCase();
+        if (![score.title, score.fileName, scoreSearchTitles.get(score.id)?.title].join(' ').toLowerCase().includes(query)) return false;
+        if (activeFolderId === '__all__') return !score.isDemo;
         if (activeFolderId === '__unfiled__' || activeFolderId == null) return !score.folderId;
         return score.folderId === activeFolderId;
     });
@@ -498,6 +542,30 @@ function createScoresLibraryToolbar({ filteredScores = [], folders = [], activeF
     if (!manageMode) {
         info.textContent = '';
 
+        const search = document.createElement('input');
+        search.type = 'search';
+        search.className = 'scores-search';
+        search.placeholder = 'Search title or filename';
+        search.setAttribute('aria-label', search.placeholder);
+        search.value = AppState.scoreLibrarySearch || '';
+        let searchTimer;
+        search.addEventListener('input', async () => {
+            AppState.scoreLibrarySearch = search.value;
+            setScoreLibrarySelection([]);
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(async () => {
+                const focused = document.activeElement === search;
+                const start = search.selectionStart, end = search.selectionEnd;
+                await refreshScoresDrawer();
+                const replacement = document.querySelector('.scores-search');
+                if (focused && replacement) {
+                    replacement.focus();
+                    replacement.setSelectionRange(start, end);
+                }
+            }, 120);
+        });
+        actions.appendChild(search);
+        if (activeFolderId === '__demos__') return toolbar;
         const addFilesBtn = document.createElement('button');
         addFilesBtn.type = 'button';
         addFilesBtn.className = 'scores-toolbar-button';
@@ -615,6 +683,7 @@ function showScoreRowActionMenu(score) {
         items: [
             { value: 'rename', label: 'Rename' },
             { value: 'move', label: 'Move' },
+            { value: 'download', label: score.fileType === 'mxl' ? 'Download saved MXL' : 'Download saved MusicXML' },
             { value: 'delete', label: 'Delete', danger: true }
         ]
     });
@@ -653,7 +722,7 @@ function createScoreRow(score, { compact = false, manageMode = false } = {}) {
         return content;
     };
 
-    if (manageMode) {
+    if (manageMode && !score.isDemo) {
         const selectedSet = getScoreLibrarySelectionSet();
         const row = document.createElement('button');
         row.type = 'button';
@@ -689,12 +758,12 @@ function createScoreRow(score, { compact = false, manageMode = false } = {}) {
 
     button.addEventListener('click', async () => {
         try {
-            const fullScore = await ScoreLibrary.getScoreById(score.id);
+            const fullScore = score.isDemo ? score : await ScoreLibrary.getScoreById(score.id);
             if (!fullScore) return;
             await loadScoreIntoApp(fullScore.rawData, {
                 fileName: fullScore.fileName,
                 fileType: fullScore.fileType,
-                libraryScoreId: fullScore.id,
+                libraryScoreId: score.isDemo ? null : fullScore.id,
                 title: fullScore.title
             });
             closeScoresDrawer();
@@ -704,6 +773,7 @@ function createScoreRow(score, { compact = false, manageMode = false } = {}) {
     });
 
     row.appendChild(button);
+    if (score.isDemo) return row;
 
     const actionBtn = document.createElement('button');
     actionBtn.type = 'button';
@@ -715,6 +785,14 @@ function createScoreRow(score, { compact = false, manageMode = false } = {}) {
         e.stopPropagation();
 
         const action = await showScoreRowActionMenu(score);
+        if (action === 'download') {
+            try {
+                const saved = await ScoreLibrary.getScoreById(score.id);
+                if (!saved) throw new Error('Score no longer exists.');
+                downloadLibraryData(saved.rawData, saved.fileName, saved.fileType === 'mxl' ? 'application/vnd.recordare.musicxml' : 'application/vnd.recordare.musicxml+xml');
+            } catch (error) { window.alert(error.message || 'Could not download score.'); }
+            return;
+        }
         if (action === 'rename') {
             const nextTitle = window.prompt('Rename score:', resolvedTitle);
             if (nextTitle == null) return;
@@ -768,23 +846,19 @@ function createScoreRow(score, { compact = false, manageMode = false } = {}) {
 }
 
 async function refreshScoresDrawer() {
+    const generation = ++scoresDrawerRefreshGeneration;
     const libraryList = document.getElementById('scores-library-list');
     updateScoresActionButtonsState();
     if (!libraryList) return;
 
     try {
         await ScoreLibrary.init();
-        try {
-            await ScoreLibrary.importStarterLibraryOnce();
-        } catch (err) {
-            console.warn('Could not import starter library', err);
-        }
         const [folders, scores] = await Promise.all([
             ScoreLibrary.getAllFolders(),
             ScoreLibrary.getAllScores()
         ]);
 
-        const validFolderIds = new Set(['__all__', '__unfiled__', ...folders.map(folder => folder.id)]);
+        const validFolderIds = new Set(['__all__', '__unfiled__', '__demos__', ...folders.map(folder => folder.id)]);
         if (!validFolderIds.has(AppState.scoreLibrarySelectedFolderId)) {
             AppState.scoreLibrarySelectedFolderId = '__all__';
         }
@@ -792,17 +866,20 @@ async function refreshScoresDrawer() {
             AppState.scoreLibraryView = 'folders';
         }
 
-        libraryList.innerHTML = '';
-
         const isSplitView = window.innerWidth >= 900;
         const filterOptions = [
             { value: '__all__', label: 'All Scores' },
             { value: '__unfiled__', label: 'Unfiled' },
-            ...folders.map(folder => ({ value: folder.id, label: folder.name || 'New Folder' }))
+            ...folders.map(folder => ({ value: folder.id, label: folder.name || 'New Folder' })),
+            { value: '__demos__', label: 'Demo Scores' }
         ];
         const activeFolderId = AppState.scoreLibrarySelectedFolderId;
 
-        const getFilteredScores = () => getFilteredLibraryScores(scores, activeFolderId);
+        const displayedScores = activeFolderId === '__demos__' ? await ScoreLibrary.getDemoScores() : scores;
+        await Promise.all(displayedScores.map(cacheScoreSearchTitle));
+        if (generation !== scoresDrawerRefreshGeneration) return;
+        libraryList.innerHTML = '';
+        const getFilteredScores = () => getFilteredLibraryScores(displayedScores, activeFolderId);
 
         if (isSplitView) {
             const shell = document.createElement('div');
@@ -854,9 +931,9 @@ async function refreshScoresDrawer() {
             if (!filteredScores.length) {
                 const empty = document.createElement('div');
                 empty.className = 'scores-folder-empty';
-                empty.textContent = activeFolderId === '__all__'
+                empty.textContent = AppState.scoreLibrarySearch ? 'No scores match this search.' : activeFolderId === '__all__'
                     ? 'No saved scores yet. Add files to the library or save the current score.'
-                    : `No scores in ${getScoreLibraryFolderLabel(activeFolderId, folders)} yet.`;
+                    : (AppState.scoreLibrarySearch ? 'No scores match this search.' : `No scores in ${getScoreLibraryFolderLabel(activeFolderId, folders)} yet.`);
                 scoresList.appendChild(empty);
             } else {
                 filteredScores.forEach(score => scoresList.appendChild(createScoreRow(score, { manageMode: isScoreLibraryManageMode() })));
@@ -931,7 +1008,7 @@ async function refreshScoresDrawer() {
         if (!filteredScores.length) {
             const empty = document.createElement('div');
             empty.className = 'scores-folder-empty';
-            empty.textContent = activeFolderId === '__all__'
+            empty.textContent = AppState.scoreLibrarySearch ? 'No scores match this search.' : activeFolderId === '__all__'
                 ? 'No saved scores yet. Add files to the library or save the current score.'
                 : `No scores in ${getScoreLibraryFolderLabel(activeFolderId, folders)} yet.`;
             scoresList.appendChild(empty);
@@ -940,6 +1017,7 @@ async function refreshScoresDrawer() {
         }
     } catch (err) {
         console.error('Could not refresh scores drawer', err);
+        if (generation !== scoresDrawerRefreshGeneration) return;
         libraryList.innerHTML = '<div class="scores-empty-state">Could not load the library.</div>';
     }
 }

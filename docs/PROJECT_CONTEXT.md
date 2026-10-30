@@ -11,7 +11,7 @@ The [developer index](README.md) links subsystem guides. The [October 20 review]
 - Public site: https://www.pianotrainerstudio.com/
 - GitHub Pages address: https://ztbishop.github.io/piano-trainer-studio/
 - The user develops in VS Code and uses Live Server for browser/WebMIDI testing.
-- The user handles GitHub commits and pushes. Each file-changing update should include a suggested commit title and description; see `../AGENTS.md`.
+- The user authorized the assistant to commit and push completed updates on October 30, 2026. Review scope and validation first, report the resulting commit/push and outstanding checks, and follow the canonical policy in `../AGENTS.md`. Tags, merges and releases still need explicit authorization.
 - Earlier ChatGPT project history was titled **Piano Trainer**. Relevant decisions should be recorded here or in the appropriate current document so new chats do not depend on recovering that history.
 
 ## Implemented capabilities
@@ -21,7 +21,7 @@ The [developer index](README.md) links subsystem guides. The [October 20 review]
 - Correct/wrong/missed-note feedback, accuracy display, virtual keyboard input, hand colors, and future-note preview.
 - Score tempo changes, tempo scaling, metronome/count-in, MIDI metronome output, measure looping, click-to-start navigation, zoom, scrolling, and fullscreen.
 - Sampled local piano audio, optional low-latency playback, MIDI output, input/output channel selection, and separate routing/volume controls.
-- Starter scores, browser library/folders, bulk import, library backup/restore, settings backup/restore, and key/semitone transposition/reset.
+- Permanent bundled demos, searchable browser library/folders, saved-score downloads, folder exports, bulk import, library backup/restore, settings backup/restore, and key/semitone transposition/reset.
 - Optional LED simulator, WLED HTTP JSON/DDP, MIDI LED devices, strip tests, brightness settings, and calibration.
 - Cloudflare Web Analytics and Google Analytics tags in `index.html`. No custom practice-event instrumentation was found in the reviewed application code.
 
@@ -44,7 +44,7 @@ The [developer index](README.md) links subsystem guides. The [October 20 review]
 - Scores are stored in IndexedDB and settings in localStorage. Different browser origins have separate data; there is no account/cloud synchronization.
 - Timing remains iterator-driven with an accumulated realtime anchor. Browser timers and complex structural navigation remain important regression areas; no scheduler rewrite is planned by default.
 - Rendering relies on OSMD/VexFlow internals and stabilized feedback geometry heuristics. See `../AGENTS.md` for strict protections.
-- No application test runner/suite is checked in. `docs/diagnostics/review-probes.cjs` contains limited read-only source probes, not browser acceptance tests. Browser, MIDI, audio, and hardware verification require the manual workflow in `DEVELOPMENT.md`.
+- Standalone regression scripts are checked in under `tests/`; there is no unified application test runner. `docs/diagnostics/review-probes.cjs` contains limited read-only source probes, not browser acceptance tests. Browser, MIDI, audio, and hardware verification require the manual workflow in `DEVELOPMENT.md`.
 - Existing guidance uses MIDIWeb for iPad/iPhone MIDI. The DDP bridge binds to localhost on the computer running it; LAN app hosting does not expose that bridge to another device.
 - Core libraries and samples are bundled, but analytics and the Markdown renderer in `README.html` use external scripts. Do not assume all online/help functionality works offline.
 - Mode-specific practice/playback hand choices are in-memory; persistent routing flags and score-local assignments are separate. See [Scores and storage](SCORES_AND_STORAGE.md) for actual backup/reset behavior.

@@ -4,6 +4,14 @@ This backlog tracks requested enhancements and outstanding review findings. Addi
 
 **Status as of October 20, 2026:** UI-001/UI-002 owner acceptance is complete. All six reproduced review findings (FIX-001 through FIX-006) have implementations with focused regressions and browser validation; further acceptance remains pending as listed below. Investigations and recommendations are separate from those fixes. Reproduced issues, conditional risks, and maintenance recommendations have different evidence levels; do not present them all as proven live-user failures.
 
+## October 30 requested library/display/workflow changes
+
+- [x] Implement updater removal/version link, permanent demos, appearance selection, saved-score downloads/folder exports, and title/filename/metadata search. Preserve existing starter records; do not retain extra original uploads.
+- [x] Align app launcher defaults with 127.0.0.1:5500; keep WLED at 4818 and LAN console addresses. Add occupied-port guidance.
+- [x] Focused automated checks and Node-served browser smoke checks; see [actual evidence and limitations](CHANGELOG.md#2026-10-30--library-appearance-and-local-launch-workflow-no-application-release).
+- [ ] Acceptance: physical MIDI/WLED, protected complex geometry/timing cases, Mac/LAN/iPad, VS Code Live Server run, and browser restore/import checks listed in that change record. These are pending checks, not reproduced defects.
+- [ ] Historical FIX-006 update-check acceptance is superseded by updater removal; deployed manifest/install/shortcut acceptance remains pending.
+
 ## Requested UI enhancements
 
 ### UI-001: One-step sliders with coarse numeric buttons and free numeric entry

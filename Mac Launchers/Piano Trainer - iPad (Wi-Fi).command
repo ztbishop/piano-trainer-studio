@@ -1,6 +1,6 @@
 #!/bin/bash
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PORT="${PIANO_TRAINER_APP_PORT:-8080}"
+PORT="${PIANO_TRAINER_APP_PORT:-5500}"
 
 if ! command -v node >/dev/null 2>&1; then
   echo
@@ -19,9 +19,11 @@ echo "Node.js is required for this launcher."
 echo
 (
   sleep 2
-  open "http://127.0.0.1:${PORT}/connection-info"
+  open "http://127.0.0.1:${PORT}/"
 ) &
 
 export PIANO_TRAINER_APP_HOST=0.0.0.0
 export PIANO_TRAINER_APP_PORT="$PORT"
 node "$ROOT/local-web-server.js"
+
+if [ $? -ne 0 ]; then read -r -p "Press Enter to exit..."; fi

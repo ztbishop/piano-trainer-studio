@@ -14,12 +14,14 @@ if %errorlevel% neq 0 (
   exit /b
 )
 
-if not defined PIANO_TRAINER_APP_PORT set "PIANO_TRAINER_APP_PORT=8080"
+if not defined PIANO_TRAINER_APP_PORT set "PIANO_TRAINER_APP_PORT=5500"
 
 echo Piano Trainer - iPad/Tablet (Wi-Fi)
 echo Hosts the Piano Trainer app on your LAN for iPad/tablet use.
 echo Node.js is required for this launcher.
 echo.
-start "" cmd /c "timeout /t 2 /nobreak >nul & start "" "http://127.0.0.1:%PIANO_TRAINER_APP_PORT%/connection-info""
+start "" powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep -Seconds 2; Start-Process 'http://127.0.0.1:%PIANO_TRAINER_APP_PORT%/'"
 set "PIANO_TRAINER_APP_HOST=0.0.0.0"
 node "%ROOT%\local-web-server.js"
+
+if errorlevel 1 pause

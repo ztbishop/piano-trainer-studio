@@ -23,7 +23,9 @@ With Node.js installed, from the repository root:
 node local-web-server.js
 ```
 
-Default app URL: `http://127.0.0.1:8080/`. Node is needed for this server and the helper, not for the static frontend served by Live Server.
+Use the existing `http://127.0.0.1:5500/index.html` Live Server origin. Launchers now share port 5500 by default; run only one app server at a time. A port collision reports a useful message without stopping the other server. Wi-Fi launchers open the app on loopback and the server prints LAN URLs for other devices. WLED remains on 4818. Old port-8080 browser data is untouched; export/import both backup types if moving it to 5500.
+
+Default app URL: `http://127.0.0.1:5500/`. Node is needed for this server and the helper, not for the static frontend served by Live Server.
 
 - Windows desktop: `Windows Launchers/Piano Trainer - Desktop.bat`
 - Windows LAN: `Windows Launchers/Piano Trainer - iPad (Wi-Fi).bat`
@@ -61,7 +63,9 @@ Transpose octave regressions: `node tests/transpose-octaves.cjs` exercises actua
 
 Optional-server regressions: `node tests/local-web-server.cjs` runs the actual source with Windows/POSIX resolver cases and a real temporary loopback HTTP listener using generated fixture files. Tests malformed requests followed by valid requests, encoded/mixed-separator traversal, normalized allowlisting, junction/symlink escapes, valid assets/MIME/query strings, directory indexes, HEAD and `/connection-info`. It closes its own listener and removes only its generated OS-temp directory; existing servers, launchers, browser data and the WLED helper are untouched. Restricted environments may need permission for loopback connections. If junction creation is denied, the test reports a mocked canonical-target check instead of claiming a physical junction pass. LAN/iPad and launcher execution remain separate acceptance checks.
 
-Hosting/update regressions: `node tests/hosting-paths.cjs` tests actual update helpers with in-memory storage, fetch/navigation mocks and URL resolution for localhost root/nested, custom-domain root and GitHub Pages subpath. Checks manifest start/scope/icons, local-file labels/reload action, saved remote-manifest overrides/download action, error/missing-version handling and hosted auto-reload. These are not deployed-site or installed-app tests.
+Launcher-address regressions: `node tests/launcher-addresses.cjs` checks the server default/override port, loopback URLs, LAN console messages, collision handling and unchanged WLED endpoint with a fake listener. Actual Mac/LAN execution remains separate.
+
+Hosting regressions: `node tests/hosting-paths.cjs` exercises the actual bootstrap using isolated network mocks: relative manifest/assets, version fallback, version display, removed updater behavior, and manifest/icon paths. `node tests/library-appearance.cjs` covers demo isolation, scoped/full backups, binary additive restore, search filtering and appearance persistence with isolated stores/DOM; neither establishes browser layout or engraving.
 
 MIDI output initialization: `node tests/midi-output-init.cjs` exercises actual asynchronous setup, output restoration, expression helpers and manual output/channel listeners with in-memory devices/storage. Covers all modes, 0/65/100% levels, channels, reconnect, missing/disconnected/None outputs, separate LED destinations and unchanged routing flags. It captures CC11 bytes without opening hardware or modifying browser data; audible piano acceptance remains separate.
 
@@ -87,7 +91,7 @@ git status --short --branch
 
 For documentation-only changes, review links, commands, and consistency and run `git diff --check`; browser/hardware checks are unnecessary unless runtime files changed. Syntax checks do not test DOM integration or inline HTML scripts.
 
-Do not launch, close, restart, or replace the user's Live Server or browser session unnecessarily. Prefer a separate test browser/tab on the supplied origin. Its MIDI permissions, browser storage, and devices can differ from the user's usual browser; describe that limitation. Opening the app can seed first-run defaults/starter scores in the test profile, and opening a library song updates its recent-open timestamp.
+Do not launch, close, restart, or replace the user's Live Server or browser session unnecessarily. Prefer a separate test browser/tab on the supplied origin. Its MIDI permissions, browser storage, and devices can differ from the user's usual browser; describe that limitation. Opening the app can seed first-run preference defaults in the test profile, and opening a library song updates its recent-open timestamp.
 
 ## Verification layers and a useful first test suite
 
@@ -148,19 +152,13 @@ Historical score examples in `DEV_NOTES.md` include Mozart Fantasy in D minor K.
 - Documentation-only changes do not change application versions.
 - For an explicitly requested version/release update, keep `version.json` and `index.html`'s `FALLBACK_ASSET_VERSION` consistent.
 - `trainer-state.js` derives `APP_VERSION` from bootstrap/manifest data; it has no separate hardcoded release number to bump.
-- Asset URLs are cache-busted using the bootstrap version. URL `appv` and stored overrides can affect it; check these when investigating stale assets.
+- Asset URLs are cache-busted using the bootstrap manifest version (or fallback). Legacy URL `appv` and stored overrides are ignored and not deleted.
 - GitHub commits, pushes, tags, and releases remain the user's responsibility unless explicitly delegated.
 - Historical version instructions in `DEV_NOTES.md` are superseded by this section.
 
-### Hosting and update-check scope
+### Hosting and version display
 
-The default `version.json` URL is relative to the app document, matching bootstrap asset-version loading. It supports a site root or a directory such as `/piano-trainer-studio/` (or its `index.html`). Hosts should use the directory's trailing slash when serving a directory URL. The web manifest's start URL, scope and icons are relative to the manifest, so an installed app stays within that deployment directory. There is still no service-worker/offline-update system.
-
-On localhost/127.0.0.1, the default check compares the running version with files served by that local copy. UI labels are **Check Local Files** / **Local Files Current**, with an explicit note that remote releases were not checked. If newer local files are found, the action is **Reload to Update**, retaining confirmation, asset cache-busting and URL query/hash behavior. Local startup does not auto-reload. On hosted sites, the existing update labels and automatic reload for a newer served manifest remain in place.
-
-The existing `pt_updateManifestUrl` localStorage override remains supported and is not migrated or cleared. A different manifest endpoint preserves the existing release-check behavior: on a local runtime, a newer version offers **Download Latest**, using that manifest's download/release URL. Remote endpoints require suitable CORS; no new remote URL is selected automatically. A saved absolute `/version.json` override remains absolute, so its scope can differ from the corrected relative default on nested hosting. Checking this deployment's manifest is not independently checking GitHub releases.
-
-Release acceptance must distinguish local root, custom-domain root and GitHub Pages subpath. Local simulations/URL tests do not establish public-host configuration or installed-app launch behavior; test those after deployment, including existing shortcuts/installs. No release/version change is implied by this path correction.
+The relative `version.json` bootstrap supplies the running version and asset cache keys, with an embedded fallback if unavailable. Settings displays that version and a fixed GitHub Releases link. Automatic/manual update checks, forced reloads and remote manifest overrides have been removed. Legacy updater keys/URL parameters are ignored without clearing browser data. Manifest start/scope/icons stay deployment-relative. Test root/subpath hosting and installed shortcuts after deployment; local mocks cannot establish public-host behavior.
 
 ## Completion and suggested commit text
 

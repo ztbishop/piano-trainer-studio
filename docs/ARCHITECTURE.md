@@ -24,6 +24,7 @@ The frontend is static HTML/CSS/JavaScript with ordered classic scripts and shar
 - `js/trainer-state.js` = shared state and persisted preference helpers
 - `js/trainer-timing.js` = shared timing math for traversal waits, measure remainder checks, and playback scheduling inputs
 - `js/toolbar-ui.js` = toolbar/menu shell
+- `js/appearance.js` = persisted Light/Soft Light/Dark selection; CSS paint changes only, without rerendering notation.
 - `js/numeric-controls.js` = presentation-only coarse numeric buttons; existing modules retain setting application. See [Menu controls](UI_CONTROLS.md).
 - `js/scores-ui.js` = score browser UI shell
 - `js/score-library.js` = score library shell
@@ -44,10 +45,10 @@ The frontend is static HTML/CSS/JavaScript with ordered classic scripts and shar
 
 ## Startup and integration boundaries
 
-1. The inline index bootstrap synchronously reads the relative version manifest, chooses the newest of fallback/manifest/URL/stored versions, and writes CSS/vendor script tags.
+1. The inline index bootstrap synchronously reads the relative version manifest, uses the manifest version with a fallback, and writes CSS/vendor script tags.
 2. State initialization reads/seeds storage. Most modules register listeners at evaluation time because control markup already exists; transpose/hand-assignment also perform deferred setup. Keep this timing in mind when moving script tags.
 3. Core constructs OSMD with `autoResize: false`, Tone sampler/synths, timing/visual state, and the remaining control listeners.
-4. Core boot initializes virtual keys/LEDs, applies stored preferences, requests MIDI, renders output/status, applies the mode, and starts the animation-frame LED output loop. The library initializes/loads its starter data through score-drawer refresh rather than a separate backend.
+4. Core boot initializes virtual keys/LEDs, applies stored preferences, requests MIDI, renders output/status, applies the mode, and starts the animation-frame LED output loop. The library reads bundled demos on demand through score-drawer refresh without seeding browser storage.
 5. User score selection goes through the existing load lifecycle. There is no automatically loaded current song at first boot.
 
 Classic script declarations share a global lexical environment; not every top-level `const`/`let` is a property on `window`. Explicit `window.*` APIs coexist with global functions. Duplicate global function declarations can be replaced by later scripts: MIDI output helpers are an existing example. Script extraction/reordering therefore needs integration tests, not just independent syntax checks.
@@ -85,7 +86,7 @@ Display staff and clef remain owned by OSMD. `HandAssignment` resolves left/righ
 ## Persistence and external services
 
 - IndexedDB `pianoTrainerLibrary` stores score records and folders. Raw score data is retained for reopening and library backups.
-- localStorage stores preferences, calibration, version overrides, starter-library state, and content-fingerprinted hand assignments. Settings backups include assignment entries.
+- localStorage stores preferences, calibration, and content-fingerprinted hand assignments (legacy updater/starter keys remain unused). Settings backups include assignment entries.
 - Storage is browser-origin-specific; changing hostname/port or browser creates a separate library/settings context. There is no automatic cloud sync.
 - `led.js` sends HTTP JSON to WLED directly or uses the localhost helper for DDP. The helper owns transport, not practice decisions. LAN app hosting does not expose the helper.
 - Cloudflare and Google Analytics are external scripts in `index.html`; `README.html` also loads an external Markdown renderer. Bundled core assets do not guarantee every help/online feature works offline.

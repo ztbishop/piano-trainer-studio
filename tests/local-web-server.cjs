@@ -24,7 +24,7 @@ function load(root, paths, httpModule, fileSystem = fs) {
 }
 
 for (const [paths, root] of [[path.win32, 'C:\\test\\PianoApp'], [path.posix, '/test/PianoApp']]) {
-    const context = load(root, paths, { createServer: () => ({ listen() {} }) }, { realpathSync: p => p });
+    const context = load(root, paths, { createServer: () => ({ on() {}, listen() {} }) }, { realpathSync: p => p });
     for (const request of ['/%', '/%GG', '/%C0%AF', '/assets/%E0%A4', '/assets/%00.txt', 'http://[invalid']) {
         assert.equal(context.safeResolve(request)?.type, 'bad-request', request);
     }

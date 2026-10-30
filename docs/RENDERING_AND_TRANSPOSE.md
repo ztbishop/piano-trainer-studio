@@ -40,6 +40,10 @@ The OSMD constructor in `trainer-core.js` retains the standard cursor type and f
 
 Keep the native cursor image dimensions, position, and center intact: feedback fallbacks and auto-scroll read its bounding rectangle. The mask affects paint only; do not narrow the actual element or shift it to achieve this appearance. OSMD continues to own cursor height, movement, rendering, and zoom. Hand/note/LED colors are independent of this styling. Browser evidence and pending acceptance are recorded in the [change history](CHANGELOG.md#2026-10-20-thinner-blue-score-cursor-no-application-release).
 
+### Appearance
+
+Display offers Light, Soft Light (gray paper), and Dark (charcoal paper/light neutral notation). `js/appearance.js` persists `pt_appearance`; CSS changes surface and neutral SVG ink colors only. No renderer call, CSS inversion, beam recalculation, coordinate transform, or anchor invalidation occurs on a theme change. Authored score colors and feedback/debug/loop overlay ink are excluded from the neutral-ink override. Browser contrast, glyph coverage and protected geometry acceptance must be recorded separately from mocked preference tests.
+
 ## Debugging a placement problem
 
 1. Record the score/edition, measure, pitch, staff/voice role, mode, zoom, and whether resize triggered it.

@@ -31,6 +31,14 @@ You can download and run Piano Trainer Studio locally without cloning the reposi
 
 ---
 
+## Local address and updates
+
+Live Server and the desktop/Wi-Fi launchers use `http://127.0.0.1:5500/` by default. Run only one app server at a time. The Wi-Fi launcher opens this local address and prints LAN addresses for your iPad/tablet in its console. The WLED helper remains at `http://127.0.0.1:4818/`; its transport and setup are unchanged.
+
+Older launcher copies used port 8080. Browser storage is separate for each hostname/port: export your library and settings from the old address before importing them at 5500 if needed. Existing storage is never migrated or cleared automatically. `PIANO_TRAINER_APP_PORT` can override the launcher port.
+
+Settings shows the running version and **Download latest release**. There is no automatic update check or reload; download a release for a local copy, or reload the hosted site. Normal version-based asset cache busting remains.
+
 ## 📸 Preview
 
 ### Main Interface
@@ -251,6 +259,10 @@ Songs are stored in your browser (IndexedDB).
 - Bulk import songs into your library
 - Organize songs into folders
 - Rename and manage songs from the library
+- **Demo Scores** stays at the bottom of the folder list and is separate from All Scores and backups. Save a demo to your library to make an editable copy. Existing starter copies are kept.
+- **Search title or filename** filters the selected folder, including embedded MusicXML work/movement titles when readable.
+- Song **⋯** menus download saved MusicXML or MXL. Converted imports download their saved MusicXML, not the original MIDI/MuseScore/Guitar Pro file. Saved transpositions download the transformed score.
+- Folder **⋯ → Export folder** downloads compatible JSON; use **Import Library (Merge)** to restore it additively.
 
 ---
 
@@ -259,7 +271,7 @@ Songs are stored in your browser (IndexedDB).
 - **Practice Menu** — core training modes and feedback
 - **Tempo** — speed + metronome
 - **Loop** — repeat sections
-- **Display** — zoom, virtual keyboard
+- **Display** — Light / Soft Light / Dark appearance, zoom, virtual keyboard
 - **Transpose** — key or semitone changes
 
 ---

@@ -10,19 +10,6 @@ const APP_MANIFEST = window.__PT_APP_MANIFEST__ || {};
 const APP_REPO_SLUG = 'ztbishop/piano-trainer-studio';
 const APP_VERSION = String(window.__PT_ASSET_VERSION__ || APP_MANIFEST.version || 'dev').trim();
 
-// Check this deployment's manifest, including nested hosting. This default does
-// not query GitHub releases; preserve the saved override for remote manifests.
-const UPDATE_MANIFEST_URL =
-  localStorage.getItem('pt_updateManifestUrl') || 'version.json';
-const UPDATE_MANIFEST_URL_STORAGE_KEY = 'pt_updateManifestUrl';
-const UPDATE_RELEASES_URL = String(
-  APP_MANIFEST.releaseUrl || `https://github.com/${APP_REPO_SLUG}/releases/latest`
-).trim();
-const UPDATE_TAG_ZIP_URL = String(
-  APP_MANIFEST.downloadUrl || `https://github.com/${APP_REPO_SLUG}/archive/refs/tags/v${APP_VERSION}.zip`
-).trim();
-const ASSET_VERSION_OVERRIDE_STORAGE_KEY = 'pt_assetVersionOverride';
-
 const AppState = {
     mode: 'realtime',
     followAdvanceInfo: null,
@@ -76,10 +63,6 @@ const AppState = {
     correctHighlightEnabled: false,
     wledDdpDebugEnabled: false,
     helperVersion: '',
-    updateManifestUrl: '',
-    updateStatus: '',
-    updateLastCheckedAt: 0,
-    updateInfo: null,
     countInActive: false,
     lastLedPreviewEvents: [],
     ledPreviewTimeline: [],
@@ -249,6 +232,7 @@ function consumePendingFirstRunNotice() {
 }
 
 const RESETTABLE_PREFERENCE_KEYS = [
+    'pt_appearance',
     PLAYER_PIANO_STORAGE_KEY,
     MIDI_IN_NAME_STORAGE_KEY,
     MIDI_OUT_NAME_STORAGE_KEY,

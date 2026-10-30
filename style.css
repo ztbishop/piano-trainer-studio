@@ -7,6 +7,16 @@
     --wrong-red: rgba(231, 76, 60, 0.5);
 }
 
+/* Appearance changes paint only: OSMD layout, cursor bounds and overlay anchors stay intact. */
+:root { --score-paper: #fff; }
+:root[data-appearance='soft-light'] { --score-paper: #eceff1; --bg-color: #e7ebee; }
+:root[data-appearance='dark'] {
+    color-scheme: dark;
+    --score-paper: #20262e;
+    --bg-color: #171c23;
+    --text-dark: #e4ebf2;
+}
+
 body {
     margin: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -1226,7 +1236,7 @@ body.app-fullscreen-active .score-overlay-controls {
     position: relative;
     z-index: 1;
     width: 100%;
-    background: #ffffff;
+    background: var(--score-paper);
     box-shadow: 0 6px 14px rgba(0,0,0,0.10);
 }
 
@@ -5184,3 +5194,29 @@ input[type="range"] {
     }
     #fs-tempo-popup .metro-row.number-step-row > label { grid-column: auto; }
 }
+
+/* Paint-only appearance and library search. No filters or layout transforms on notation. */
+.appearance-control { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.scores-search { min-width:120px; width:220px; max-width:100%; box-sizing:border-box; padding:9px 10px; border:1px solid #a6b3bf; border-radius:8px; font:inherit; }
+.scores-split-scores .scores-library-toolbar-actions { flex-wrap:wrap !important; }
+:root[data-appearance='soft-light'] :is(.toolbar-popup,.scores-drawer,.scores-action-menu-panel,.scores-folder-picker-panel,#options-overlay fieldset) { background:#e7ebee !important; }
+:root[data-appearance='dark'] :is(#static-menu,.toolbar-popup,.scores-drawer,.scores-action-menu-panel,.scores-folder-picker-panel,.info-panel,.practice-panel,#options-overlay) { background:#252d37 !important; color:#e4ebf2 !important; }
+:root[data-appearance='dark'] :is(.toolbar-popup,.scores-drawer,.scores-action-menu-panel,.scores-folder-picker-panel,.info-panel,.practice-panel,#options-overlay) :is(label,legend,p,li,h2,h3,span,div) { color:#e4ebf2; }
+:root[data-appearance='dark'] :is(fieldset,.scores-list-box,.scores-split-pane,.scores-item-button,.scores-folder-list-item,.scores-browser-header,.info-panel-section) { background:#29333f !important; border-color:#526171 !important; color:#e4ebf2 !important; }
+:root[data-appearance='dark'] :is(button,select,textarea,input:not([type='range']):not([type='checkbox']):not([type='radio'])) { background:#344150 !important; color:#e4ebf2 !important; border-color:#718297 !important; box-shadow:none !important; }
+:root[data-appearance='dark'] button:hover:not(:disabled) { background:#405166 !important; }
+:root[data-appearance='dark'] :is(button.is-active,button.is-selected,button.is-loaded) { background:#304e66 !important; border-color:#8dccff !important; }
+:root[data-appearance='dark'] :is(.setting-note,.scores-item-meta,.scores-section-label,.scores-item-badge,.info-panel-help,.info-panel-help *) { color:#b4c1cf !important; }
+:root[data-appearance='dark'] :is(a,.info-panel-help a) { color:#8dccff !important; }
+:root[data-appearance='dark'] .scores-action-menu-button-danger { color:#ff9393 !important; }
+:root[data-appearance='dark'] #osmd-container svg { color:#e8edf2; fill:#e8edf2; }
+/* Only neutral engraving ink is recolored. Exclude production/debug overlays and preserve authored colors. */
+:root[data-appearance='dark'] #osmd-container svg :is([fill='#000000'],[fill='#000'],[fill='black'],[fill='#000000ff']):not(:is(#pt-feedback-group,#pt-looper-group,#pt-debug-group) *) { fill:#e8edf2; }
+:root[data-appearance='dark'] #osmd-container svg :is([stroke='#000000'],[stroke='#000'],[stroke='black'],[stroke='#000000ff']):not(:is(#pt-feedback-group,#pt-looper-group,#pt-debug-group) *) { stroke:#e8edf2; }
+@media (max-width:760px) {
+    .scores-library-toolbar-actions { flex-wrap:wrap !important; }
+    .scores-search { width:100%; flex:1 1 100%; }
+}
+:root[data-appearance='dark'] #music-area { background:#171c23 !important; }
+:root[data-appearance='soft-light'] #music-area { background:#e7ebee !important; }
+:root[data-appearance='dark'] :is(.toolbar-popup,#options-overlay,.practice-panel) :is(label,legend,.practice-row-label,.setting-note) { color:#e4ebf2 !important; }

@@ -1,0 +1,53 @@
+// Actual library and UI helpers with isolated stores/DOM; no user data or hardware.
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8'),ui=read('js/scores-ui.js');
+const section=(start,end)=>ui.slice(ui.indexOf(start),ui.indexOf(end,ui.indexOf(start)));
+(async()=>{
+ let fetches=0,writes=0;
+ const payload=JSON.parse(read('assets/Starter_Scores.json'));
+ const context=vm.createContext({URL,ArrayBuffer,Uint8Array,console,window:{},document:{baseURI:'http://127.0.0.1:5500/index.html'},fetch:async()=>{fetches++;return {ok:true,json:async()=>payload};}});
+ vm.runInContext(read('js/score-library.js'),context);const lib=context.window.ScoreLibrary;
+ lib.transaction=()=>{writes++;throw Error('Unexpected persistence');};
+ const demos=await lib.getDemoScores();assert.equal(demos.length,16);assert(demos.every(s=>s.isDemo&&s.folderId==='__demos__'));
+ assert.strictEqual(await lib.getDemoScores(),demos);assert.equal(fetches,1);assert.equal(writes,0);
+ const bytes=new Uint8Array([0,255,17,128]).buffer,folders=[{id:'a',name:'One'},{id:'b',name:'Two'},{id:'empty',name:'Empty'}];
+ const scores=[{id:'1',folderId:'a',fileName:'one.mxl',fileType:'mxl',rawData:bytes},{id:'2',folderId:'b',rawData:'<score/>'},{id:'3',folderId:null,rawData:'unfiled'}];
+ lib.getAllFolders=async()=>folders;lib.getAllScores=async()=>scores;
+ const backup=await lib.exportBackup('a');assert.equal(backup.version,1);assert.equal(backup.folders.length,1);assert.equal(backup.scores.length,1);
+ assert.deepEqual(Array.from(backup.scores[0].rawData.bytes),[0,255,17,128]);assert.equal((await lib.exportBackup('empty')).scores.length,0);
+ assert.equal((await lib.exportBackup()).scores.length,3);assert.equal((await lib.exportBackup()).folders.length,3);
+ const stored={folders:[],scores:[]};let id=0;context.window.crypto={randomUUID:()=>`new-${++id}`};context.getScoreDisplayTitle=()=>'';
+ lib.transaction=async(names,mode,executor)=>executor({folders:{put:v=>stored.folders.push(v)},scores:{put:v=>stored.scores.push(v)}});
+ await lib.importBackup(backup);assert.equal(stored.scores[0].folderId,stored.folders[0].id);assert.notEqual(stored.scores[0].id,'1');
+ assert.deepEqual(Array.from(new Uint8Array(stored.scores[0].rawData)),[0,255,17,128]);
+ context.AppState={scoreLibrarySearch:''};
+ vm.runInContext("const scoreSearchTitles = new Map([['one',{title:'Embedded Waltz'}]]);"+section('function getFilteredLibraryScores','function createScoresLibraryToolbar'),context);
+ const searchable=[{id:'one',title:'Renamed',fileName:'file.musicxml',folderId:'a'},{id:'two',title:'Other',fileName:'OTHER.mxl',folderId:null},...demos];
+ assert.equal(context.getFilteredLibraryScores(searchable,'__all__').length,2);
+ context.AppState.scoreLibrarySearch=' embedded WALTZ ';assert.equal(context.getFilteredLibraryScores(searchable,'a').length,1);assert.equal(context.getFilteredLibraryScores(searchable,'__unfiled__').length,0);
+ context.AppState.scoreLibrarySearch='other.MXL';assert.equal(context.getFilteredLibraryScores(searchable,'__all__').length,1);
+ context.AppState.scoreLibrarySearch='no match';assert.equal(context.getFilteredLibraryScores(searchable,'__all__').length,0);
+ context.AppState.scoreLibrarySearch='';assert.equal(context.getFilteredLibraryScores(searchable,'__demos__').length,16);
+ const handlers={},control={value:'',addEventListener:(name,fn)=>handlers[name]=fn},storedPrefs=new Map([['pt_appearance','dark']]);
+ const appearanceContext={document:{documentElement:{dataset:{}},getElementById:()=>control},localStorage:{getItem:k=>storedPrefs.get(k),setItem:(k,v)=>storedPrefs.set(k,v)}};
+ vm.runInNewContext(read('js/appearance.js'),appearanceContext);assert.equal(control.value,'dark');
+ for(const value of ['soft-light','light','dark','invalid']){control.value=value;handlers.change();assert.equal(appearanceContext.document.documentElement.dataset.appearance,value==='invalid'?'light':value);}
+ assert(read('js/trainer-state.js').includes("'pt_appearance'"));
+ // Download keeps binary and text payloads intact and retains the saved extension.
+ const downloads=[],blobs=[],timers=[];
+ const downloadContext={Blob,URL:{createObjectURL:blob=>{blobs.push(blob);return 'blob:test';},revokeObjectURL:()=>{}},setTimeout:fn=>timers.push(fn),document:{body:{appendChild(){}},createElement:()=>({addEventListener(){},click(){downloads.push(this.download);},remove(){}})}};
+ vm.runInNewContext(section('function downloadLibraryData','async function promptForLibraryFolderChoice'),downloadContext);
+ downloadContext.downloadLibraryData(bytes,'binary.mxl','application/vnd.recordare.musicxml');
+ downloadContext.downloadLibraryData('<score>é</score>','converted.musicxml','application/vnd.recordare.musicxml+xml');
+ assert.deepEqual(Array.from(new Uint8Array(await blobs[0].arrayBuffer())),[0,255,17,128]);
+ assert.equal(await blobs[1].text(),'<score>é</score>');assert.deepEqual(downloads,['binary.mxl','converted.musicxml']);assert.equal(timers.length,2);
+ const metadataContext=vm.createContext({DOMParser:class {parseFromString(){return {querySelector:()=>null,getElementsByTagName:tag=>tag==='work-title'?[{textContent:'Embedded title'}]:[]};}}});
+ vm.runInContext(section('const scoreSearchTitles','function downloadLibraryData'),metadataContext);
+ const metadataScore={id:'early',fileType:'mxl',rawData:bytes,updatedAt:1};
+ await metadataContext.cacheScoreSearchTitle(metadataScore);
+ assert.equal(vm.runInContext('scoreSearchTitles.size',metadataContext),0,'Missing startup extractor must not cache a permanent miss');
+ let extracts=0;metadataContext.extractMusicXmlFromMxl=async()=>{extracts++;return '<score/>';};
+ await metadataContext.cacheScoreSearchTitle(metadataScore);await metadataContext.cacheScoreSearchTitle(metadataScore);
+ assert.equal(extracts,1);assert.equal(vm.runInContext("scoreSearchTitles.get('early').title",metadataContext),'Embedded title');
+ console.log('Library/appearance: demo isolation/cache, scoped/full/empty backups, binary additive restore, folder/title/filename/metadata search, and theme persistence passed.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

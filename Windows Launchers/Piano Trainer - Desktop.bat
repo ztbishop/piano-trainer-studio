@@ -23,7 +23,7 @@ pause
 exit /b 1
 
 :root_found
-if not defined PIANO_TRAINER_APP_PORT set "PIANO_TRAINER_APP_PORT=8080"
+if not defined PIANO_TRAINER_APP_PORT set "PIANO_TRAINER_APP_PORT=5500"
 
 where node >nul 2>nul
 if %errorlevel% neq 0 (
@@ -43,3 +43,5 @@ echo Node.js is required for this launcher.
 echo.
 start "" powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep -Seconds 2; Start-Process 'http://127.0.0.1:%PIANO_TRAINER_APP_PORT%/'"
 node "%ROOT%local-web-server.js"
+
+if errorlevel 1 pause

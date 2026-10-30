@@ -33,7 +33,11 @@ Database: `pianoTrainerLibrary`, schema version 1. IDs use `crypto.randomUUID()`
 
 Folder/score lists are loaded and sorted in JavaScript. Recent scores are selected by last-opened time. UI folder IDs `__all__` and `__unfiled__` represent views; real unfiled records have `folderId: null`. Multi-select move/delete and folder-with-scores deletion are explicit operations; ordinary `deleteFolder()` requires an empty folder.
 
-Starter data is a version-1 library backup at [Starter_Scores.json](../assets/Starter_Scores.json), containing 3 folders and 16 scores in the reviewed revision. `pt_starterLibraryImported_v1` prevents repeat imports. If existing scores are present, the marker is set without adding starters. Deleting all songs later does not automatically reseed them while that marker remains.
+Bundled demos are read from `assets/Starter_Scores.json` (16 scores) into a session cache and displayed in a permanent `__demos__` system folder at the bottom. They are never inserted into IndexedDB, included in All Scores/backups, renamed, moved, or deleted. Save to Library creates an ordinary editable copy. Existing starter folders/scores and the obsolete `pt_starterLibraryImported_v1` flag are left untouched; automatic starter seeding is removed.
+
+Search filters the active folder by saved title, filename, and embedded MusicXML work/movement titles, case-insensitively. `scores-ui.js` caches extracted titles for the session; failed metadata extraction falls back to title/filename search and never prevents opening the original MXL. No stored title or raw data is rewritten.
+
+Song menus download the saved payload, accurately labeled MusicXML or MXL. Converted imports have only their saved MusicXML; extra original-upload storage is not introduced. Folder exports use the existing version-1 backup structure containing that folder and its scores, including empty folders; full backups remain unchanged. Both import additively through Import Library (Merge).
 
 ## Backups and restore semantics
 
@@ -55,7 +59,7 @@ Use disposable data and backups for restore/deletion tests. Never clear the user
 - Input velocity and live low-latency monitoring are explicitly forced on at startup, even though legacy storage keys exist.
 - Per-mode practice/playback hand choices live in `AppState.modeSettings`; old corresponding storage keys remain in the backup/reset list but are not used by current change handlers/startup restoration.
 - Hand assignments use dynamic `pt_handAssignment_v1_<32 hex characters>` keys. They are included in settings export/import, but not the resettable global-preference list.
-- Starter-import and asset/update overrides are separate from the ordinary resettable list. Reset Settings is not a full wipe of the origin.
+- Legacy starter-import and updater keys remain untouched but are no longer consumed. `pt_appearance` is included in settings backup/reset. Reset Settings is not a full wipe of the origin.
 - Many global storage reads/writes are unguarded. Hand-assignment storage has its own fallback warning, but that does not make the entire app safe when localStorage is blocked.
 
 There is no cross-origin/browser/device cloud sync. Hostname, scheme, and port define storage identity. A different Live Server port can appear to lose songs while leaving them in the previous origin.

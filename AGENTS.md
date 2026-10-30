@@ -48,8 +48,8 @@
 
 ## Git and completion handoff
 
-- The user owns commits and pushes. Do not commit, push, tag, merge, or publish a release unless explicitly asked.
+- On October 30, 2026, the user authorized committing and pushing this update and future completed updates. After appropriate validation, review the change scope, commit the authorized project changes, and push to the configured GitHub remote. Preserve unrelated user changes and report validation limits and the resulting commit. Tags, merges, and published releases still require an explicit request.
 - After every update that changes project files, summarize the changes, validation results, and remaining risks or manual checks.
-- Include a suggested Git commit title and description in the final response, ready for the user to copy. Keep the title concise and imperative; the description should explain the final change and actual validation. Label tests that were not run and omit claims about unverified behavior.
+- Use a concise, imperative commit title and a description explaining the final change and actual validation. Label tests that were not run and omit claims about unverified behavior. Report the commit and push result in the final response; provide suggested commit text only when the work remains uncommitted.
 - For a read-only chat with no changes, state that no commit is needed.
-- End with the Git status/change scope so the user can review and commit the work.
+- End with the Git status/change scope so the user can review the work.

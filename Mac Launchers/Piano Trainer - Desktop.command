@@ -26,7 +26,7 @@ if [ -z "$ROOT" ]; then
   exit 1
 fi
 
-PORT="${PIANO_TRAINER_APP_PORT:-8080}"
+PORT="${PIANO_TRAINER_APP_PORT:-5500}"
 
 if ! command -v node >/dev/null 2>&1; then
   echo
@@ -48,3 +48,5 @@ echo
   open "http://127.0.0.1:${PORT}/"
 ) &
 node "$ROOT/local-web-server.js"
+
+if [ $? -ne 0 ]; then read -r -p "Press Enter to exit..."; fi
