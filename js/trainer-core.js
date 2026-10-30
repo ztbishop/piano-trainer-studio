@@ -1280,6 +1280,9 @@ async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType
             }
         }
 
+        // Refresh presentation after every load, including direct files, demos and transpose.
+        window.ScoresUI?.updateScoresActionButtonsState();
+        if (typeof updatePracticeSummary === 'function') updatePracticeSummary();
         console.error('File loaded successfully.');
         if (AppState.debugEventFlow || AppState.debugMatchLogs || AppState.debugAnchorResolution || AppState.debugPersistentAnchors) {
             console.error('[PianoTrainer debug LOAD] console logging active', {

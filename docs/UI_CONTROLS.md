@@ -22,3 +22,11 @@ Button targets are 40px square. Existing numeric box widths and range thumbs are
 Run `node tests/numeric-controls.cjs` for isolated adapter cases (off-grid steps, bounds, disabled state, blank entry and one numeric commit without changing range handlers). It also executes the actual zoom binding source with mocked rendering/storage: preview input must neither render nor save, and committed changes must render once. These mocked checks do not establish browser layout, actual engraving or hardware correctness.
 
 Follow [Development](DEVELOPMENT.md) for browser/hardware checks. Verify native typing and blur, both buttons, keyboard activation, slider one-unit movement, bounds, disabled controls, persistence and responsive fit. For Zoom, compare the SVG during a drag and after release; score rendering must wait until release. Exercise navigation/feedback after zoom on a built-in score. Actual validation and pending acceptance belong in [Change history](CHANGELOG.md).
+
+## Menu organization and status
+
+Practice retains modes, hand selection/playback and visual feedback, with Hand assignment in an expandable disclosure. Its toolbar button summarizes mode, practiced hands and an enabled loop range by reading the existing controls; it does not write settings or orchestrate playback. The experimental simple synth switch is in More → Audio / Routing, using its original ID and handler. Routing labels are Assigned hands and Accompaniment (performance roles, not engraving staves).
+
+Settings lists MIDI and LED setup before About; Debug is in Advanced. Tempo and Loop appear in More only at widths where their direct toolbar buttons are hidden (1060px and below). Menu top/max-height follows the actual wrapped toolbar bounds so phone controls remain reachable. This only positions menus; OSMD layout/feedback geometry is unchanged.
+
+Validate desktop and phone menus, disclosures, existing setting handlers, summary updates after mode/hand/loop changes and score loads, and keyboard dismissal of save/folder dialogs. Library workflow details live in [Scores and storage](SCORES_AND_STORAGE.md).

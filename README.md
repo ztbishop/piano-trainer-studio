@@ -254,7 +254,10 @@ Songs are stored in your browser (IndexedDB).
 
 ## 📂 Library & Scores
 
-- Open and save individual songs
+- **Current score** identifies the loaded song and whether it is saved, a demo, or temporary.
+- **Save to Library** saves new/changed content without overwriting an existing song. Identical content is identified as saved; choose **Save a copy** to intentionally create another entry.
+- **Add File(s)** uses the selected folder (Unfiled from All Scores or Demo Scores), shows progress, skips exact saved duplicates, and reports individual failures while continuing the batch.
+- Backup imports remain additive: importing the same backup again can create duplicates.
 - Backup and import saved libraries
 - Bulk import songs into your library
 - Organize songs into folders
@@ -370,3 +373,7 @@ If you find this useful, consider sharing or contributing!
 ## License
 
 AGPL v3.0
+
+### Menu shortcuts
+
+Practice shows your current mode/hands and enabled loop range; expand **Hand assignment** for staff/voice mapping. Find the experimental simple synth under **More → Audio / Routing**, alongside **Assigned hands** and **Accompaniment** output controls. On narrow screens, Tempo and Loop move into More. Settings puts MIDI/LED setup first, About below them, and Debug inside Advanced.

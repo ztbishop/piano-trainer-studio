@@ -45,6 +45,18 @@ function deserializeScoreRawData(payload) {
 const ScoreLibrary = {
     dbPromise: null,
 
+    sameScoreData(a, b) {
+        if (typeof a === 'string' && typeof b === 'string') return a === b;
+        const bytes = value => value instanceof ArrayBuffer ? new Uint8Array(value)
+            : ArrayBuffer.isView(value) ? new Uint8Array(value.buffer, value.byteOffset, value.byteLength) : null;
+        const left = bytes(a), right = bytes(b);
+        return !!(left && right && left.length === right.length && left.every((value, index) => value === right[index]));
+    },
+
+    async findMatchingScore(rawData, scores = null) {
+        return (scores || await this.getAllScores()).find(score => this.sameScoreData(score.rawData, rawData)) || null;
+    },
+
     async init() {
         if (!('indexedDB' in window)) {
             throw new Error('IndexedDB is not available in this browser.');

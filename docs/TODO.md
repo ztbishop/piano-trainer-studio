@@ -12,6 +12,13 @@ This backlog tracks requested enhancements and outstanding review findings. Addi
 - [ ] Acceptance: physical MIDI/WLED, protected complex geometry/timing cases, Mac/LAN/iPad, VS Code Live Server run, and browser restore/import checks listed in that change record. These are pending checks, not reproduced defects.
 - [ ] Historical FIX-006 update-check acceptance is superseded by updater removal; deployed manifest/install/shortcut acceptance remains pending.
 
+## October 30 library feedback and menu follow-up
+
+- [x] Import progress/partial failures/busy protection, exact ordinary-file duplicate recognition, explicit Save a copy, and current-score status.
+- [x] Practice/Settings/Audio menu cleanup and responsive menu positioning; Node, isolated IndexedDB and actual UI checks completed. See [evidence and limits](CHANGELOG.md#2026-10-30--library-feedback-and-menu-workflow-no-application-release).
+- [ ] Deferred by request: duplicate-aware backup merging. Existing version-1 backups still import additively with new IDs. Preserve intentional copies and existing starter records when designing a future change.
+- [ ] Acceptance, not reproduced defects: actual converted-file imports, physical MIDI/audio/WLED, complex-score engraving/timing cases. Existing protected-system acceptance items below remain open.
+
 ## Requested UI enhancements
 
 ### UI-001: One-step sliders with coarse numeric buttons and free numeric entry

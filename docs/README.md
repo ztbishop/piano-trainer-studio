@@ -41,6 +41,6 @@ node docs/diagnostics/review-probes.cjs
 
 The probes read actual source and use isolated mocks; they do not start servers, connect MIDI/LEDs, modify browser storage, or change application files. `issueObserved: true` means the documented issue was observed by that probe, not that application regression testing passed. The tie case is explicitly conditional on a synthetic object topology. They are diagnostics, not an application test suite; see the dated review for interpretation.
 
-When completing a change, update the relevant current document and record meaningful behavior/validation in `CHANGELOG.md`. Do not generate a new release number, tag, or long historical narrative for every small edit. The user still owns commits and pushes.
+When completing a change, update the relevant current document and record meaningful behavior/validation in `CHANGELOG.md`. Do not generate a new release number, tag, or long historical narrative for every small edit. Follow the current commit/push authorization in [AGENTS.md](../AGENTS.md).
 
 Maintain related entries in `TODO.md` as work proceeds: record material newly discovered follow-ups, keep unverified risks distinct from reproduced defects, and link completed fixes to actual validation. Recording an item does not authorize expanding the current task to implement it.

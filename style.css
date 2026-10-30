@@ -5220,3 +5220,45 @@ input[type="range"] {
 :root[data-appearance='dark'] #music-area { background:#171c23 !important; }
 :root[data-appearance='soft-light'] #music-area { background:#e7ebee !important; }
 :root[data-appearance='dark'] :is(.toolbar-popup,#options-overlay,.practice-panel) :is(label,legend,.practice-row-label,.setting-note) { color:#e4ebf2 !important; }
+
+/* Library feedback and focused menu cleanup. Existing rendering styles are unchanged. */
+#scores-panel .scores-drawer-header {
+    display: block;
+    padding: 10px 14px 4px !important;
+    overflow-wrap: anywhere;
+}
+#scores-current-title { margin-top: 4px; }
+#scores-status { white-space: pre-line; max-height: 8em; overflow: auto; overflow-wrap: anywhere; }
+#scores-status:empty { display: none; }
+.scores-save-dialog {
+    color: inherit; background: var(--pt-panel-bg, #fff); border: 1px solid #888;
+    border-radius: 12px; max-width: min(420px, calc(100vw - 40px)); padding: 20px;
+}
+.scores-save-dialog::backdrop { background: rgba(0,0,0,.45); }
+.scores-save-dialog label { display: block; }
+.scores-save-dialog input { display: block; box-sizing: border-box; width: 100%; margin: 8px 0 16px; }
+.scores-save-dialog button { margin-right: 8px; }
+.practice-hand-assignment > summary, #settings-advanced > summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
+#options-overlay #fs-midi-setup { order: 0; }
+#options-overlay #fs-led-setup { order: 1; }
+#options-overlay #fs-about-updates { order: 2; }
+#options-overlay #settings-advanced { order: 3; }
+@media (min-width: 1061px) {
+    #btn-more-tempo, #btn-more-loop { display: none; }
+}
+
+.scores-folder-dialog { padding: 0; border: 0; background: transparent; max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); }
+.scores-folder-dialog::backdrop { background: rgba(0,0,0,.45); }
+:root[data-appearance='soft-light'] .scores-save-dialog { background: #e7ebee; }
+:root[data-appearance='dark'] .scores-save-dialog { background: #252d37; color: #e4ebf2; }
+#practice-summary { display: block; font-size: 10px; font-weight: normal; }
+
+body > .toolbar-popup, #practice-popup, #options-overlay {
+    top: var(--toolbar-panel-top, 72px);
+    max-height: calc(100dvh - var(--toolbar-panel-top, 72px) - 12px);
+}
+
+#btn-practice { flex-direction: column; gap: 2px; }
+#practice-summary { max-width: 160px; white-space: normal; }
+
+#btn-scores-save-current[hidden], #btn-scores-save-copy[hidden] { display: none !important; }

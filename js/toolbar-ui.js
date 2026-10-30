@@ -238,7 +238,9 @@ document.addEventListener('click', (e) => {
         e.target.closest('#help-overlay') ||
         e.target.closest('#led-calibration-panel') ||
         e.target.closest('.scores-action-menu-overlay') ||
-        e.target.closest('.scores-folder-picker-overlay')
+        e.target.closest('.scores-folder-picker-overlay') ||
+        e.target.closest('.scores-folder-dialog') ||
+        e.target.closest('.scores-save-dialog')
     ) {
         return;
     }
@@ -261,6 +263,7 @@ function positionScoresPanel() {
         topPx = Math.round(navRect.bottom + 10);
     }
 
+    document.documentElement.style.setProperty('--toolbar-panel-top', `${topPx}px`);
     panel.style.top = `${topPx}px`;
     panel.style.bottom = `12px`;
 }
@@ -313,3 +316,23 @@ window.IntroUI = {
 };
 
 
+
+// Read control state only; this summary never writes practice or routing preferences.
+function updatePracticeSummary() {
+    const summary = document.getElementById('practice-summary');
+    if (!summary) return;
+    const checked = id => document.getElementById(id)?.checked;
+    const mode = checked('mode-follow') ? 'Follow' : checked('mode-wait') ? 'Wait' : 'Realtime';
+    const hands = checked('practice-lh') && checked('practice-rh') ? 'Both hands' : checked('practice-lh') ? 'Left hand' : checked('practice-rh') ? 'Right hand' : 'No hands';
+    const loop = checked('check-looper') ? ` · Loop ${document.getElementById('val-loop-min').value}–${document.getElementById('val-loop-max').value}` : '';
+    summary.textContent = `${mode} · ${hands}${loop}`;
+}
+document.addEventListener('change', () => requestAnimationFrame(updatePracticeSummary));
+document.addEventListener('click', () => requestAnimationFrame(updatePracticeSummary));
+window.addEventListener('load', updatePracticeSummary);
+
+// Wrapped mobile toolbars must not cover the first menu controls.
+if (typeof ResizeObserver !== 'undefined') {
+    const toolbar = document.getElementById('static-menu');
+    if (toolbar) new ResizeObserver(positionScoresPanel).observe(toolbar);
+}

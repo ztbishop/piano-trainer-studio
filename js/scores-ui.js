@@ -9,6 +9,82 @@
 // Metadata is a read-only session cache; never rewrite old library titles or MXL payloads.
 const scoreSearchTitles = new Map();
 let scoresDrawerRefreshGeneration = 0;
+let scoreLibraryBusy = false;
+let currentScoreStatusGeneration = 0;
+const libraryDisabledControls = new Map();
+
+function setLibraryStatus(message) {
+    const status = document.getElementById('scores-status');
+    if (status) status.textContent = message;
+}
+
+function syncLibraryBusyControls() {
+    const panel = document.getElementById('scores-panel');
+    if (!panel) return;
+    panel.setAttribute('aria-busy', String(scoreLibraryBusy));
+    if (scoreLibraryBusy) {
+        panel.querySelectorAll('button, input, select').forEach(control => {
+            if (!libraryDisabledControls.has(control)) libraryDisabledControls.set(control, control.disabled);
+            control.disabled = true;
+        });
+    } else {
+        libraryDisabledControls.forEach((disabled, control) => { control.disabled = disabled; });
+        libraryDisabledControls.clear();
+    }
+}
+
+async function runLibraryOperation(action) {
+    if (scoreLibraryBusy) return;
+    const previousFocus = document.activeElement;
+    scoreLibraryBusy = true;
+    syncLibraryBusyControls();
+    try { await action(); }
+    catch (error) { console.error('Library operation failed', error); setLibraryStatus(error?.message || 'Library operation failed.'); }
+    finally {
+        scoreLibraryBusy = false;
+        syncLibraryBusyControls();
+        await updateScoresActionButtonsState();
+        if (previousFocus?.isConnected && document.activeElement === document.body) {
+            const target = previousFocus.disabled ? document.getElementById('btn-scores-save-copy') : previousFocus;
+            if (target && !target.disabled && !target.hidden) target.focus();
+        }
+    }
+}
+
+// A native modal dialog supplies focus containment, Escape, and focus restoration.
+function requestLibraryTitle(defaultTitle, copy) {
+    return new Promise(resolve => {
+        const dialog = document.createElement('dialog');
+        dialog.className = 'scores-save-dialog';
+        const form = document.createElement('form');
+        form.method = 'dialog';
+        const heading = document.createElement('h3');
+        heading.id = 'scores-save-heading';
+        heading.textContent = copy ? 'Save a copy' : 'Save to Library';
+        dialog.setAttribute('aria-labelledby', heading.id);
+        const label = document.createElement('label');
+        label.textContent = 'Score title';
+        const input = document.createElement('input');
+        input.value = defaultTitle;
+        input.required = true;
+        label.appendChild(input);
+        const cancel = document.createElement('button');
+        cancel.type = 'button'; cancel.textContent = 'Cancel';
+        cancel.addEventListener('click', () => dialog.close());
+        const save = document.createElement('button');
+        save.type = 'submit'; save.textContent = copy ? 'Save copy' : 'Save';
+        let result = null;
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            if (!input.value.trim()) { input.focus(); return; }
+            result = input.value.trim(); dialog.close();
+        });
+        dialog.addEventListener('close', () => { dialog.remove(); resolve(result); }, { once: true });
+        form.append(heading, label, cancel, save); dialog.appendChild(form);
+        document.body.appendChild(dialog); dialog.showModal(); input.select();
+    });
+}
+
 async function cacheScoreSearchTitle(score) {
     // The drawer can initialize before the core classic script has loaded.
     // Do not cache that temporary lack of an MXL extractor as missing metadata.
@@ -51,8 +127,9 @@ async function promptForLibraryFolderChoice({ allowAll = false, title = 'Choose 
     });
 
     return new Promise((resolve) => {
-        const overlay = document.createElement('div');
-        overlay.className = 'scores-folder-picker-overlay';
+        const overlay = document.createElement('dialog');
+        overlay.className = 'scores-folder-dialog';
+        overlay.setAttribute('aria-label', title);
 
         const panel = document.createElement('div');
         panel.className = 'scores-folder-picker-panel';
@@ -69,12 +146,15 @@ async function promptForLibraryFolderChoice({ allowAll = false, title = 'Choose 
 
         const onKeyDown = (e) => {
             if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
                 finish('__cancel__');
             }
         };
 
         const finish = (value) => {
             document.removeEventListener('keydown', onKeyDown, true);
+            overlay.close();
             overlay.remove();
             resolve(value);
         };
@@ -105,6 +185,8 @@ async function promptForLibraryFolderChoice({ allowAll = false, title = 'Choose 
 
         document.addEventListener('keydown', onKeyDown, true);
         document.body.appendChild(overlay);
+        overlay.addEventListener('cancel', event => { event.preventDefault(); finish('__cancel__'); });
+        overlay.showModal();
     });
 }
 
@@ -141,13 +223,34 @@ function ensureScoresDrawerOpen() {
     });
 }
 
-function updateScoresActionButtonsState() {
-    const btnSaveCurrent = document.getElementById('btn-scores-save-current');
-    if (!btnSaveCurrent) return;
-    btnSaveCurrent.disabled = AppState.currentScoreData == null;
-    btnSaveCurrent.title = AppState.currentScoreData == null
-        ? 'Open a score first, then save it into the library.'
-        : 'Save the currently loaded score into your library.';
+async function updateScoresActionButtonsState(scores = null) {
+    const generation = ++currentScoreStatusGeneration;
+    const rawData = AppState.currentScoreData;
+    const save = document.getElementById('btn-scores-save-current');
+    const copy = document.getElementById('btn-scores-save-copy');
+    const title = document.getElementById('scores-current-title');
+    const status = document.getElementById('scores-current-state');
+    if (!save) return;
+    save.disabled = scoreLibraryBusy || rawData == null;
+    if (copy) copy.disabled = scoreLibraryBusy || rawData == null;
+    if (title) title.textContent = rawData == null ? 'No score loaded' : AppState.currentScoreTitle || AppState.currentScoreFileName;
+    try {
+        const savedScores = scores || (rawData == null ? [] : await ScoreLibrary.getAllScores());
+        const current = savedScores.find(score => score.id === AppState.currentScoreLibraryId && ScoreLibrary.sameScoreData(score.rawData, rawData));
+        const match = current || (rawData == null ? null : await ScoreLibrary.findMatchingScore(rawData, savedScores));
+        const demo = rawData == null || match ? null : (await ScoreLibrary.getDemoScores().catch(() => [])).find(item => ScoreLibrary.sameScoreData(item.rawData, rawData));
+        if (generation !== currentScoreStatusGeneration || rawData !== AppState.currentScoreData) return;
+        if (copy) copy.hidden = !match;
+        if (title && match) title.textContent = match.title;
+        save.hidden = !!match;
+        save.textContent = 'Save to Library';
+        save.disabled = scoreLibraryBusy || rawData == null || !!match;
+        save.title = match ? 'This exact score is already saved. Use Save a copy for another entry.' : 'Save the current score without replacing an existing entry.';
+        if (status) status.textContent = rawData == null ? 'Open a file or choose a demo to begin.' : match ? `Saved as ${match.title}` : demo ? 'Demo · not saved to library' : 'Not saved to library';
+    } catch (error) {
+        if (generation !== currentScoreStatusGeneration) return;
+        if (status) status.textContent = 'Could not check library status.';
+    }
 }
 
 function getFolderLibrarySelectionSet() {
@@ -848,7 +951,6 @@ function createScoreRow(score, { compact = false, manageMode = false } = {}) {
 async function refreshScoresDrawer() {
     const generation = ++scoresDrawerRefreshGeneration;
     const libraryList = document.getElementById('scores-library-list');
-    updateScoresActionButtonsState();
     if (!libraryList) return;
 
     try {
@@ -858,6 +960,7 @@ async function refreshScoresDrawer() {
             ScoreLibrary.getAllScores()
         ]);
 
+        await updateScoresActionButtonsState(scores);
         const validFolderIds = new Set(['__all__', '__unfiled__', '__demos__', ...folders.map(folder => folder.id)]);
         if (!validFolderIds.has(AppState.scoreLibrarySelectedFolderId)) {
             AppState.scoreLibrarySelectedFolderId = '__all__';
@@ -1025,79 +1128,66 @@ async function refreshScoresDrawer() {
 async function importFilesToLibrary(files) {
     const incoming = Array.from(files || []).filter(Boolean);
     if (!incoming.length) return;
-
-    try {
+    await runLibraryOperation(async () => {
         const folders = await ScoreLibrary.getAllFolders();
-        const selectedFolderId = await promptForLibraryFolderChoice({
-            title: 'Add files to which folder?',
-            folders
-        });
-        if (selectedFolderId === '__cancel__') return;
-
-        for (const file of incoming) {
-            const useConverter = window.MidiImport && typeof window.MidiImport.isConverterImportFileName === 'function'
-                && window.MidiImport.isConverterImportFileName(file.name || '');
-            const scoreFile = useConverter
-                ? await window.MidiImport.convertFileToScore(file)
-                : await readScoreFile(file);
-            await ScoreLibrary.saveScore({
-                title: scoreFile.title,
-                folderId: selectedFolderId,
-                fileName: scoreFile.fileName,
-                fileType: scoreFile.fileType,
-                rawData: scoreFile.rawData
-            });
+        const active = AppState.scoreLibrarySelectedFolderId;
+        const selectedFolderId = folders.some(folder => folder.id === active) ? active : null;
+        const existing = await ScoreLibrary.getAllScores();
+        let added = 0, skipped = 0;
+        const failed = [];
+        ensureScoresDrawerOpen();
+        for (const [index, file] of incoming.entries()) {
+            setLibraryStatus(`Adding ${index + 1} of ${incoming.length}: ${file.name}`);
+            try {
+                const useConverter = window.MidiImport && typeof window.MidiImport.isConverterImportFileName === 'function'
+                    && window.MidiImport.isConverterImportFileName(file.name || '');
+                const scoreFile = useConverter ? await window.MidiImport.convertFileToScore(file) : await readScoreFile(file);
+                if (await ScoreLibrary.findMatchingScore(scoreFile.rawData, existing)) { skipped++; continue; }
+                const saved = await ScoreLibrary.saveScore({ ...scoreFile, folderId: selectedFolderId });
+                existing.push(saved);
+                added++;
+            } catch (error) {
+                failed.push(`${file.name}: ${error?.message || 'Could not import file'}`);
+            }
         }
-
         setScoreLibraryManageMode(false);
         setFolderLibraryManageMode(false);
         AppState.scoreLibrarySelectedFolderId = selectedFolderId ?? '__unfiled__';
         AppState.scoreLibraryView = 'scores';
         await refreshScoresDrawer();
-        ensureScoresDrawerOpen();
-    } catch (err) {
-        console.error('Could not import score files', err);
-        window.alert(err?.message || 'Could not import one or more score files.');
-    }
+        setLibraryStatus(`${added} added, ${skipped} already saved, ${failed.length} failed.${failed.length ? '\n' + failed.join('\n') : ''}`);
+    });
 }
 
-async function saveCurrentScoreToLibrary() {
-    if (AppState.currentScoreData == null) {
-        window.alert('Load a score first, then save it to the library.');
-        return;
-    }
-
-    const defaultTitle = AppState.currentScoreTitle || getScoreDisplayTitle(AppState.currentScoreFileName || 'Untitled Score');
-    const title = window.prompt('Save to library as:', defaultTitle);
-    if (title == null) return;
-
-    try {
+async function saveCurrentScoreToLibrary({ copy = false } = {}) {
+    if (AppState.currentScoreData == null) return;
+    // Capture the source before awaiting dialogs; a later score load must not change what is saved.
+    const source = { rawData: AppState.currentScoreData, fileName: AppState.currentScoreFileName,
+        fileType: AppState.currentScoreFileType, title: AppState.currentScoreTitle };
+    await runLibraryOperation(async () => {
+        const match = await ScoreLibrary.findMatchingScore(source.rawData);
+        if (match && !copy) { setLibraryStatus(`Already saved as ${match.title}. Use Save a copy for another entry.`); return; }
+        const defaultTitle = match?.title || source.title || getScoreDisplayTitle(source.fileName || 'Untitled Score');
+        const title = await requestLibraryTitle(copy ? `${defaultTitle} (copy)` : defaultTitle, copy);
+        if (title == null) return;
         const folders = await ScoreLibrary.getAllFolders();
-        const selectedFolderId = await promptForLibraryFolderChoice({
-            title: 'Save into which folder?',
-            folders
-        });
+        const selectedFolderId = await promptForLibraryFolderChoice({ title: 'Save into which folder?', folders });
         if (selectedFolderId === '__cancel__') return;
-
-        const saved = await ScoreLibrary.saveScore({
-            title,
-            folderId: selectedFolderId,
-            fileName: AppState.currentScoreFileName || `${title}.xml`,
-            fileType: AppState.currentScoreFileType || getScoreFileTypeFromName(AppState.currentScoreFileName || ''),
-            rawData: AppState.currentScoreData,
-            lastOpenedAt: Date.now()
-        });
-        AppState.currentScoreLibraryId = saved.id;
-        AppState.currentScoreTitle = saved.title;
+        const saved = await ScoreLibrary.saveScore({ title, folderId: selectedFolderId,
+            fileName: source.fileName || `${title}.xml`,
+            fileType: source.fileType || getScoreFileTypeFromName(source.fileName || ''),
+            rawData: source.rawData, lastOpenedAt: Date.now() });
+        if (AppState.currentScoreData === source.rawData) {
+            AppState.currentScoreLibraryId = saved.id;
+            AppState.currentScoreTitle = saved.title;
+        }
         setScoreLibraryManageMode(false);
         setFolderLibraryManageMode(false);
         AppState.scoreLibrarySelectedFolderId = selectedFolderId ?? '__unfiled__';
         AppState.scoreLibraryView = 'scores';
         await refreshScoresDrawer();
-    } catch (err) {
-        console.error('Could not save current score', err);
-        window.alert('Could not save the current score to the library.');
-    }
+        setLibraryStatus(`Saved ${saved.title}.`);
+    });
 }
 
 async function createLibraryFolder() {
@@ -1139,20 +1229,18 @@ async function exportScoreLibraryBackup() {
 
 async function importScoreLibraryBackupFile(file) {
     if (!file) return;
-
-    try {
-        const text = await file.text();
-        const payload = JSON.parse(text);
+    await runLibraryOperation(async () => {
+        setLibraryStatus(`Importing backup: ${file.name}`);
+        const payload = JSON.parse(await file.text());
         await ScoreLibrary.importBackup(payload);
         setScoreLibraryManageMode(false);
         setFolderLibraryManageMode(false);
         AppState.scoreLibraryView = 'folders';
         await refreshScoresDrawer();
-    } catch (err) {
-        console.error('Could not import library backup', err);
-        window.alert('Invalid library backup file.');
-    }
+        setLibraryStatus('Backup imported. Existing scores were kept; importing the same backup again can create copies.');
+    });
 }
+
 
 function initScoresDrawerShell() {
     const btnOpenFile = document.getElementById('btn-scores-open-file');
@@ -1220,6 +1308,19 @@ function initScoresDrawerShell() {
         });
     }
 
+    const copyButton = document.getElementById('btn-scores-save-copy');
+    if (copyButton && !copyButton.dataset.boundSaveCopy) {
+        copyButton.dataset.boundSaveCopy = 'true';
+        copyButton.addEventListener('click', () => saveCurrentScoreToLibrary({ copy: true }));
+    }
+    const panel = document.getElementById('scores-panel');
+    if (panel && !panel.dataset.busyBound) {
+        panel.dataset.busyBound = 'true';
+        panel.addEventListener('click', event => {
+            if (scoreLibraryBusy) { event.preventDefault(); event.stopImmediatePropagation(); }
+        }, true);
+        new MutationObserver(syncLibraryBusyControls).observe(panel, { childList: true, subtree: true });
+    }
     positionScoresPanel();
     window.addEventListener('resize', positionScoresPanel);
     refreshScoresDrawer();

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Isolated library workflow checks</title>
+<h1>Isolated library workflow checks</h1>
+<p>Uses a new temporary IndexedDB database, then removes only that database. Does not load the app, touch its library/settings, render scores, or connect hardware. Reload to run again.</p>
+<button id="run">Run isolated checks</button><pre id="results" role="status"></pre>
+<div id="scores-panel" hidden>
+  <button id="btn-scores-save-current"></button><button id="btn-scores-save-copy"></button>
+  <div id="scores-current-title"></div><div id="scores-current-state"></div><div id="scores-status"></div>
+</div>
+<script>
+const AppState = { currentScoreData: null, scoreLibrarySelectedFolderId: '__all__' };
+function getScoreDisplayTitle(name) { return name; }
+function getScoreFileTypeFromName(name) { return name.endsWith('.mxl') ? 'mxl' : 'xml'; }
+document.getElementById('run').onclick = async function () {
+    this.disabled = true;
+    const result = document.getElementById('results');
+    const databaseName = 'pt-workflow-test-' + crypto.randomUUID();
+    let database;
+    let checks = 0;
+    const check = (condition, label) => { if (!condition) throw Error(label); checks++; result.textContent += 'PASS: ' + label + '\n'; };
+    const install = text => { const script = document.createElement('script'); script.textContent = text; document.body.appendChild(script); };
+    try {
+        const source = await (await fetch('../../js/score-library.js')).text();
+        if (!source.includes("const SCORE_LIBRARY_DB_NAME = 'pianoTrainerLibrary';")) throw Error('Database isolation patch no longer matches; no tests started.');
+        install(source.replace("const SCORE_LIBRARY_DB_NAME = 'pianoTrainerLibrary';", `const SCORE_LIBRARY_DB_NAME = '${databaseName}';`));
+        database = await window.ScoreLibrary.init();
+        const ui = await (await fetch('../../js/scores-ui.js')).text();
+        if (!ui.includes('\ninitScoresDrawerShell();')) throw Error('UI isolation boundary no longer matches.');
+        install(ui.split('\ninitScoresDrawerShell();')[0]);
+        window.ensureScoresDrawerOpen = () => {};
+        window.refreshScoresDrawer = () => updateScoresActionButtonsState();
+        window.setScoreLibraryManageMode = window.setFolderLibraryManageMode = () => {};
+        window.readScoreFile = async file => {
+            if (file.name === 'unreadable.xml') throw Error('Simulated read failure');
+            return { fileName: file.name, title: file.name, fileType: getScoreFileTypeFromName(file.name), rawData: file.name.endsWith('.mxl') ? await file.arrayBuffer() : await file.text() };
+        };
+        const library = window.ScoreLibrary;
+        library.getDemoScores = async () => [{ rawData: '<demo/>' }];
+        const folder = await library.createFolder('Temporary workflow folder');
+        AppState.scoreLibrarySelectedFolderId = folder.id;
+        await importFilesToLibrary([new File(['<one/>'], 'one.xml'), new File(['bad'], 'unreadable.xml'), new File(['<two/>'], 'two.xml')]);
+        let records = await library.getAllScores();
+        check(records.length === 2 && records.every(score => score.folderId === folder.id), 'Batch continues after failure and saves to selected folder');
+        check(document.getElementById('scores-status').textContent.includes('2 added, 0 already saved, 1 failed'), 'Partial failure summary');
+        await importFilesToLibrary([new File(['<one/>'], 'renamed.xml')]);
+        check((await library.getAllScores()).length === 2, 'Exact text duplicate skipped despite filename change');
+        AppState.currentScoreData = '<one/>'; AppState.currentScoreTitle = 'one';
+        await updateScoresActionButtonsState();
+        check(document.getElementById('btn-scores-save-current').disabled, 'Already-saved action disabled');
+        window.requestLibraryTitle = async () => 'Explicit copy';
+        window.promptForLibraryFolderChoice = async () => folder.id;
+        await saveCurrentScoreToLibrary({ copy: true });
+        records = await library.getAllScores();
+        check(records.length === 3 && records.some(score => score.title === 'Explicit copy'), 'Explicit copy persists without replacing source');
+        check(document.getElementById('scores-current-state').textContent === 'Saved as Explicit copy', 'Current copy identity remains accurate');
+        AppState.currentScoreData = '<transposed/>';
+        await updateScoresActionButtonsState();
+        check(!document.getElementById('btn-scores-save-current').disabled, 'Changed content is unsaved even with an existing library ID');
+        window.requestLibraryTitle = async () => 'Transposed';
+        await saveCurrentScoreToLibrary();
+        check((await library.getAllScores()).some(score => score.rawData === '<transposed/>'), 'Changed content saved separately');
+        const binary = new Uint8Array([80, 75, 1, 2]);
+        await importFilesToLibrary([new File([binary], 'binary.mxl'), new File([binary], 'same.mxl')]);
+        check(document.getElementById('scores-status').textContent.includes('1 added, 1 already saved'), 'Binary matching survives IndexedDB structured cloning');
+        const backup = await library.exportBackup();
+        const before = (await library.getAllScores()).length;
+        await importScoreLibraryBackupFile(new File([JSON.stringify(backup)], 'backup.json'));
+        check((await library.getAllScores()).length === before * 2, 'Backup imports remain additive, including duplicates');
+        result.textContent += `Completed ${checks} checks.\n`;
+    } catch (error) { result.textContent += 'FAIL: ' + error.stack + '\n'; }
+    finally {
+        if (database) database.close();
+        await new Promise((resolve, reject) => {
+            const request = indexedDB.deleteDatabase(databaseName);
+            request.onsuccess = resolve; request.onerror = () => reject(request.error);
+        });
+        result.textContent += 'Temporary database removed; application storage untouched.';
+    }
+};
+</script></html>

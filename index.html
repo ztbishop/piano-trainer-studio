@@ -77,7 +77,7 @@
             <div class="menu-separator" aria-hidden="true"></div>
 
             <div class="menu-group toolbar-popup-launchers">
-                <button id="btn-practice">🎹 Practice ▾</button>
+                <button id="btn-practice">🎹 Practice ▾<span id="practice-summary"></span></button>
                 <button id="btn-tempo" class="collapse-to-more">♪ Tempo ▾</button>
                 <button id="btn-looper" class="collapse-to-more">🔁 Loop ▾</button>
                 <button id="btn-more">⋯ More ▾</button>
@@ -100,7 +100,9 @@
     <div id="scores-panel" class="scores-drawer popup-surface hidden">
         <div class="scores-drawer-inner">
             <div class="scores-drawer-header">
-                
+                <strong>Current score</strong>
+                <div id="scores-current-title">No score loaded</div>
+                <div id="scores-current-state" class="setting-note" role="status">Open a file or choose a demo to begin.</div>
             </div>
 
             <div class="scores-drawer-body">
@@ -109,7 +111,8 @@
                     <div class="scores-action-toolbar">
                         <div class="scores-action-group scores-action-group-current">
                             <button type="button" id="btn-scores-open-file">Open File</button>
-                            <button type="button" id="btn-scores-save-current">Save to Library</button>
+                            <button type="button" id="btn-scores-save-current" disabled>Save to Library</button>
+                            <button type="button" id="btn-scores-save-copy" disabled hidden>Save a copy</button>
                         </div>
                         <div class="scores-action-group scores-action-group-library">
                             <button type="button" id="btn-scores-export-library">Backup Library</button>
@@ -120,6 +123,9 @@
 
                 <div class="scores-section scores-library">
                     <div class="scores-section-label">Library</div>
+                    <div class="setting-note">Saved in this browser only. Back up your library to protect your scores.</div>
+                    <div class="setting-note">Add files to the selected folder (Unfiled from All Scores or Demo Scores).</div>
+                    <div id="scores-status" class="setting-note" role="status" aria-live="polite"></div>
                     <div id="scores-library-list" class="scores-list-box scores-library-list">
                         <div class="scores-empty-state">Library tools will appear here in the next step.</div>
                     </div>
@@ -159,7 +165,9 @@
                 <section class="info-panel-section">
                     <h3>Quick Start</h3>
                     <ul>
-                        <li>Open a score from the Scores menu, or add your own files to the library.</li>
+                        <li>Open a score from the Scores menu, or add your own files to the library. Current score shows whether it is saved.</li>
+                        <li>Save to Library stores new or changed content. If it is already saved, Save a copy creates another entry without replacing the original.</li>
+                        <li>Add File(s) uses the selected folder, skips identical saved content, and reports any failures. Backup imports remain additive and can create duplicates.</li>
                         <li><strong>Best results:</strong> MusicXML / MXL.</li>
                         <li><strong>Also supported:</strong> MIDI, MuseScore (3.x), and Guitar Pro (5.x) files. These are experimental, and MIDI does not include all notation details.</li>
                         <li>Connect your MIDI keyboard in Settings.</li>
@@ -195,20 +203,6 @@
 
     <div id="options-overlay" class="popup-surface hidden">
         <div class="options-grid">
-            <fieldset id="fs-about-updates">
-                <legend>About &amp; Updates</legend>
-                <div class="about-update-stack">
-                    <div class="update-check-row">
-                        <a id="app-releases-link" href="https://github.com/ztbishop/piano-trainer-studio/releases/latest" target="_blank" rel="noopener noreferrer">Download latest release</a>
-                        <div class="update-check-meta">
-                            <div id="app-version-display" class="setting-note">Version: --</div>
-
-                        </div>
-                        <a class="settings-doc-link" href="README.html" target="_blank" rel="noopener noreferrer">📘 Full Setup Guide</a>
-                    </div>
-                </div>
-            </fieldset>
-
             <fieldset id="fs-midi-setup">
                 <legend>MIDI Setup</legend>
                 <div class="connection-stack">
@@ -363,11 +357,27 @@
                 </div>
             </fieldset>
 
+            <fieldset id="fs-about-updates">
+                <legend>About</legend>
+                <div class="about-update-stack">
+                    <div class="update-check-row">
+                        <a id="app-releases-link" href="https://github.com/ztbishop/piano-trainer-studio/releases/latest" target="_blank" rel="noopener noreferrer">Download latest release</a>
+                        <div class="update-check-meta">
+                            <div id="app-version-display" class="setting-note">Version: --</div>
+
+                        </div>
+                        <a class="settings-doc-link" href="README.html" target="_blank" rel="noopener noreferrer">📘 Full Setup Guide</a>
+                    </div>
+                </div>
+            </fieldset>
+
+            <details id="settings-advanced"><summary>Advanced</summary>
             <fieldset id="fs-display-debug" class="hidden">
                 <legend>Debug</legend>
                 <label><input type="checkbox" id="check-debug"> Debug Note Feedback</label>
                 <label id="row-wled-ddp-debug"><input type="checkbox" id="check-wled-ddp-debug"> DDP Debug Logging</label>
             </fieldset>
+            </details>
         </div>
 
 
@@ -399,6 +409,14 @@
     <div id="audio-popup" class="toolbar-popup popup-surface hidden">
         <fieldset id="fs-audio-popup">
             <legend>🎚 Audio / Routing</legend>
+                <div class="practice-row practice-playback-timing-row">
+                    <div class="practice-row-label">Playback sound</div>
+                    <div class="practice-options-stack">
+                        <label class="inline-row-flex"><input type="checkbox" id="check-low-latency-playback"> Use simple synth playback (experimental)</label>
+                        <div class="practice-inline-note">Uses a lighter synth sound instead of the sampled piano. May feel snappier, but sounds less realistic.</div>
+                    </div>
+                </div>
+
             <div class="routing-grid">
                 <section class="routing-card">
                     <div class="routing-card-title">App Audio</div>
@@ -417,8 +435,8 @@
                             <div class="routing-source-group-label">Score Playback</div>
                             <div class="routing-source-grid routing-source-grid-score">
                                 <label class="routing-readonly-note">Uses Practice hand selections.</label>
-                                <label><input type="checkbox" id="enable-hand-staves" checked> Hand Staves</label>
-                                <label><input type="checkbox" id="enable-other"> Other Staves</label>
+                                <label><input type="checkbox" id="enable-hand-staves" checked> Assigned hands</label>
+                                <label><input type="checkbox" id="enable-other"> Accompaniment</label>
                             </div>
                         </div>
                         <div class="routing-source-group">
@@ -456,8 +474,8 @@
                             <div class="routing-source-group-label">Score Playback</div>
                             <div class="routing-source-grid routing-source-grid-score">
                                 <label class="routing-readonly-note">Uses Practice hand selections.</label>
-                                <label><input type="checkbox" id="enable-midiout-hand-staves"> Hand Staves</label>
-                                <label><input type="checkbox" id="enable-midiout-other"> Other Staves</label>
+                                <label><input type="checkbox" id="enable-midiout-hand-staves"> Assigned hands</label>
+                                <label><input type="checkbox" id="enable-midiout-other"> Accompaniment</label>
                             </div>
                         </div>
                         <div class="routing-source-group">
@@ -636,16 +654,6 @@
 
                 <div class="practice-divider"></div>
 
-                <div class="practice-row practice-playback-timing-row">
-                    <div class="practice-row-label">Playback Timing</div>
-                    <div class="practice-options-stack">
-                        <label class="inline-row-flex"><input type="checkbox" id="check-low-latency-playback"> Use simple synth playback (experimental)</label>
-                        <div class="practice-inline-note">Uses a lighter synth sound instead of the sampled piano. May feel snappier, but sounds less realistic.</div>
-                    </div>
-                </div>
-
-                <div class="practice-divider"></div>
-
                 <div class="practice-section-title">Visual Feedback</div>
 
                 <div class="practice-feedback-list">
@@ -656,8 +664,7 @@
 
                 <div class="practice-divider"></div>
 
-                <div class="practice-row practice-hand-staff-row">
-                    <div class="practice-row-label">Hand assignment</div>
+                <details class="practice-hand-assignment"><summary>Hand assignment</summary>
                     <div class="assignment-body">
                     <label class="assignment-mode-label">Assign by
                         <select id="assignment-mode" disabled><option value="staff">Staff</option><option value="voice">Voice</option></select>
@@ -673,11 +680,11 @@
                     <button type="button" id="assignment-advanced" class="assignment-link" aria-expanded="false" hidden>Edit all assignments</button>
                     <div id="assignment-details"></div>
                     <p id="assignment-notice" class="assignment-help" role="status" hidden></p>
-                    <label id="assignment-accompaniment" class="assignment-help" hidden><input type="checkbox" id="play-accompaniment" checked> Play accompaniment <span>(uses Other parts audio/MIDI routing in Settings)</span></label>
+                    <label id="assignment-accompaniment" class="assignment-help" hidden><input type="checkbox" id="play-accompaniment" checked> Play accompaniment <span>(uses Accompaniment in More → Audio / Routing)</span></label>
                     <p id="assignment-output" class="assignment-help" hidden></p>
                     <p id="assignment-storage" class="assignment-help" role="status" hidden></p>
                     </div>
-                </div>
+                </details>
             </div>
         </fieldset>
     </div>

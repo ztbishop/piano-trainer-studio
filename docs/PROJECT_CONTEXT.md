@@ -58,7 +58,7 @@ Scales, triads, arpeggios, and chord-progression practice tools have been discus
 
 Open the current project checkout in Codex and use:
 
-> Read AGENTS.md and the relevant project documentation, check Git status, and help implement: [describe changes]. Preserve existing behavior except for the changes requested. Leave commits and pushes to me, and provide a suggested commit title and description.
+> Read AGENTS.md and the relevant project documentation, check Git status, and help implement: [describe changes]. Preserve existing behavior except for the changes requested. Follow AGENTS.md for commit/push authorization and report validation and outstanding checks.
 
 Repository guidance must be accessible to the new chat. A separate ChatGPT chat needs repository access or the relevant files supplied to it. Documentation is maintained with changes; it does not automatically synchronize separate chats, checkouts, or GitHub.
 

@@ -93,6 +93,12 @@ For documentation-only changes, review links, commands, and consistency and run 
 
 Do not launch, close, restart, or replace the user's Live Server or browser session unnecessarily. Prefer a separate test browser/tab on the supplied origin. Its MIDI permissions, browser storage, and devices can differ from the user's usual browser; describe that limitation. Opening the app can seed first-run preference defaults in the test profile, and opening a library song updates its recent-open timestamp.
 
+## Library workflow checks
+
+`node tests/library-workflow.cjs` runs actual UI/library functions with isolated stores and controls: text/binary matching, partial import failures, busy/reentry recovery, deliberate copies, transformed saves and status, and unchanged backup delegation.
+
+Open `docs/diagnostics/library-workflow.html` through the existing server and click **Run isolated checks** for ten real IndexedDB checks. It loads the current library source into a uniquely named temporary database and the workflow functions with isolated UI adapters, then closes/deletes only that test database. It does not open the application database, seed preferences, connect hardware or render notation. Save-title/folder dialogs and responsive menus still need actual app inspection.
+
 ## Verification layers and a useful first test suite
 
 | Layer | What it establishes | What it does not establish |
@@ -162,7 +168,7 @@ The relative `version.json` bootstrap supplies the running version and asset cac
 
 ## Completion and suggested commit text
 
-Every file-changing update must include an accurate suggested commit title and description, even for documentation-only work. Do not create the commit.
+Follow the current commit/push authorization in [AGENTS.md](../AGENTS.md). Use an accurate commit title and description including validation; provide suggested text if work remains uncommitted.
 
 Example format:
 

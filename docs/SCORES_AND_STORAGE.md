@@ -16,7 +16,11 @@ Accepted extension does not guarantee conversion compatibility. Converted MIDI d
 
 MXL XML extraction reads ZIP entries and container metadata, supports stored/deflated entries through `DecompressionStream`, and falls back to converter export if needed. This fallback supports metadata/transposition only; ordinary OSMD rendering still uses original MXL. If canonical XML cannot be obtained, ordinary rendering may work while voice metadata/transpose are limited. See the review for empty-source assignment identity risk.
 
-Direct Open is temporary. Add File(s) imports into a chosen library folder without loading every score. Bulk imports run sequentially: if a later file fails, earlier saves can remain. Save Current creates a new score record; it is not an overwrite operation.
+Direct Open is temporary. Add File(s) uses the selected user folder, or Unfiled from All Scores/Unfiled/Demo Scores, without opening every score. It reports per-file progress, skips exact saved-content duplicates (including within the same batch), continues after read/conversion/storage failures, and lists added/already-saved/failed totals with filenames and errors. Added means stored, not a guarantee that every score will render. Conflicting library controls are disabled until completion; successful earlier writes remain if a later file fails.
+
+The Current score area identifies the loaded score independently of search/folder selection. It shows Saved, Demo (not saved), or Not saved to library. Equality uses exact XML text or binary bytes, never filenames or converter-normalized MXL. Existing duplicates and starter copies are not removed. A retained library ID alone is insufficient after transposition.
+
+Save to Library creates a new record only if the exact current content is not already saved. Already-saved content replaces that action with Save a copy for intentional duplicates. Neither action overwrites a record. Title and folder selection use modal dialogs with cancellation. A source snapshot prevents a later load from changing what an in-progress save writes. Save/backup-import feedback appears inline; backups retain their existing additive semantics below.
 
 Transpose starts from `currentScoreOriginalData` every time. Saving the current transposed score stores the transformed data; reopening that saved record treats it as its own source. The record does not retain a separate full original/transpose history. See [Rendering and transpose](RENDERING_AND_TRANSPOSE.md).
 
