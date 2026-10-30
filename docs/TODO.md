@@ -4,7 +4,7 @@ Reconciled October 30, 2026 against current source and the [change history](CHAN
 
 ## Confirmed problems and limitations
 
-- [ ] **Settings backup validation (remaining part of INV-007).** `importSettingsBackupPayload()` accepts supported keys without checking the backup version and converts global preference values to strings without validating their types/ranges. This is a confirmed code limitation, not a reproduced report of lost scores. Define compatible validation for current and older settings backups, reject malformed/unsupported input before changes, and add isolated tests. Storage-failure recovery is already implemented; settings and library backup validation are separate. Evidence: [current importer](../js/trainer-state.js), [storage semantics](SCORES_AND_STORAGE.md#backups-and-restore-semantics).
+No unresolved reproduced runtime defect or confirmed validation gap is currently tracked here. Settings-backup validation is now implemented and tested; see the [validation update](CHANGELOG.md#2026-10-30--settings-backup-validation-no-application-release).
 
 The previously reproduced runtime defects FIX-001–FIX-007 have implementations and recorded regression results. Their remaining device/score acceptance is consolidated below; they are not outstanding unfixed bugs. This does not establish that the app has no other defects.
 
@@ -55,5 +55,5 @@ Keep detailed implementation and validation in [CHANGELOG.md](CHANGELOG.md), rat
 - **UI-001/UI-002:** numeric controls and thinner cursor implemented; owner acceptance recorded October 20. That acceptance does not cover later playback patches.
 - **FIX-001–FIX-007:** server request/path protection, final-loop note gating, playback callback ownership, enharmonic octave transposition, deployment-relative paths and saved MIDI output volume implemented. Remaining acceptance is listed once above.
 - **October 30 requests:** updater removal/release link, permanent demos, appearance, downloads/folder exports/search, launcher alignment, import feedback, Save a copy/current status, menu cleanup and duplicate-aware backup merging implemented.
-- **Storage follow-ups:** large-library matching improvements, transaction rollback/error recovery and app-wide unavailable-preference handling implemented with isolated regression coverage. Only the specific validation/limit work listed above remains open.
+- **Storage follow-ups:** large-library matching improvements, transaction rollback/error recovery and app-wide unavailable-preference handling implemented with isolated regression coverage. Settings backup schema/value validation is also implemented with legacy compatibility and isolated Node/browser tests. The storage-limit and real-profile acceptance cases above remain open.
 - Removed obsolete updater acceptance, duplicate hardware/geometry/hosting checks, and the stale blanket request to establish tests. Historical change records retain their original evidence and limitations; this cleanup does not mark unperformed tests as passed.

@@ -375,30 +375,114 @@ function downloadSettingsBackup() {
     }
 }
 
+// Pure validation: never read/write storage or touch the score library here.
+function validateSettingsBackupPayload(payload) {
+    const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+    const owns = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+    if (!record(payload)) throw new Error('Settings backup must be a JSON object.');
+    if (owns(payload, 'version') && payload.version !== 1) throw new Error('Unsupported settings backup version. Expected version 1 or an older unversioned backup.');
+    if (owns(payload, 'version') && !owns(payload, 'settings')) throw new Error('Settings backup is missing its settings object. Use Import Library for score backups.');
+    const raw = owns(payload, 'settings') ? payload.settings : payload;
+    if (!record(raw)) throw new Error('Settings backup settings must be an object.');
+    const normalized = {};
+    const invalid = (key, expectation) => { throw new Error(`Invalid setting "${key}": ${expectation}. Nothing was imported.`); };
+    const number = (value, key, min, max) => {
+        if ((typeof value !== 'number' && typeof value !== 'string') || String(value).trim() === '') invalid(key, 'expected a number');
+        const n = Number(value);
+        if (!Number.isFinite(n) || !Number.isInteger(n) || n < min || n > max) invalid(key, `expected an integer from ${min} to ${max}`);
+        return n;
+    };
+    const enums = {
+        pt_appearance: ['light', 'soft-light', 'dark'], pt_playerPianoType: PLAYER_PIANO_SIZES.map(String),
+        pt_ledOutputMode: ['none', 'midi', 'wled'], pt_wledTransport: ['http-json', 'ddp'],
+        pt_trainerMode: ['realtime', 'wait', 'follow'], pt_wledTransportWarningAccepted: ['0', '1']
+    };
+    const ranges = {
+        pt_ledCount: [1, 500], pt_ledMasterBrightness: [1, 100], pt_ledFuture1Pct: [0, 100], pt_ledFuture2Pct: [0, 100],
+        pt_trainerPianoVolume: [0, 100], pt_trainerMidiOutVolume: [0, 100], pt_metronomeVolume: [0, 100],
+        pt_trainerMidiInBoost: [50, 200], pt_trainerZoom: [50, 150],
+        pt_savedMidiInChannel: [0, 16], pt_savedMidiOutChannel: [1, 16], pt_savedMidiLightsChannel: [1, 16],
+        // Retained for older backups; the current preview depth is fixed at one.
+        pt_futurePreviewDepth: [0, Number.MAX_SAFE_INTEGER]
+    };
+    const strings = ['pt_savedMidiInName', 'pt_savedMidiOutName', 'pt_savedMidiLightsName',
+        'pt_savedMidiIn', 'pt_savedMidiOut', 'pt_savedMidiLights', 'pt_wledIp'];
+    const booleans = [
+        'pt_midiLedLowVelocity', 'pt_ledReverse', 'pt_wledDdpDebugEnabled', 'pt_feedbackEnabled',
+        'pt_futurePreviewEnabled', 'pt_correctHighlightEnabled', 'pt_practiceLeft', 'pt_practiceRight',
+        'pt_audioLeft', 'pt_audioRight', 'pt_audioHands', 'pt_audioOther', 'pt_audioInstrument', 'pt_audioVirtualKeyboard',
+        'pt_midiOutHands', 'pt_midiOutOther', 'pt_midiOutInstrument', 'pt_midiOutVirtualKeyboard',
+        'pt_inputVelocityEnabled', 'pt_liveLowLatencyMonitoringEnabled', 'pt_lowLatencyPlaybackEnabled',
+        'pt_autoScroll', 'pt_virtualKeyboardVisible', 'pt_fullscreenOnPlay', 'pt_debugEnabled',
+        'pt_visualPulseEnabled', 'pt_loopCountInEnabled', 'pt_metronomeMidiOutEnabled', 'pt_accentedDownbeatEnabled'
+    ];
+    const jsonObject = (value, key) => {
+        if (typeof value !== 'string') invalid(key, 'expected a JSON object encoded as text');
+        let parsed;
+        try { parsed = JSON.parse(value); } catch (_) { invalid(key, 'invalid JSON'); }
+        if (!record(parsed)) invalid(key, 'expected a JSON object');
+        return parsed;
+    };
+    for (const key of RESETTABLE_PREFERENCE_KEYS) {
+        if (!owns(raw, key) || raw[key] === null) continue; // Legacy null entries mean absent.
+        const value = raw[key];
+        if (owns(enums, key)) {
+            if (!['string', 'number'].includes(typeof value) || !enums[key].includes(String(value))) invalid(key, 'unsupported choice');
+            normalized[key] = String(value);
+        } else if (owns(ranges, key)) {
+            normalized[key] = String(number(value, key, ...ranges[key]));
+        } else if (strings.includes(key)) {
+            if (typeof value !== 'string') invalid(key, 'expected text');
+            normalized[key] = value;
+        } else if (booleans.includes(key)) {
+            if (![true, false, 'true', 'false'].includes(value)) invalid(key, 'expected true or false');
+            normalized[key] = String(value);
+        } else if (key === LED_CALIBRATION_STORAGE_KEY) {
+            const parsed = jsonObject(value, key), calibration = {};
+            for (const [midi, offset] of Object.entries(parsed)) {
+                if (!/^(0|[1-9]\d*)$/.test(midi)) invalid(key, 'invalid MIDI note key');
+                number(midi, key, 0, 127);
+                calibration[midi] = number(offset, key, -40, 40);
+            }
+            normalized[key] = JSON.stringify(calibration);
+        } else invalid(key, 'no supported validation rule');
+    }
+    for (const key of Object.keys(raw).filter(key => /^pt_handAssignment_v1_[a-f0-9]{32}$/.test(key))) {
+        if (raw[key] === null) continue;
+        const saved = jsonObject(raw[key], key), assignment = {};
+        if (!['mode', 'staff', 'voice', 'playAccompaniment'].some(field => owns(saved, field))) invalid(key, 'missing hand-assignment fields');
+        if (owns(saved, 'mode')) {
+            if (!['staff', 'voice'].includes(saved.mode)) invalid(key, 'unsupported assignment mode');
+            assignment.mode = saved.mode;
+        }
+        if (owns(saved, 'playAccompaniment')) {
+            if (typeof saved.playAccompaniment !== 'boolean') invalid(key, 'accompaniment must be true or false');
+            assignment.playAccompaniment = saved.playAccompaniment;
+        }
+        for (const field of ['staff', 'voice']) if (owns(saved, field)) {
+            if (!record(saved[field])) invalid(key, `${field} assignments must be an object`);
+            const roles = {};
+            for (const [id, role] of Object.entries(saved[field])) {
+                if (!['left', 'right', 'accompaniment', 'ignore'].includes(role)) invalid(key, 'unsupported hand role');
+                if (field === 'staff') {
+                    if (!/^[1-9]\d*$/.test(id)) invalid(key, 'invalid staff number');
+                    number(id, key, 1, Number.MAX_SAFE_INTEGER);
+                } else {
+                    let pair; try { pair = JSON.parse(id); } catch (_) { invalid(key, 'invalid voice identity'); }
+                    if (!Array.isArray(pair) || pair.length !== 2 || !pair.every(value => typeof value === 'string')) invalid(key, 'invalid voice identity');
+                }
+                roles[id] = role;
+            }
+            assignment[field] = roles;
+        }
+        normalized[key] = JSON.stringify(assignment);
+    }
+    if (!Object.keys(normalized).length) throw new Error('No supported settings found in backup. Nothing was imported.');
+    return normalized;
+}
+
 function importSettingsBackupPayload(payload) {
-    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-        throw new Error('Invalid settings backup payload');
-    }
-
-    const rawSettings = payload && typeof payload.settings === 'object' && payload.settings && !Array.isArray(payload.settings)
-        ? payload.settings
-        : payload;
-
-    const normalizedSettings = {};
-    RESETTABLE_PREFERENCE_KEYS.forEach((key) => {
-        if (!Object.prototype.hasOwnProperty.call(rawSettings, key)) return;
-        const value = rawSettings[key];
-        if (value === null || value === undefined) return;
-        normalizedSettings[key] = String(value);
-    });
-
-    Object.keys(rawSettings).filter(key => /^pt_handAssignment_v1_[a-f0-9]{32}$/.test(key)).forEach(key => {
-        if (typeof rawSettings[key] === 'string') normalizedSettings[key] = rawSettings[key];
-    });
-
-    if (Object.keys(normalizedSettings).length === 0) {
-        throw new Error('No supported settings found in backup');
-    }
+    const normalizedSettings = validateSettingsBackupPayload(payload);
 
     appSessionStorage.replace({}, [SKIP_FIRST_RUN_ONCE_STORAGE_KEY]);
     appLocalStorage.replace({ ...normalizedSettings, [FIRST_RUN_INIT_STORAGE_KEY]: 'true' }, RESETTABLE_PREFERENCE_KEYS);
@@ -420,6 +504,8 @@ function handleSettingsBackupImportFile(file) {
             window.alert(err.message || 'Could not import settings backup.');
         }
     };
+    reader.onerror = () => window.alert('Could not read settings backup. Nothing was imported.');
+    reader.onabort = () => window.alert('Settings backup reading was cancelled. Nothing was imported.');
     reader.readAsText(file);
 }
 

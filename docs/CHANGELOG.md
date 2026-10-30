@@ -1,5 +1,13 @@
 # Change history and future update records
 
+## 2026-10-30 — Settings backup validation (no application release)
+
+- Validate complete settings backups before storage mutation: numeric version 1, older unversioned wrappers and flat maps remain supported. Check supported choices, numeric ranges, booleans/text, LED calibration and fingerprinted hand-assignment structures. Preserve typed legacy primitives and null-as-absent behavior; ignore unknown legacy keys. Unsupported versions/malformed known values reject the entire import with an explanatory error.
+- Keep existing successful-import replacement semantics, unrelated keys/absent assignments and score storage intact. Retain commit rollback protections; handle file read/abort errors without success/reload. Export format/version is unchanged. Update user/storage/development guidance and close the confirmed validation-gap backlog entry.
+- Validation: settings-backup (46 cases), storage-unavailable, library-workflow, midi-output-init and library-appearance Node suites passed. The browser harness passed 49 checks through the existing 127.0.0.1:5500 server, including actual FileReader malformed-JSON/unsupported-version/legacy-file handling and a counted reload only after success. Tests used in-memory preferences, never native user stores or scores. Changed JavaScript/inline scripts and diff checks passed.
+- Pending: real cross-profile migration/device restoration, physical quota exhaustion and permission revocation during rollback. No hardware, playback or engraving acceptance was claimed; their production paths are unchanged.
+
+
 ## 2026-10-30 — Backlog reconciliation (documentation only)
 
 - Separate confirmed limitations, unverified investigations/acceptance and optional improvements. Identify settings-backup validation as a source-confirmed gap without claiming a reproduced data-loss incident.

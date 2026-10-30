@@ -1,0 +1,41 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Isolated settings backup validation</title><style>body{font:16px system-ui;margin:24px}pre{white-space:pre-wrap}</style>
+<h1>Isolated settings backup validation</h1><p>Runs current validation, import/export and FileReader handlers against in-memory preferences. Native settings and score storage are never opened.</p>
+<button id="run">Run isolated checks</button><pre id="results" role="status"></pre>
+<script src="settings-backup-cases.js"></script>
+<script>
+const testLocalData={},testSessionData={};let testWrites=0,testFailKey,testReloads=0,testAlertResolve;
+function testAlert(message){testAlertResolve?.(message);}
+function testStore(data){return new Proxy(data,{get(target,key){
+ if(key==='getItem')return k=>target[k]??null;
+ if(key==='setItem')return(k,v)=>{testWrites++;if(k===testFailKey){testFailKey=null;throw new DOMException('Test quota','QuotaExceededError');}target[k]=String(v);};
+ if(key==='removeItem')return k=>{testWrites++;delete target[k];};return target[key];
+}});}
+const testLocal=testStore(testLocalData),testSession=testStore(testSessionData);
+document.getElementById('run').onclick=async function(){
+ this.disabled=true;const output=document.getElementById('results');let extra=0;
+ const report=label=>{output.textContent+='PASS: '+label+'\n';};
+ const install=text=>{const script=document.createElement('script');script.textContent=text;document.body.appendChild(script);};
+ try{
+ let storage=await(await fetch('../../js/storage.js')).text();
+ if(!storage.includes('() => window.localStorage')||!storage.includes('() => window.sessionStorage'))throw Error('Isolation boundary changed');
+ storage=storage.replace('() => window.localStorage','() => testLocal').replace('() => window.sessionStorage','() => testSession');
+ let state=await(await fetch('../../js/trainer-state.js')).text();
+ if(!state.includes('window.location.reload();'))throw Error('Reload boundary changed');
+ state=state.replaceAll('window.location.reload();','testReloads++;').replaceAll('window.alert(', 'testAlert(');
+ install(storage);install(state);
+ const read=async text=>{const alerted=new Promise(resolve=>{testAlertResolve=resolve;});handleSettingsBackupImportFile(new File([text],'settings.json',{type:'application/json'}));return await alerted;};
+ for(const text of ['{bad json',JSON.stringify({version:99,settings:{pt_appearance:'dark'}})]){
+ const before=JSON.stringify({testLocalData,testSessionData,testWrites});const message=await read(text);
+ if(before!==JSON.stringify({testLocalData,testSessionData,testWrites})||testReloads!==0||message.includes('Settings imported'))throw Error('Invalid file changed data or reloaded');
+ report('Invalid JSON/version file reports failure without writes or reload');extra++;
+ }
+ const message=await read(JSON.stringify({settings:{pt_appearance:'dark'}}));
+ if(!message.includes('Settings imported')||testReloads!==1||testLocalData.pt_appearance!=='dark')throw Error('Legacy file import failed');
+ report('Legacy FileReader import succeeds and requests reload only after commit');extra++;
+ const count=runSettingsBackupValidationChecks({validate:validateSettingsBackupPayload,import:importSettingsBackupPayload,export:buildSettingsBackupPayload,keys:RESETTABLE_PREFERENCE_KEYS,
+ get:k=>testLocalData[k]??null,set:(k,v)=>{testLocalData[k]=v;},snapshot:()=>JSON.stringify({testLocalData,testSessionData,testWrites}),localSnapshot:()=>JSON.stringify(testLocalData),failOnce:k=>{testFailKey=k;},report});
+ output.textContent+='Completed '+(count+extra)+' checks. Native browser settings and score storage untouched.';
+ }catch(error){output.textContent+='FAIL: '+error.stack;}
+};
+</script>
