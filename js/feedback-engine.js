@@ -719,6 +719,43 @@ function getCurrentFeedbackContext() {
     };
 }
 
+// Read score-position instructions, not playback traversal history: seeking/repeats
+// must resolve the same clef, including changes within a measure and at its end.
+function getFeedbackClef(measureIndex, staffIndex, absoluteTimestamp) {
+    const measures = osmd?.Sheet?.SourceMeasures;
+    if (!measures?.[measureIndex]) return null;
+    const lastClef = entry => (entry?.Instructions || []).slice().reverse().find(instruction =>
+        Number.isFinite(instruction.ClefType) && Number.isFinite(instruction.Line));
+    for (let index = measureIndex; index >= 0; index--) {
+        const measure = measures[index];
+        if (index < measureIndex) {
+            const endClef = lastClef(measure.LastInstructionsStaffEntries?.[staffIndex]);
+            if (endClef) return endClef;
+        }
+        const entries = measure.VerticalSourceStaffEntryContainers || [];
+        const relativeTime = Number.isFinite(absoluteTimestamp)
+            ? absoluteTimestamp - measure.AbsoluteTimestamp.RealValue : 0;
+        for (let entryIndex = entries.length - 1; entryIndex >= 0; entryIndex--) {
+            const container = entries[entryIndex];
+            if (index === measureIndex && container.Timestamp.RealValue > relativeTime + 1e-9) continue;
+            const clef = lastClef(container.StaffEntries?.[staffIndex]);
+            if (clef) return clef;
+        }
+        const startClef = lastClef(measure.FirstInstructionsStaffEntries?.[staffIndex]);
+        if (startClef) return startClef;
+    }
+    return null;
+}
+
+function getFeedbackClefTopStep(clef) {
+    if (!clef || clef.Line < 1 || clef.Line > 5) return null;
+    const types = opensheetmusicdisplay.ClefEnum;
+    // Diatonic MIDI-octave steps at the clef's reference line: G4, F3, C4.
+    const reference = { [types.G]: 32, [types.F]: 24, [types.C]: 28 }[clef.ClefType];
+    if (reference == null) return null; // Preserve legacy fallback for unpitched/unknown clefs.
+    return reference + (5 - clef.Line) * 2 + (clef.OctaveOffset || 0) * 7;
+}
+
 function resolveFeedbackAnchor(midi, targetStaffId, forceMIdx = null, anchorOrExactY = null) {
     if (anchorOrExactY && typeof anchorOrExactY === 'object' && anchorOrExactY.x != null && anchorOrExactY.y != null) {
         return { x: anchorOrExactY.x, y: anchorOrExactY.y };
@@ -744,14 +781,21 @@ function resolveFeedbackAnchor(midi, targetStaffId, forceMIdx = null, anchorOrEx
                     const fallbackStaffId = (midi >= 60) ? AppState.hands.right : AppState.hands.left;
                     targetStaffId = fallbackStaffId ?? AppState.hands.right ?? 1;
                 }
-                const staffIdx = Math.max(0, (Number(targetStaffId) || 1) - 1);
-
-                const staffMeasure = osmd.GraphicSheet.MeasureList[mIdx][staffIdx] || osmd.GraphicSheet.MeasureList[mIdx][0];
+                let staffIdx = Math.max(0, (Number(targetStaffId) || 1) - 1);
+                const staffMeasures = osmd?.GraphicSheet?.MeasureList?.[mIdx];
+                if (!staffMeasures?.[staffIdx]) staffIdx = 0;
+                const staffMeasure = staffMeasures?.[staffIdx];
+                if (!staffMeasure?.PositionAndShape?.AbsolutePosition) return null;
                 const staffTopY = staffMeasure.PositionAndShape.AbsolutePosition.y * 10;
+                const context = getCurrentFeedbackContext();
+                const timestamp = context.measureIndex === mIdx ? context.timestamp
+                    : osmd.cursor.Iterator.CurrentMeasureIndex === mIdx ? osmd.cursor.Iterator.currentTimeStamp?.RealValue
+                    : osmd.Sheet?.SourceMeasures?.[mIdx]?.AbsoluteTimestamp?.RealValue;
+                const clefTopStep = getFeedbackClefTopStep(getFeedbackClef(mIdx, staffIdx, timestamp));
 
                 const pitchMap = [0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6];
                 const step = (Math.floor(midi / 12) - 1) * 7 + pitchMap[midi % 12];
-                const fallbackAnchor = (staffIdx === 0) ? 38 : 26;
+                const fallbackAnchor = clefTopStep ?? ((staffIdx === 0) ? 38 : 26);
                 yPos = staffTopY + (fallbackAnchor - step) * 5;
             }
 

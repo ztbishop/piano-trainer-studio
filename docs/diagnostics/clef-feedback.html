@@ -1,0 +1,90 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>pre{white-space:pre-wrap;max-height:150px;overflow:auto}iframe{box-sizing:border-box}</style><title>Isolated clef feedback</title>
+<h1>Clef changes: real-score checks</h1><p>Uses memory-only preferences and blocks score storage/MIDI. Loads bundled scores through real OSMD; checks active clefs and anchored/fallback feedback without accessing your library.</p>
+<button id="run">Load isolated app</button><button id="checks" disabled>Run isolated app checks</button><pre id="results"></pre><iframe id="app" style="width:100%;height:800px;border:1px solid" allow="autoplay"></iframe>
+<script>
+document.getElementById('run').onclick=async function(){
+ this.disabled=true;
+ let html=await(await fetch('../../index.html')).text();
+ const root=new URL('../../',location.href).href;
+ const block=`<base href="${root}"><script>
+ window.testErrors=[];addEventListener('error',e=>testErrors.push(e.message));addEventListener('unhandledrejection',e=>testErrors.push(String(e.reason)));
+ window.assignmentTestData={};
+ const memoryStore=data=>new Proxy(data,{get(target,key){if(key==='getItem')return k=>target[k]??null;if(key==='setItem')return(k,v)=>{target[k]=String(v);};if(key==='removeItem')return k=>{delete target[k];};return target[key];}});
+ Object.defineProperty(window,'localStorage',{value:memoryStore(assignmentTestData)});
+ Object.defineProperty(window,'sessionStorage',{value:memoryStore({})});
+ Object.defineProperty(window,'indexedDB',{get(){throw Error('Score storage blocked in unison test');}});
+ Object.defineProperty(navigator,'requestMIDIAccess',{value:()=>Promise.reject(Error('Hardware disabled for unison test'))});
+ <\/script>`;
+ html=html.replace('<head>','<head>'+block).replace(/<script[^>]+src="https:[\s\S]*?<\/script>/g,'');
+ const frame=document.getElementById('app');
+ frame.onload=()=>{
+ document.getElementById('checks').disabled=false;
+ const doc=frame.contentDocument;const report=document.getElementById('results');
+ report.textContent='App loaded with isolated preferences; native settings/scores untouched.';
+ const check=doc.createElement('script');check.textContent=`setTimeout(()=>{parent.document.getElementById('results').textContent+='\\nStartup errors: '+JSON.stringify(testErrors);},1500);`;doc.body.appendChild(check);
+ };
+ frame.srcdoc=html;
+};
+
+document.getElementById('checks').onclick=function(){this.disabled=true;const f=document.getElementById('app'),script=f.contentDocument.createElement('script');script.textContent='('+async function(){
+ const output=parent.document.getElementById('results');let count=0;
+ const check=(ok,label)=>{if(!ok)throw Error(label);count++;output.textContent+='\nPASS: '+label;};
+ const original={advance:checkWaitModeAdvance,audio:shouldRouteLiveSourceToLocalAudio,midi:shouldRouteLiveSourceToMidiOut,early:tryReserveSingleHandEarlyGrace,upcoming:tryReserveRealtimeUpcomingHeldNote};
+ const cases=[
+ {title:'Fur Elise',points:[[13,4.75,1,1],[13,4.8125,1,0],[14,4.875,1,0],[16,5.9375,1,0],[17,6,1,1]],sample:[13,4.8125,2]},
+ {title:'Prelude I in C major BWV 846',points:[[31,31.5,0,0],[31,31.5625,0,1],[31,31.9375,0,1],[32,32,0,0]],sample:[31,31.5625,1]},
+ {title:'Sonata No. 16 1st Movement K. 545',points:[[0,0,1,0],[4,4.625,1,0],[4,4.75,1,1],[16,16.875,1,1],[17,17,1,0],[29,29.75,1,1],[28,28.75,1,0]],sample:[4,4,2]},
+ {title:'The Entertainer',points:[[0,0,0,0],[0,0,1,1]],sample:null}
+ ];
+ const seek=(measure,time)=>{osmd.cursor.reset();let steps=0;while(!osmd.cursor.Iterator.EndReached&&steps++<10000){const it=osmd.cursor.Iterator;if(it.CurrentMeasureIndex===measure&&Math.abs(it.currentTimeStamp.RealValue-time)<1e-8){osmd.cursor.update();return it;}it.moveToNext();}throw Error('Event not found '+measure+' '+time);};
+ const paths=()=>[...document.querySelectorAll('#osmdSvgPage1 path')].filter(p=>!p.closest('#pt-feedback-group,#pt-debug-group,#pt-looper-group')).map(p=>p.getAttribute('d')).join('|');
+ try{
+ document.getElementById('btn-help-close').click();const demos=await ScoreLibrary.getDemoScores();
+ checkWaitModeAdvance=()=>{};shouldRouteLiveSourceToLocalAudio=()=>false;shouldRouteLiveSourceToMidiOut=()=>false;tryReserveSingleHandEarlyGrace=()=>null;tryReserveRealtimeUpcomingHeldNote=()=>null;
+ for(const test of cases){
+ const score=demos.find(s=>s.title===test.title);await loadScoreIntoApp(score.rawData,{fileName:score.fileName,fileType:score.fileType,title:test.title});
+ check(AppState.currentScoreData===score.rawData,test.title+': original score loaded');
+ for(const [m,t,staff,type] of [...test.points,...test.points.slice().reverse()])check(getFeedbackClef(m,staff,t)?.ClefType===type,test.title+' m'+(m+1)+' t'+t+': active clef '+type+' staff '+(staff+1));
+ const selected=new Set(test.points.flatMap(([m])=>[Math.max(0,m-1),m,m+1]));
+ osmd.cursor.reset();let steps=0,compared=0,worst=0;const beforePaths=paths();
+ while(!osmd.cursor.Iterator.EndReached&&steps++<20000){const it=osmd.cursor.Iterator;
+ if(selected.has(it.CurrentMeasureIndex)){
+ osmd.cursor.update();AppState.currentExpectedContext={measureIndex:it.CurrentMeasureIndex,timestamp:it.currentTimeStamp.RealValue};
+ for(const e of it.CurrentVoiceEntries||[])for(const n of e.Notes||[]){if(n.isRest()||n.PrintObject===false||n.isCueNote||n.Notehead==='none')continue;
+ const midi=n.halfTone+12,staff=getResolvedStaffAssignmentIdFromNote(n),anchor=GeometryEngine.getNoteAnchor(n,it.CurrentMeasureIndex,staff-1);if(!anchor)continue;
+ const exact=resolveFeedbackAnchor(midi,staff,it.CurrentMeasureIndex,anchor);check(exact.x===anchor.x&&exact.y===anchor.y,test.title+': anchored feedback unchanged');
+ if(![0,2,4,5,7,9,11].includes(midi%12))continue;
+ const fallback=resolveFeedbackAnchor(midi,staff,it.CurrentMeasureIndex);const error=Math.abs(fallback.y-anchor.y);worst=Math.max(worst,error);compared++;
+ if(error>0.5)throw Error(JSON.stringify({title:test.title,measure:it.CurrentMeasureIndex,time:it.currentTimeStamp.RealValue,staff,midi,error}));
+ }
+ }
+ it.moveToNext();}
+ check(compared>0,test.title+': '+compared+' real natural-note fallback comparisons; max error '+worst.toFixed(4)+' SVG units');
+ check(paths()===beforePaths,test.title+': feedback resolution leaves engraving unchanged');
+ if(!test.sample)continue;
+ const [m,t,staff]=test.sample;
+ for(const zoom of [100,125,75]){
+ applyZoom(zoom,{save:false});const it=seek(m,t);AppState.currentExpectedContext={measureIndex:m,timestamp:t};AppState.practice={left:true,right:true};AppState.hands={right:1,left:2};AppState.feedbackEnabled=true;
+ const note=it.CurrentVoiceEntries.flatMap(e=>e.Notes).find(n=>!n.isRest()&&getResolvedStaffAssignmentIdFromNote(n)===staff&&[0,2,4,5,7,9,11].includes((n.halfTone+12)%12));
+ check(!!note,test.title+': sample note available');const midi=note.halfTone+12;
+ for(const mode of ['realtime','wait','follow']){
+ AppState.mode=mode;AppState.earlyGraceReservations.clear();AppState.correctFeedbackHistory=[];AppState.releasedIncorrectFeedback=[];AppState.activeHeldIncorrectFeedback.clear();AppState.sustainedVisuals=[];
+ buildExpectedNotesFromEntries(it.CurrentVoiceEntries,m,t);const anchor=GeometryEngine.getNoteAnchor(note,m,staff-1);
+ const wrong=staff===2?midi-12:midi+12;check(!AppState.expectedNotes.some(n=>n.midi===wrong),test.title+': wrong-note probe is not a target');
+ const penalty=AppState.score.wrong;AppState.isPlaying=true;triggerVirtualKey(wrong,true,'midi');AppState.isPlaying=false;
+ const marker=AppState.activeHeldIncorrectFeedback.get(wrong),expectedY=anchor.y+(staff===2?35:-35);
+ check(AppState.score.wrong===penalty+1&&marker&&Math.abs(marker.anchor.y-expectedY)<0.5,test.title+' '+mode+' '+zoom+'%: real wrong-key feedback follows changed clef');triggerVirtualKey(wrong,false,'midi');
+ const credit=AppState.score.correct;AppState.isPlaying=true;triggerVirtualKey(midi,true,'midi');AppState.isPlaying=false;triggerVirtualKey(midi,false,'midi');
+ check(AppState.score.correct===credit+1&&AppState.correctFeedbackHistory.some(mark=>mark.midi===midi&&mark.anchor.x===anchor.x&&mark.anchor.y===anchor.y),test.title+' '+mode+': correct hit retains rendered anchor and single credit');
+ AppState.realtimeWrongPressInCurrentContext=false;const unhit=AppState.expectedNotes.filter(n=>!n.hit).length;const missed=AppState.score.wrong;processMissedNotes();check(AppState.score.wrong===missed+unhit,test.title+' '+mode+': miss grading unchanged');
+ }
+ window.dispatchEvent(new Event('resize'));await new Promise(r=>setTimeout(r,400));check(Math.abs(resolveFeedbackAnchor(midi,staff,m).y-GeometryEngine.getNoteAnchor(note,m,staff-1).y)<0.5,test.title+': resize retains clef fallback placement');
+ }
+ }
+ const score=demos.find(s=>s.title==='Fur Elise');await loadScoreIntoApp(score.rawData,{fileName:score.fileName,fileType:score.fileType,title:score.title});applyZoom(100,{save:false});const it=seek(13,4.8125);AppState.currentExpectedContext={measureIndex:13,timestamp:4.8125};
+ const note=it.CurrentVoiceEntries.flatMap(e=>e.Notes).find(n=>!n.isRest()&&getResolvedStaffAssignmentIdFromNote(n)===2),anchor=GeometryEngine.getNoteAnchor(note,13,1);drawFeedbackNote(note.halfTone+12,true,2,13,anchor);registerHeldIncorrectFeedback(note.halfTone,2,13);
+ const svg=GeometryEngine.getSvg(),point=svg.createSVGPoint();point.x=anchor.x;point.y=anchor.y;const client=point.matrixTransform(svg.getScreenCTM()),area=document.getElementById('music-area');area.scrollTop+=client.y-area.getBoundingClientRect().top-230;
+ check(testErrors.length===0,'No uncaught errors');output.textContent='Completed '+count+' checks; native scores/settings untouched.\n'+output.textContent;
+ }catch(e){output.textContent+='\nFAIL '+e.stack;}finally{AppState.isPlaying=false;checkWaitModeAdvance=original.advance;shouldRouteLiveSourceToLocalAudio=original.audio;shouldRouteLiveSourceToMidiOut=original.midi;tryReserveSingleHandEarlyGrace=original.early;tryReserveRealtimeUpcomingHeldNote=original.upcoming;}
+ }.toString()+')()';f.contentDocument.body.appendChild(script);};
+</script>
