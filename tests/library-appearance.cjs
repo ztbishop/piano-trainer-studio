@@ -11,15 +11,14 @@ const section=(start,end)=>ui.slice(ui.indexOf(start),ui.indexOf(end,ui.indexOf(
  const demos=await lib.getDemoScores();assert.equal(demos.length,16);assert(demos.every(s=>s.isDemo&&s.folderId==='__demos__'));
  assert.strictEqual(await lib.getDemoScores(),demos);assert.equal(fetches,1);assert.equal(writes,0);
  const bytes=new Uint8Array([0,255,17,128]).buffer,folders=[{id:'a',name:'One'},{id:'b',name:'Two'},{id:'empty',name:'Empty'}];
- const scores=[{id:'1',folderId:'a',fileName:'one.mxl',fileType:'mxl',rawData:bytes},{id:'2',folderId:'b',rawData:'<score/>'},{id:'3',folderId:null,rawData:'unfiled'}];
+ const scores=[{id:'1',title:'One',folderId:'a',fileName:'one.mxl',fileType:'mxl',rawData:bytes},{id:'2',folderId:'b',rawData:'<score/>'},{id:'3',folderId:null,rawData:'unfiled'}];
  lib.getAllFolders=async()=>folders;lib.getAllScores=async()=>scores;
  const backup=await lib.exportBackup('a');assert.equal(backup.version,1);assert.equal(backup.folders.length,1);assert.equal(backup.scores.length,1);
  assert.deepEqual(Array.from(backup.scores[0].rawData.bytes),[0,255,17,128]);assert.equal((await lib.exportBackup('empty')).scores.length,0);
  assert.equal((await lib.exportBackup()).scores.length,3);assert.equal((await lib.exportBackup()).folders.length,3);
- const stored={folders:[],scores:[]};let id=0;context.window.crypto={randomUUID:()=>`new-${++id}`};context.getScoreDisplayTitle=()=>'';
- lib.transaction=async(names,mode,executor)=>executor({folders:{put:v=>stored.folders.push(v)},scores:{put:v=>stored.scores.push(v)}});
- await lib.importBackup(backup);assert.equal(stored.scores[0].folderId,stored.folders[0].id);assert.notEqual(stored.scores[0].id,'1');
- assert.deepEqual(Array.from(new Uint8Array(stored.scores[0].rawData)),[0,255,17,128]);
+ const validated=lib.validateBackup(backup);
+ assert.equal(validated.scores[0].folderId,validated.folders[0].id);
+ assert.deepEqual(Array.from(new Uint8Array(validated.scores[0].rawData)),[0,255,17,128]);
  context.AppState={scoreLibrarySearch:''};
  vm.runInContext("const scoreSearchTitles = new Map([['one',{title:'Embedded Waltz'}]]);"+section('function getFilteredLibraryScores','function createScoresLibraryToolbar'),context);
  const searchable=[{id:'one',title:'Renamed',fileName:'file.musicxml',folderId:'a'},{id:'two',title:'Other',fileName:'OTHER.mxl',folderId:null},...demos];
@@ -49,5 +48,5 @@ const section=(start,end)=>ui.slice(ui.indexOf(start),ui.indexOf(end,ui.indexOf(
  let extracts=0;metadataContext.extractMusicXmlFromMxl=async()=>{extracts++;return '<score/>';};
  await metadataContext.cacheScoreSearchTitle(metadataScore);await metadataContext.cacheScoreSearchTitle(metadataScore);
  assert.equal(extracts,1);assert.equal(vm.runInContext("scoreSearchTitles.get('early').title",metadataContext),'Embedded title');
- console.log('Library/appearance: demo isolation/cache, scoped/full/empty backups, binary additive restore, folder/title/filename/metadata search, and theme persistence passed.');
+ console.log('Library/appearance: demo isolation/cache, scoped/full/empty backups, binary backup validation, folder/title/filename/metadata search, and theme persistence passed.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

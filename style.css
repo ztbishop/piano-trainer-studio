@@ -5262,3 +5262,10 @@ body > .toolbar-popup, #practice-popup, #options-overlay {
 #practice-summary { max-width: 160px; white-space: normal; }
 
 #btn-scores-save-current[hidden], #btn-scores-save-copy[hidden] { display: none !important; }
+
+.scores-merge-dialog { width: 640px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); box-sizing: border-box; }
+.scores-merge-dialog p, .scores-merge-dialog label { overflow-wrap: anywhere; }
+.scores-merge-rows { max-height: 45dvh; overflow-y: auto; }
+.scores-merge-rows label { margin: 12px 0; }
+.scores-merge-rows select { display: block; width: 100%; min-width: 0; margin-top: 6px; white-space: normal; }
+.scores-merge-footer { margin-top: 16px; }

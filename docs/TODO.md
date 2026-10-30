@@ -16,7 +16,7 @@ This backlog tracks requested enhancements and outstanding review findings. Addi
 
 - [x] Import progress/partial failures/busy protection, exact ordinary-file duplicate recognition, explicit Save a copy, and current-score status.
 - [x] Practice/Settings/Audio menu cleanup and responsive menu positioning; Node, isolated IndexedDB and actual UI checks completed. See [evidence and limits](CHANGELOG.md#2026-10-30--library-feedback-and-menu-workflow-no-application-release).
-- [ ] Deferred by request: duplicate-aware backup merging. Existing version-1 backups still import additively with new IDs. Preserve intentional copies and existing starter records when designing a future change.
+- [x] Duplicate-aware backup merge with preview, stable import identities, preserved copies/changed versions, uncertain defaults and version-1 compatibility. See [validation](CHANGELOG.md#2026-10-30--safe-library-backup-merging-no-application-release).
 - [ ] Acceptance, not reproduced defects: actual converted-file imports, physical MIDI/audio/WLED, complex-score engraving/timing cases. Existing protected-system acceptance items below remain open.
 
 ## Requested UI enhancements
@@ -68,7 +68,7 @@ The [review's conditional risks/design questions](CODE_REVIEW_2026-10-20.md) hol
 - [ ] **INV-004 — Wrong/unanchored-note feedback after clef changes.** Exercise the cursor/staff-index fallback on clef changes and multiple instruments before altering the protected geometry pipeline.
 - [ ] **INV-005 — Smaller-keyboard pitch endpoints.** Verify actual supported device endpoints against symmetric trimming; determine whether explicit lowest/highest-key configuration is needed.
 - [ ] **INV-006 — MIDI holds, disconnects, echo filtering, and output switching.** Test unplug while held, input/channel changes, identical pitches on multiple channels, legitimate input matching recent output, and old/new output note-off destinations.
-- [ ] **INV-007 — Storage failure and backup validation.** Define behavior for unavailable/quota-limited storage, malformed/unknown-version backups, and duplicate additive imports while preserving existing data/compatibility.
+- [ ] **INV-007 — Storage failure and backup validation.** Library backup structural/version validation, repeat-import handling and atomic rollback are implemented and tested in the [merge update](CHANGELOG.md#2026-10-30--safe-library-backup-merging-no-application-release). Remaining investigation: unavailable storage across the app, actual quota exhaustion, settings backup validation and very large library performance. Do not treat simulated write failure as physical quota testing.
 - [ ] **INV-008 — Complex/timewise transposition support.** Verify timewise documents, multiple staff keys, explicit accidentals, and microtonal inputs before broad compatibility claims.
 
 ## Testing and maintenance recommendations

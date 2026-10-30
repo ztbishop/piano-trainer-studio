@@ -1227,18 +1227,75 @@ async function exportScoreLibraryBackup() {
     }
 }
 
+function previewLibraryMerge(prepared) {
+    return new Promise(resolve => {
+        const choices = { folders: Object.create(null), scores: Object.create(null) };
+        const dialog = document.createElement('dialog');
+        dialog.className = 'scores-save-dialog scores-merge-dialog';
+        dialog.setAttribute('aria-labelledby', 'scores-merge-heading');
+        const heading = document.createElement('h3'); heading.id = 'scores-merge-heading'; heading.textContent = 'Import library backup';
+        const note = document.createElement('p');
+        note.textContent = 'Existing scores stay unchanged. Possible duplicates are kept separate unless you choose an existing entry.';
+        const summary = document.createElement('p'); summary.setAttribute('role', 'status');
+        const rows = document.createElement('div'); rows.className = 'scores-merge-rows';
+        const footer = document.createElement('div'); footer.className = 'scores-merge-footer';
+        const cancel = document.createElement('button'); cancel.textContent = 'Cancel'; cancel.type = 'button';
+        const confirm = document.createElement('button'); confirm.textContent = 'Import'; confirm.type = 'button';
+        const finish = value => { dialog.close(); dialog.remove(); resolve(value); };
+        cancel.onclick = () => finish(null);
+        dialog.addEventListener('cancel', event => { event.preventDefault(); finish(null); });
+        confirm.onclick = () => finish(choices);
+        const addChoice = (key, labelText, options, value, change) => {
+            const label = document.createElement('label'); label.textContent = labelText;
+            const select = document.createElement('select'); select.id = key;
+            for (const [value, text] of options) { const option = document.createElement('option'); option.value = value; option.textContent = text; select.appendChild(option); }
+            select.value = value;
+            select.onchange = () => { change(select.value); render(); document.getElementById(key)?.focus(); };
+            label.appendChild(select); rows.appendChild(label);
+        };
+        const render = () => {
+            let plan;
+            try { plan = ScoreLibrary.planBackupMerge(prepared, choices); }
+            catch (error) { summary.textContent = error.message; confirm.disabled = true; return; }
+            confirm.disabled = false;
+            summary.textContent = `Scores to add: ${plan.added} · Already represented: ${plan.skipped} · Possible duplicates: ${plan.uncertain}. Folders reused: ${plan.foldersReused} · New folders: ${plan.foldersAdded}.`;
+            rows.replaceChildren();
+            for (const row of plan.folderRows) {
+                if (row.suggestion) addChoice(`merge-folder-${row.incoming.id}`, `Folder: ${row.incoming.name}`, [['reuse', `Use existing folder: ${row.suggestion.name}`], ['separate', 'Keep as a separate folder']], choices.folders[row.incoming.id] || 'reuse', value => { choices.folders[row.incoming.id] = value; choices.scores = Object.create(null); });
+                else if (!row.target) {
+                    const description = document.createElement('p'); description.textContent = `New folder: ${row.incoming.name}`; rows.appendChild(description);
+                }
+            }
+            for (const row of plan.scoreRows) {
+                if (row.candidates.length) {
+                    const folder = prepared.incoming.folders.find(folder => folder.id === row.incoming.folderId)?.name || 'Unfiled';
+                    addChoice(`merge-score-${row.incoming.id}`, `${row.incoming.title} (${folder}) — possible duplicate`, [['', 'Keep separate (recommended)'], ...row.candidates.map(candidate => [candidate.id, `Use existing entry: ${candidate.title} (${candidate.id.slice(-8)})`])], choices.scores[row.incoming.id] || '', value => { choices.scores[row.incoming.id] = value; });
+                } else if (row.changed) {
+                    const description = document.createElement('p'); description.textContent = `${row.incoming.title}: different content; add a separate version.`; rows.appendChild(description);
+                }
+            }
+        };
+        footer.append(cancel, confirm); dialog.append(heading, note, summary, rows, footer);
+        render(); document.body.appendChild(dialog); dialog.showModal(); cancel.focus();
+    });
+}
+
 async function importScoreLibraryBackupFile(file) {
     if (!file) return;
     await runLibraryOperation(async () => {
-        setLibraryStatus(`Importing backup: ${file.name}`);
-        const payload = JSON.parse(await file.text());
-        await ScoreLibrary.importBackup(payload);
+        ensureScoresDrawerOpen();
+        setLibraryStatus(`Checking backup: ${file.name}`);
+        const prepared = await ScoreLibrary.prepareBackupMerge(JSON.parse(await file.text()));
+        const choices = await previewLibraryMerge(prepared);
+        if (!choices) { setLibraryStatus('Import cancelled. No library changes.'); return; }
+        const result = await ScoreLibrary.applyBackupMerge(prepared, choices);
         setScoreLibraryManageMode(false);
         setFolderLibraryManageMode(false);
         AppState.scoreLibraryView = 'folders';
         await refreshScoresDrawer();
-        setLibraryStatus('Backup imported. Existing scores were kept; importing the same backup again can create copies.');
+        setLibraryStatus(`Backup merged: ${result.added} scores added, ${result.skipped} already represented; ${result.foldersAdded} new folders, ${result.foldersReused} reused. Existing scores kept.`);
     });
+    if (document.activeElement === document.body) document.getElementById('btn-scores-import-library')?.focus();
 }
 
 

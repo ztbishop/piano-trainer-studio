@@ -318,37 +318,155 @@ const ScoreLibrary = {
         };
     },
 
-    async importBackup(payload) {
-        const folders = Array.isArray(payload?.folders) ? payload.folders : [];
-        const scores = Array.isArray(payload?.scores) ? payload.scores : [];
-        const folderIdMap = new Map();
-
-        await this.transaction([SCORE_LIBRARY_FOLDER_STORE, SCORE_LIBRARY_SCORE_STORE], 'readwrite', ({ [SCORE_LIBRARY_FOLDER_STORE]: folderStore, [SCORE_LIBRARY_SCORE_STORE]: scoreStore }) => {
-            folders.forEach(folder => {
-                const newId = makeLibraryId();
-                folderIdMap.set(folder.id, newId);
-                folderStore.put({
-                    id: newId,
-                    name: String(folder.name || 'New Folder').trim() || 'New Folder',
-                    createdAt: Number(folder.createdAt) || Date.now(),
-                    updatedAt: Number(folder.updatedAt) || Date.now()
-                });
-            });
-
-            scores.forEach(score => {
-                scoreStore.put({
-                    id: makeLibraryId(),
-                    title: String(score.title || getScoreDisplayTitle(score.fileName || '') || 'Untitled Score').trim() || 'Untitled Score',
-                    folderId: folderIdMap.get(score.folderId) || null,
-                    fileName: score.fileName || 'Imported Score.xml',
-                    fileType: score.fileType || getScoreFileTypeFromName(score.fileName || ''),
-                    rawData: deserializeScoreRawData(score.rawData),
-                    createdAt: Number(score.createdAt) || Date.now(),
-                    updatedAt: Date.now(),
-                    lastOpenedAt: Number(score.lastOpenedAt) || null
-                });
-            });
+    validateBackup(payload) {
+        const fail = message => { throw new Error(`Invalid library backup: ${message}`); };
+        if (!payload || payload.version !== 1 || !Array.isArray(payload.folders) || !Array.isArray(payload.scores)) {
+            fail('choose a Piano Trainer version-1 library or folder backup.');
+        }
+        const ids = items => {
+            const seen = new Set();
+            for (const item of items) {
+                if (!item || typeof item.id !== 'string' || !item.id.trim() || seen.has(item.id)) fail('missing or duplicate entry ID.');
+                seen.add(item.id);
+            }
+            return seen;
+        };
+        const folderIds = ids(payload.folders); ids(payload.scores);
+        const text = (value, label) => {
+            if (typeof value !== 'string' || !value.trim()) fail(`${label} is missing.`);
+            return value;
+        };
+        const aliases = item => {
+            if (item.mergeIds !== undefined && (!Array.isArray(item.mergeIds) || item.mergeIds.some(id => typeof id !== 'string' || !id.trim()))) fail('invalid import identities.');
+            return [...new Set([item.id, ...(item.mergeIds || [])])];
+        };
+        const folders = payload.folders.map(folder => ({ id: folder.id, name: text(folder.name, 'folder name'), mergeIds: aliases(folder),
+            createdAt: Number(folder.createdAt) || Date.now(), updatedAt: Number(folder.updatedAt) || Date.now() }));
+        const scores = payload.scores.map(score => {
+            if (score.folderId != null && !folderIds.has(score.folderId)) fail('a score refers to a missing folder.');
+            const data = score.rawData;
+            if (!data || !['text', 'arraybuffer'].includes(data.kind)) fail('unrecognized score data.');
+            if (data.kind === 'text' && (typeof data.text !== 'string' || !data.text.length)) fail('empty or invalid score text.');
+            if (data.kind === 'arraybuffer' && (!Array.isArray(data.bytes) || !data.bytes.length || data.bytes.some(byte => !Number.isInteger(byte) || byte < 0 || byte > 255))) fail('invalid binary score bytes.');
+            return { id: score.id, title: text(score.title, 'score title'), fileName: text(score.fileName, 'filename'),
+                fileType: typeof score.fileType === 'string' && score.fileType ? score.fileType : getScoreFileTypeFromName(score.fileName),
+                folderId: score.folderId ?? null, rawData: deserializeScoreRawData(data), mergeIds: aliases(score),
+                createdAt: Number(score.createdAt) || Date.now(), updatedAt: Number(score.updatedAt) || Date.now(), lastOpenedAt: Number(score.lastOpenedAt) || null };
         });
+        return { folders, scores };
+    },
+
+    // Snapshot both stores together. Commit rechecks this snapshot inside its write transaction.
+    async readMergeSnapshot() {
+        const snapshot = { folders: [], scores: [] };
+        await this.transaction(['folders', 'scores'], 'readonly', stores => {
+            for (const key of ['folders', 'scores']) stores[key].getAll().onsuccess = event => { snapshot[key] = event.target.result; };
+        });
+        return snapshot;
+    },
+
+    mergeSnapshotKey({ folders, scores }) {
+        const sorted = entries => entries.slice().sort((a, b) => a.id.localeCompare(b.id));
+        return JSON.stringify({ folders: sorted(folders), scores: sorted(scores).map(score => ({ ...score, rawData: serializeScoreRawData(score.rawData) })) });
+    },
+
+    async prepareBackupMerge(payload) {
+        const incoming = this.validateBackup(payload);
+        const snapshot = await this.readMergeSnapshot();
+        return { incoming, snapshot, snapshotKey: this.mergeSnapshotKey(snapshot) };
+    },
+
+    planBackupMerge(prepared, choices = {}) {
+        const { incoming, snapshot } = prepared;
+        const identities = item => new Set([item.id, ...(item.mergeIds || [])]);
+        const related = (a, b) => [...identities(a)].some(id => identities(b).has(id));
+        const nameKey = name => name.trim().toLowerCase();
+        const folderRows = [], scoreRows = [], folderMap = new Map();
+        const reservedFolders = new Set(), reservedScores = new Set();
+        const knownFolder = new Map(), knownScore = new Map();
+        // Reserve exact IDs before aliases, so an older imported version cannot steal a copy's identity.
+        for (const direct of [true, false]) {
+            for (const folder of incoming.folders) {
+                if (knownFolder.has(folder.id)) continue;
+                const match = snapshot.folders.find(local => !reservedFolders.has(local.id) && (direct ? local.id === folder.id : related(local, folder)));
+                if (match) { knownFolder.set(folder.id, match); reservedFolders.add(match.id); }
+            }
+            for (const score of incoming.scores) {
+                if (knownScore.has(score.id)) continue;
+                const match = snapshot.scores.find(local => !reservedScores.has(local.id) && this.sameScoreData(local.rawData, score.rawData) && (direct ? local.id === score.id : related(local, score)));
+                if (match) { knownScore.set(score.id, match); reservedScores.add(match.id); }
+            }
+        }
+        for (const folder of incoming.folders) {
+            const known = knownFolder.get(folder.id);
+            const sameName = snapshot.folders.filter(local => nameKey(local.name) === nameKey(folder.name));
+            const uniqueIncoming = incoming.folders.filter(other => nameKey(other.name) === nameKey(folder.name)).length === 1;
+            const suggestion = !known && uniqueIncoming && sameName.length === 1 && !reservedFolders.has(sameName[0].id) ? sameName[0] : null;
+            const target = known || (choices.folders?.[folder.id] === 'separate' ? null : suggestion);
+            if (target) reservedFolders.add(target.id);
+            folderMap.set(folder.id, target?.id || folder.id);
+            folderRows.push({ incoming: folder, target, suggestion });
+        }
+        for (const score of incoming.scores) {
+            const known = knownScore.get(score.id);
+            const knownDifferent = !known && snapshot.scores.some(local => related(local, score));
+            const candidates = known || knownDifferent ? [] : snapshot.scores.filter(local => !reservedScores.has(local.id)
+                && this.sameScoreData(local.rawData, score.rawData) && local.title === score.title && local.fileName === score.fileName
+                && local.fileType === score.fileType && (local.folderId ?? null) === (folderMap.get(score.folderId) ?? null));
+            const choice = Object.prototype.hasOwnProperty.call(choices.scores || {}, score.id) ? choices.scores[score.id] : null;
+            const target = known || (choice ? candidates.find(local => local.id === choice) : null);
+            if (choice && !known && !target) throw new Error('A selected existing entry is unavailable or used twice. Review the matches again.');
+            if (target) reservedScores.add(target.id);
+            scoreRows.push({ incoming: score, target, candidates, changed: knownDifferent });
+        }
+        return { folderRows, scoreRows,
+            added: scoreRows.filter(row => !row.target).length, skipped: scoreRows.filter(row => row.target).length,
+            uncertain: scoreRows.filter(row => row.candidates.length).length,
+            foldersAdded: folderRows.filter(row => !row.target).length, foldersReused: folderRows.filter(row => row.target).length };
+    },
+
+    async applyBackupMerge(prepared, choices = {}) {
+        const plan = this.planBackupMerge(prepared, choices);
+        let failure;
+        try {
+            await this.transaction(['folders', 'scores'], 'readwrite', (stores, tx) => {
+                const current = {}; let reads = 0;
+                const commit = () => {
+                    if (++reads !== 2) return;
+                    try {
+                        if (this.mergeSnapshotKey(current) !== prepared.snapshotKey) throw new Error('The library changed while the preview was open. Choose the backup again to refresh the preview.');
+                        const folderIds = new Set(current.folders.map(item => item.id));
+                        const scoreIds = new Set(current.scores.map(item => item.id));
+                        const allocate = (wanted, used) => { let id = wanted; while (used.has(id)) id = makeLibraryId(); used.add(id); return id; };
+                        const remember = (target, source, store) => {
+                            const mergeIds = [...new Set([...(target.mergeIds || []), source.id, ...(source.mergeIds || [])])];
+                            if (JSON.stringify(mergeIds) !== JSON.stringify(target.mergeIds || [])) store.put({ ...target, mergeIds });
+                        };
+                        const folderMap = new Map();
+                        for (const row of plan.folderRows) {
+                            if (row.target) {
+                                folderMap.set(row.incoming.id, row.target.id);
+                                remember(row.target, row.incoming, stores.folders);
+                            } else {
+                                const id = allocate(row.incoming.id, folderIds);
+                                folderMap.set(row.incoming.id, id);
+                                stores.folders.add({ ...row.incoming, id });
+                            }
+                        }
+                        for (const row of plan.scoreRows) {
+                            if (row.target) remember(row.target, row.incoming, stores.scores);
+                            else stores.scores.add({ ...row.incoming, id: allocate(row.incoming.id, scoreIds), folderId: folderMap.get(row.incoming.folderId) || null });
+                        }
+                    } catch (error) { failure = error; tx.abort(); }
+                };
+                for (const key of ['folders', 'scores']) stores[key].getAll().onsuccess = event => { current[key] = event.target.result; commit(); };
+            });
+        } catch (error) { throw failure || error; }
+        return { added: plan.added, skipped: plan.skipped, foldersAdded: plan.foldersAdded, foldersReused: plan.foldersReused };
+    },
+
+    async importBackup(payload) {
+        return this.applyBackupMerge(await this.prepareBackupMerge(payload));
     },
 
     demoPromise: null,

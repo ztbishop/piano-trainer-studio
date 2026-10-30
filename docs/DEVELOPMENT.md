@@ -65,7 +65,7 @@ Optional-server regressions: `node tests/local-web-server.cjs` runs the actual s
 
 Launcher-address regressions: `node tests/launcher-addresses.cjs` checks the server default/override port, loopback URLs, LAN console messages, collision handling and unchanged WLED endpoint with a fake listener. Actual Mac/LAN execution remains separate.
 
-Hosting regressions: `node tests/hosting-paths.cjs` exercises the actual bootstrap using isolated network mocks: relative manifest/assets, version fallback, version display, removed updater behavior, and manifest/icon paths. `node tests/library-appearance.cjs` covers demo isolation, scoped/full backups, binary additive restore, search filtering and appearance persistence with isolated stores/DOM; neither establishes browser layout or engraving.
+Hosting regressions: `node tests/hosting-paths.cjs` exercises the actual bootstrap using isolated network mocks: relative manifest/assets, version fallback, version display, removed updater behavior, and manifest/icon paths. `node tests/library-appearance.cjs` covers demo isolation, scoped/full backups, binary backup validation, search filtering and appearance persistence with isolated stores/DOM; neither establishes browser layout or engraving.
 
 MIDI output initialization: `node tests/midi-output-init.cjs` exercises actual asynchronous setup, output restoration, expression helpers and manual output/channel listeners with in-memory devices/storage. Covers all modes, 0/65/100% levels, channels, reconnect, missing/disconnected/None outputs, separate LED destinations and unchanged routing flags. It captures CC11 bytes without opening hardware or modifying browser data; audible piano acceptance remains separate.
 
@@ -95,9 +95,11 @@ Do not launch, close, restart, or replace the user's Live Server or browser sess
 
 ## Library workflow checks
 
-`node tests/library-workflow.cjs` runs actual UI/library functions with isolated stores and controls: text/binary matching, partial import failures, busy/reentry recovery, deliberate copies, transformed saves and status, and unchanged backup delegation.
+`node tests/library-workflow.cjs` runs actual UI/library functions with isolated stores and controls: text/binary matching, partial import failures, busy/reentry recovery, deliberate copies, transformed saves and status, and backup preview/apply/cancellation.
 
-Open `docs/diagnostics/library-workflow.html` through the existing server and click **Run isolated checks** for ten real IndexedDB checks. It loads the current library source into a uniquely named temporary database and the workflow functions with isolated UI adapters, then closes/deletes only that test database. It does not open the application database, seed preferences, connect hardware or render notation. Save-title/folder dialogs and responsive menus still need actual app inspection.
+Open `docs/diagnostics/library-workflow.html` through the existing server and click **Run isolated checks** for 19 real IndexedDB checks; enable the interactive option and confirm both default previews for 21 total. It loads the current library source into a uniquely named temporary database and the workflow functions with isolated UI adapters, then closes/deletes only that test database. It does not open the application database, seed preferences, connect hardware or render notation. The checks include repeated backups, uncertain legacy copies, explicit association persistence, changed versions, stale previews and rollback of earlier writes after a simulated storage failure. Save-title/folder dialogs and responsive menus still need actual app inspection.
+
+`node tests/library-merge.cjs` covers actual validation/planning/apply functions with isolated store adapters: intentional copies, known IDs and aliases, local rename/move preservation, changed-version repeat imports, export/restore identity, uncertain defaults and manual choices, one-to-one matching, same-name/empty folders, binary payloads, malformed backups and stale previews. Compare the real IndexedDB checks above before claiming storage correctness.
 
 ## Verification layers and a useful first test suite
 

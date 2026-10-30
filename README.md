@@ -257,7 +257,7 @@ Songs are stored in your browser (IndexedDB).
 - **Current score** identifies the loaded song and whether it is saved, a demo, or temporary.
 - **Save to Library** saves new/changed content without overwriting an existing song. Identical content is identified as saved; choose **Save a copy** to intentionally create another entry.
 - **Add File(s)** uses the selected folder (Unfiled from All Scores or Demo Scores), shows progress, skips exact saved duplicates, and reports individual failures while continuing the batch.
-- Backup imports remain additive: importing the same backup again can create duplicates.
+- **Import Library (Merge)** previews what will be added or recognized. Repeat imports skip known identical entries; intentional copies and changed versions are preserved. Possible duplicates from older backups stay separate by default, unless you choose **Use existing entry**. Cancel makes no changes.
 - Backup and import saved libraries
 - Bulk import songs into your library
 - Organize songs into folders
@@ -265,7 +265,7 @@ Songs are stored in your browser (IndexedDB).
 - **Demo Scores** stays at the bottom of the folder list and is separate from All Scores and backups. Save a demo to your library to make an editable copy. Existing starter copies are kept.
 - **Search title or filename** filters the selected folder, including embedded MusicXML work/movement titles when readable.
 - Song **⋯** menus download saved MusicXML or MXL. Converted imports download their saved MusicXML, not the original MIDI/MuseScore/Guitar Pro file. Saved transpositions download the transformed score.
-- Folder **⋯ → Export folder** downloads compatible JSON; use **Import Library (Merge)** to restore it additively.
+- Folder **⋯ → Export folder** downloads compatible JSON; use **Import Library (Merge)** to restore it through the same merge preview.
 
 ---
 

@@ -27,7 +27,7 @@ The frontend is static HTML/CSS/JavaScript with ordered classic scripts and shar
 - `js/appearance.js` = persisted Light/Soft Light/Dark selection; CSS paint changes only, without rerendering notation.
 - `js/numeric-controls.js` = presentation-only coarse numeric buttons; existing modules retain setting application. See [Menu controls](UI_CONTROLS.md).
 - `js/scores-ui.js` = score browser UI shell
-- `js/score-library.js` = score library shell
+- `js/score-library.js` = library persistence, backup validation, identity-based merge planning and atomic commit; see Scores and storage for merge semantics
 - `js/led.js` = LED simulator, calibration, and hardware/WLED output
 - `js/midi.js` = WebMIDI setup, selectors, and connection state wiring
 - `js/midi-import.js` = lazy-loaded webmscore conversion wrapper for MIDI/MuseScore/Guitar Pro imports

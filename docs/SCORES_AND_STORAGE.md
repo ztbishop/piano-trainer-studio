@@ -20,7 +20,7 @@ Direct Open is temporary. Add File(s) uses the selected user folder, or Unfiled 
 
 The Current score area identifies the loaded score independently of search/folder selection. It shows Saved, Demo (not saved), or Not saved to library. Equality uses exact XML text or binary bytes, never filenames or converter-normalized MXL. Existing duplicates and starter copies are not removed. A retained library ID alone is insufficient after transposition.
 
-Save to Library creates a new record only if the exact current content is not already saved. Already-saved content replaces that action with Save a copy for intentional duplicates. Neither action overwrites a record. Title and folder selection use modal dialogs with cancellation. A source snapshot prevents a later load from changing what an in-progress save writes. Save/backup-import feedback appears inline; backups retain their existing additive semantics below.
+Save to Library creates a new record only if the exact current content is not already saved. Already-saved content replaces that action with Save a copy for intentional duplicates. Neither action overwrites a record. Title and folder selection use modal dialogs with cancellation. A source snapshot prevents a later load from changing what an in-progress save writes. Save/backup-import feedback appears inline; backup merging follows the identity and preview rules below.
 
 Transpose starts from `currentScoreOriginalData` every time. Saving the current transposed score stores the transformed data; reopening that saved record treats it as its own source. The record does not retain a separate full original/transpose history. See [Rendering and transpose](RENDERING_AND_TRANSPOSE.md).
 
@@ -41,17 +41,27 @@ Bundled demos are read from `assets/Starter_Scores.json` (16 scores) into a sess
 
 Search filters the active folder by saved title, filename, and embedded MusicXML work/movement titles, case-insensitively. `scores-ui.js` caches extracted titles for the session; failed metadata extraction falls back to title/filename search and never prevents opening the original MXL. No stored title or raw data is rewritten.
 
-Song menus download the saved payload, accurately labeled MusicXML or MXL. Converted imports have only their saved MusicXML; extra original-upload storage is not introduced. Folder exports use the existing version-1 backup structure containing that folder and its scores, including empty folders; full backups remain unchanged. Both import additively through Import Library (Merge).
+Song menus download the saved payload, accurately labeled MusicXML or MXL. Converted imports have only their saved MusicXML; extra original-upload storage is not introduced. Folder exports use the existing version-1 backup structure containing that folder and its scores, including empty folders; full backups remain unchanged. Both use the same safe merge preview through Import Library (Merge).
 
 ## Backups and restore semantics
 
 | Backup | Format | Restore behavior |
 | --- | --- | --- |
-| Score library | `{version: 1, exportedAt, folders, scores}`; binary data serialized as `{kind: 'arraybuffer', bytes: [...]}`, text as `{kind: 'text', text}` | Additive import with new IDs; folder links remapped; existing library remains. Reimporting can duplicate songs/folders. |
+| Score library | `{version: 1, exportedAt, folders, scores}`; binary data serialized as `{kind: 'arraybuffer', bytes: [...]}`, text as `{kind: 'text', text}` | Identity-aware merge with a preview; existing entries remain. Known identical entries are skipped, changed versions added separately, and uncertain matches kept separate by default. |
 | Settings | `{version: 1, exportedAt, appVersion, settings}`; supported localStorage values plus fingerprinted hand assignments | Clears the known resettable global preferences, imports supported entries, sets first-run markers, and reloads. Existing unrelated/assignment entries not explicitly cleared can remain. |
 | LED calibration | Dedicated calibration JSON export/import in `led.js` | Applies calibration separately from songs; inspect calibration validation when changing its format. |
 
-Both a library backup and settings backup are needed for a fuller move to a new browser/origin. Neither is a backup of source code, releases, or external analytics. Current imports are permissive and do not reject unknown backup versions; schema-validation hardening is a recommendation, not an implemented guarantee.
+Both a library backup and settings backup are needed for a fuller move to a new browser/origin. Neither is a backup of source code, releases, or external analytics. Library backups validate version, unique IDs, folder references, metadata and text/binary payload structure before any write. Unsupported versions or malformed records reject the entire import. Settings backup validation is separate and unchanged.
+
+### Library merge identity and preview
+
+Version-1 library and folder backups remain supported. Imported entries retain their incoming ID when available; collisions allocate a fresh local ID. Optional `mergeIds` arrays record source identities on folders/scores, including explicit associations with older imports. Export carries these arrays forward without changing the version-1 payload shape or database schema. Older app versions can read the score data but may forget these associations when they import it. Save a copy creates a new independent identity, not inherited merge history.
+
+Matching reserves exact IDs first, then remembered identities, one-to-one. A score is already represented only when the identity and exact stored content match. Current titles, folder placement, timestamps and content remain unchanged; only internal import identities can be appended. Known identities with different content become separate versions, whose source identity is remembered so repeated imports do not keep adding that version. Multiple intentional entries in a backup are never mapped to a single existing entry.
+
+Older imports that regenerated IDs cannot be linked with certainty. Exact content, title, filename, file type and resolved folder identify possible matches. The preview defaults to Keep separate, with an explicit Use existing entry option; that choice is remembered. A reused folder is matched by identity first, otherwise a unique case-insensitive trimmed name can be suggested. Users can keep a suggested folder separate instead. Ambiguous names and multiple distinct same-name incoming folders are not collapsed; empty folders are retained.
+
+Preview totals update as choices change. Cancel/Escape writes nothing. Validation and comparison do not parse, normalize, transpose or re-render music. MXL bytes and XML text remain exact. Commit rechecks both stores against the preview snapshot inside a single read/write transaction: intervening edits require a fresh preview; failed writes abort all folder, score and association changes. Settings, hand assignments and demos are not imported by a library backup.
 
 Use disposable data and backups for restore/deletion tests. Never clear the user's browser storage for routine debugging.
 
@@ -80,4 +90,4 @@ The persistence fingerprint is a deterministic identity hash of canonical source
 
 ## Before changing this subsystem
 
-Check existing backup compatibility, new-ID additive import, starter markers, source/original identity, transpose reset, and score-local assignments. For migrations, define behavior for old payloads and storage failure before changing schema versions. See [Development](DEVELOPMENT.md) and [the review](CODE_REVIEW_2026-10-20.md).
+Check existing backup compatibility, repeat imports and intentional copies, starter markers, source/original identity, transpose reset, and score-local assignments. For migrations, define behavior for old payloads and storage failure before changing schema versions. See [Development](DEVELOPMENT.md) and [the review](CODE_REVIEW_2026-10-20.md).

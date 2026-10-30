@@ -2,6 +2,7 @@
 <html lang="en"><meta charset="utf-8"><title>Isolated library workflow checks</title>
 <h1>Isolated library workflow checks</h1>
 <p>Uses a new temporary IndexedDB database, then removes only that database. Does not load the app, touch its library/settings, render scores, or connect hardware. Reload to run again.</p>
+<label><input type="checkbox" id="interactive"> Include two interactive previews (choose Import with defaults)</label><br>
 <button id="run">Run isolated checks</button><pre id="results" role="status"></pre>
 <div id="scores-panel" hidden>
   <button id="btn-scores-save-current"></button><button id="btn-scores-save-copy"></button>
@@ -64,8 +65,62 @@ document.getElementById('run').onclick = async function () {
         check(document.getElementById('scores-status').textContent.includes('1 added, 1 already saved'), 'Binary matching survives IndexedDB structured cloning');
         const backup = await library.exportBackup();
         const before = (await library.getAllScores()).length;
+        const actualPreview = window.previewLibraryMerge;
+        window.previewLibraryMerge = async () => ({});
         await importScoreLibraryBackupFile(new File([JSON.stringify(backup)], 'backup.json'));
-        check((await library.getAllScores()).length === before * 2, 'Backup imports remain additive, including duplicates');
+        check((await library.getAllScores()).length === before, 'Repeat backup import adds nothing and preserves intentional copies');
+        const legacy = structuredClone(backup);
+        legacy.scores = [legacy.scores[0]]; legacy.scores[0].id = 'legacy-original'; delete legacy.scores[0].mergeIds;
+        let prepared = await library.prepareBackupMerge(legacy);
+        check(library.planBackupMerge(prepared).uncertain === 1, 'Older regenerated IDs produce an uncertain match');
+        await library.applyBackupMerge(prepared);
+        check((await library.getAllScores()).length === before + 1, 'Uncertain match kept separate by default');
+        check((await library.importBackup(legacy)).added === 0, 'Repeat legacy import recognized');
+        legacy.scores[0].id = 'legacy-associated';
+        prepared = await library.prepareBackupMerge(legacy);
+        const candidate = library.planBackupMerge(prepared).scoreRows[0].candidates[0];
+        await library.applyBackupMerge(prepared, { scores: { 'legacy-associated': candidate.id } });
+        check((await library.importBackup(legacy)).added === 0, 'Explicit association persists');
+        legacy.scores[0].rawData = { kind: 'text', text: '<changed/>' };
+        check((await library.importBackup(legacy)).added === 1, 'Changed version added without overwriting source');
+        check((await library.importBackup(legacy)).added === 0, 'Changed version not duplicated on repeat');
+        prepared = await library.prepareBackupMerge(backup);
+        await library.createFolder('Concurrent edit');
+        let rejected = false;
+        try { await library.applyBackupMerge(prepared); } catch (error) { rejected = /library changed/.test(error.message); }
+        check(rejected, 'Stale preview rejected');
+        const beforeFailure = await library.readMergeSnapshot();
+        const failing = { version: 1, folders: [{id:'rollback-folder',name:'Rollback'}], scores: [1,2].map(i => ({id:'rollback-'+i,title:'Rollback '+i,fileName:'test.xml',fileType:'xml',folderId:'rollback-folder',rawData:{kind:'text',text:'<rollback/>'}})) };
+        prepared = await library.prepareBackupMerge(failing);
+        const originalTransaction = library.transaction; let writes = 0;
+        library.transaction = function(names, mode, execute) {
+            return originalTransaction.call(this, names, mode, (stores, tx) => {
+                const scores = new Proxy(stores.scores, { get(target, key) {
+                    if (key === 'add') return value => { if (++writes === 2) throw Error('Simulated storage failure'); return target.add(value); };
+                    const value = target[key]; return typeof value === 'function' ? value.bind(target) : value;
+                }});
+                return execute({...stores,scores}, tx);
+            });
+        };
+        rejected = false;
+        try { await library.applyBackupMerge(prepared); } catch (error) { rejected = /Simulated storage failure/.test(error.message); }
+        finally { library.transaction = originalTransaction; }
+        check(rejected && library.mergeSnapshotKey(await library.readMergeSnapshot()) === library.mergeSnapshotKey(beforeFailure), 'Real IndexedDB transaction rolls back earlier folder/score writes on failure');
+        rejected = false;
+        try { await library.importBackup({...backup,version:99}); } catch (error) { rejected = /Invalid library backup/.test(error.message); }
+        check(rejected && library.mergeSnapshotKey(await library.readMergeSnapshot()) === library.mergeSnapshotKey(beforeFailure), 'Malformed backup rejected before writes');
+        if (document.getElementById('interactive').checked) {
+            window.previewLibraryMerge = actualPreview;
+            const interactiveBackup = await library.exportBackup();
+            interactiveBackup.scores = [interactiveBackup.scores[0]];
+            interactiveBackup.scores[0].id = 'interactive-legacy-id'; delete interactiveBackup.scores[0].mergeIds;
+            const beforeInteractive = (await library.getAllScores()).length;
+            const file = new File([JSON.stringify(interactiveBackup)], 'interactive-test.json');
+            await importScoreLibraryBackupFile(file);
+            check((await library.getAllScores()).length === beforeInteractive + 1, 'Interactive default merge keeps uncertain entry separate');
+            await importScoreLibraryBackupFile(file);
+            check((await library.getAllScores()).length === beforeInteractive + 1, 'Interactive repeat merge adds nothing');
+        }
         result.textContent += `Completed ${checks} checks.\n`;
     } catch (error) { result.textContent += 'FAIL: ' + error.stack + '\n'; }
     finally {
