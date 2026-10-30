@@ -1,0 +1,92 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>pre{white-space:pre-wrap}iframe{box-sizing:border-box}</style><title>Isolated multi-segment ties</title>
+<h1>Multi-segment ties: real-score checks</h1><p>Uses memory-only preferences and blocks score storage/MIDI. Loads bundled scores through real OSMD; inspects tie topology without altering the renderer.</p>
+<button id="run">Load isolated app</button><button id="checks" disabled>Run isolated app checks</button><pre id="results"></pre><iframe id="app" style="width:100%;height:800px;border:1px solid" allow="autoplay"></iframe>
+<script>
+document.getElementById('run').onclick=async function(){
+ this.disabled=true;
+ let html=await(await fetch('../../index.html')).text();
+ const root=new URL('../../',location.href).href;
+ const block=`<base href="${root}"><script>
+ window.testErrors=[];addEventListener('error',e=>testErrors.push(e.message));addEventListener('unhandledrejection',e=>testErrors.push(String(e.reason)));
+ window.assignmentTestData={};
+ const memoryStore=data=>new Proxy(data,{get(target,key){if(key==='getItem')return k=>target[k]??null;if(key==='setItem')return(k,v)=>{target[k]=String(v);};if(key==='removeItem')return k=>{delete target[k];};return target[key];}});
+ Object.defineProperty(window,'localStorage',{value:memoryStore(assignmentTestData)});
+ Object.defineProperty(window,'sessionStorage',{value:memoryStore({})});
+ Object.defineProperty(window,'indexedDB',{get(){throw Error('Score storage blocked in identity test');}});
+ Object.defineProperty(navigator,'requestMIDIAccess',{value:()=>Promise.reject(Error('Hardware disabled for storage test'))});
+ <\/script>`;
+ html=html.replace('<head>','<head>'+block).replace(/<script[^>]+src="https:[\s\S]*?<\/script>/g,'');
+ const frame=document.getElementById('app');
+ frame.onload=()=>{
+ document.getElementById('checks').disabled=false;
+ const doc=frame.contentDocument;const report=document.getElementById('results');
+ report.textContent='App loaded with isolated preferences; native settings/scores untouched.';
+ const check=doc.createElement('script');check.textContent=`setTimeout(()=>{parent.document.getElementById('results').textContent+='\\nStartup errors: '+JSON.stringify(testErrors);},1500);`;doc.body.appendChild(check);
+ };
+ frame.srcdoc=html;
+};
+
+document.getElementById('checks').onclick=function(){
+ this.disabled=true;
+ const frame=document.getElementById('app'), script=frame.contentDocument.createElement('script');
+ script.textContent='('+async function(){
+ const output=parent.document.getElementById('results');let count=0;
+ const check=(ok,label)=>{if(!ok)throw Error(label);output.textContent+='\nPASS: '+label;count++;};
+ try {
+ document.getElementById('btn-help-close').click();
+ const demos=await ScoreLibrary.getDemoScores();
+ const original={output:schedulePlaybackForDestinations,timeout:schedulePlaybackTimeout,frame:schedulePlaybackFrame,metro:scheduleMetronomeForPlaybackWindow,visual:startVisualSustains};
+ let scheduled=[];
+ // Capture output requests and suppress future callbacks: no hardware/audio is played.
+ schedulePlaybackForDestinations=(midi,durationMs)=>scheduled.push({midi,durationMs});
+ schedulePlaybackTimeout=()=>0;schedulePlaybackFrame=()=>0;scheduleMetronomeForPlaybackWindow=()=>{};startVisualSustains=()=>{};
+ try {
+ for(const title of ['Moonlight Sonata 1st Movement','Prelude I in C major BWV 846','The Entertainer']){
+ const score=demos.find(s=>s.title===title);
+ await loadScoreIntoApp(score.rawData,{fileName:score.fileName,fileType:score.fileType,title});
+ const svgBefore=Array.from(document.querySelectorAll('#osmdSvgPage1 path')).map(p=>p.getAttribute('d')).join('|');
+ const ties=new Set();osmd.cursor.reset();let steps=0;
+ while(!osmd.cursor.Iterator.EndReached && steps++<100000){
+ for(const e of osmd.cursor.Iterator.CurrentVoiceEntries||[])for(const n of e.Notes||[])if(n.NoteTie)ties.add(n.NoteTie);
+ osmd.cursor.Iterator.moveToNext();
+ }
+ const long=[...ties].filter(t=>t.Notes?.length>=3);
+ check(long.length>0,title+': real multi-segment ties found');
+ for(const tie of long){
+ const notes=[...new Set(tie.Notes)];const expected=notes.reduce((sum,n)=>sum+n.Length.RealValue,0);
+ check(notes.every(n=>n.NoteTie===tie && n.halfTone===tie.StartNote.halfTone),title+': ordered shared same-pitch topology');
+ check(Math.abs(getCombinedTieLength(tie.StartNote)-expected)<1e-9,title+': all '+notes.length+' segments counted ('+expected+' whole notes)');
+ }
+ for(const tie of [...ties].filter(t=>t.Notes?.length===2))check(Math.abs(getCombinedTieLength(tie.StartNote)-tie.Notes.reduce((n,x)=>n+x.Length.RealValue,0))<1e-9,title+': two-segment duration unchanged');
+ const tie=long[0],expected=tie.Notes.reduce((n,x)=>n+x.Length.RealValue,0),midi=tie.StartNote.halfTone+12;
+ const seek=note=>{osmd.cursor.reset();let count=0;while(!osmd.cursor.Iterator.EndReached&&count++<100000){if((osmd.cursor.Iterator.CurrentVoiceEntries||[]).some(e=>e.Notes.includes(note)))return;osmd.cursor.Iterator.moveToNext();}throw Error('Tie note not found');};
+ for(const mode of ['realtime','wait','follow']){
+ seek(tie.StartNote);const eventTime=osmd.cursor.Iterator.currentTimeStamp.RealValue;AppState.mode=mode;AppState.practice={left:true,right:true};AppState.playback={left:true,right:true};AppState.audioEnabled.hands=true;
+ AppState.speedPercent=0.75;AppState.pendingAudio=[];AppState.isPlaying=true;AppState.anchorTime=Tone.now();scheduled=[];
+ playbackLoop();AppState.isPlaying=false;
+ const duration=expected*4*60/(AppState.baseBpm*AppState.speedPercent)*1000;
+ check(scheduled.some(n=>n.midi===midi&&Math.abs(n.durationMs-duration*.9)<1e-6),title+': '+mode+' schedules full tie with existing 90% factor and tempo scale');
+ check(AppState.visualNotesToStart.some(n=>n.midi===midi&&Math.abs(n.durationMs-duration*.85)<1e-6),title+': '+mode+' visual sustain retains 85% factor');
+ if(mode==='wait')check(AppState.visualNotesToStart.some(n=>n.midi===midi&&Math.abs(n.endTimestamp-(eventTime+expected*.85))<1e-9),title+': Wait musical sustain end uses the full tie');
+ for(const note of tie.Notes.slice(1)){
+ seek(note);const i=osmd.cursor.Iterator;
+ buildExpectedNotesFromEntries([{Notes:[note]}],i.CurrentMeasureIndex,i.currentTimeStamp.RealValue);
+ check(AppState.expectedNotes.length===0&&AppState.visualNotesToStart.length===0,title+': '+mode+' continuation requires no new attack/visual');
+ }
+ }
+ const svgAfter=Array.from(document.querySelectorAll('#osmdSvgPage1 path')).map(p=>p.getAttribute('d')).join('|');
+ check(!!svgBefore&&svgBefore===svgAfter,title+': tie traversal leaves engraving paths unchanged');
+ osmd.cursor.reset();osmd.cursor.update();
+ }
+ check(testErrors.length===0,'No uncaught errors');
+ } finally {
+ AppState.isPlaying=false;
+ schedulePlaybackForDestinations=original.output;schedulePlaybackTimeout=original.timeout;schedulePlaybackFrame=original.frame;scheduleMetronomeForPlaybackWindow=original.metro;startVisualSustains=original.visual;
+ resetPlaybackForLoadedScore();
+ }
+ output.textContent='Completed '+count+' checks. Native settings and scores were never accessed.\n'+output.textContent;
+ }catch(error){output.textContent+='\nFAIL: '+error.stack;}
+ } .toString()+')()';
+ frame.contentDocument.body.appendChild(script);
+};
+</script>

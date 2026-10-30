@@ -14,7 +14,6 @@ Reproduce the relevant case before deciding on a fix. The [October 20 review](CO
 
 ### Score and input investigations
 
-- [ ] **INV-001 — Multi-segment ties.** Test an actual three-segment OSMD tie. The old synthetic shared-array probe suggested a truncated duration; it did not establish a real-score defect.
 - [ ] **INV-002 — Same-pitch unison voices.** Check playable-note deduplication against distinct XML-note feedback anchors, including separate same-pitch voices. Preserve distinct visual positions even where one piano key satisfies the musical target.
 - [ ] **INV-004 — Clef-change feedback.** Check wrong/unanchored-note fallback across clef changes and multiple instruments before modifying geometry rules.
 - [ ] **INV-005 — Smaller keyboards.** Compare physical lowest/highest keys with symmetric trimming; determine whether explicit endpoint configuration is needed.
@@ -54,6 +53,7 @@ Keep detailed implementation and validation in [CHANGELOG.md](CHANGELOG.md), rat
 - **UI-001/UI-002:** numeric controls and thinner cursor implemented; owner acceptance recorded October 20. That acceptance does not cover later playback patches.
 - **FIX-001–FIX-007:** server request/path protection, final-loop note gating, playback callback ownership, enharmonic octave transposition, deployment-relative paths and saved MIDI output volume implemented. Remaining acceptance is listed once above.
 - **October 30 requests:** updater removal/release link, permanent demos, appearance, downloads/folder exports/search, launcher alignment, import feedback, Save a copy/current status, menu cleanup and duplicate-aware backup merging implemented.
+- **INV-001:** real bundled OSMD scores confirmed truncated multi-segment tie lengths; ordered traversal is fixed with Node and parsed-score playback/feedback regressions. Audible/device sustain and complex timing acceptance remain above. See [evidence](CHANGELOG.md#2026-10-30--multi-segment-tie-duration-no-application-release).
 - **INV-003:** missing-XML assignment identity now uses original source contents, with isolated Node and real-MXL browser coverage. The old shared empty identity remains untouched and unused; see the [fix and limits](CHANGELOG.md#2026-10-30--hand-assignment-identity-without-xml-no-application-release).
 - **Storage follow-ups:** large-library matching improvements, transaction rollback/error recovery and app-wide unavailable-preference handling implemented with isolated regression coverage. Settings backup schema/value validation is also implemented with legacy compatibility and isolated Node/browser tests. The storage-limit and real-profile acceptance cases above remain open.
 - Removed obsolete updater acceptance, duplicate hardware/geometry/hosting checks, and the stale blanket request to establish tests. Historical change records retain their original evidence and limitations; this cleanup does not mark unperformed tests as passed.

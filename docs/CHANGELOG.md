@@ -1,5 +1,13 @@
 # Change history and future update records
 
+## 2026-10-30 — Multi-segment tie duration (no application release)
+
+- Confirmed the old helper truncates real OSMD shared-array ties after two segments. Moonlight Sonata 1st Movement measures 35–37: two chains returned 2 rather than 3 whole notes. Prelude I in C major BWV 846 measures 32/33: two chains returned 0.4375 rather than 0.9375. The Entertainer: six chains returned 0.3125 rather than 0.375. These observations used the bundled scores and real OSMD, not only the historical synthetic probe.
+- Follow the ordered next segment instead of any different note; retain same-pitch checks, explicit-link fallback and cycle guarding. Preserve the 90% playback and 85% visual factors, tempo scaling, continuation exclusion, cursor/timing rules, routing and engraving. Update practice/development guidance and close INV-001's investigation with evidence; device acceptance remains separate.
+- Validation: multi-segment-ties, playback-lifecycle and loop-gate Node suites passed, along with changed-script/inline syntax and documentation/diff checks. The isolated browser harness on the existing 127.0.0.1:5500 server passed 227 assertions across all three scores: ten long ties, existing two-segment ties, actual playback-loop duration requests in all modes at 75% speed, continuation matching/visual exclusion, and unchanged SVG paths. Native settings/scores were never accessed. Output and future callbacks were intercepted; no physical or audible output acceptance is claimed.
+- Pending: listening/physical MIDI/WLED sustain and cleanup, tempo changes within ties, repeats/endings/loop boundaries and broader complex engraving acceptance. Those policies were not rewritten. No vendor, library schema, launcher or version change.
+
+
 ## 2026-10-30 — Hand-assignment identity without XML (no application release)
 
 - Preserve normal canonical-XML assignment keys. When XML extraction yields no usable MusicXML, fingerprint the original source text/bytes with separate type prefixes instead of the shared empty string. Blob/File, ArrayBuffer and byte views retain exact content identity; filenames do not influence it. Without usable/readable source data, assignments are temporary for that load. Leave the historical empty-XML entry untouched and unused; do not guess its owner or migrate it.

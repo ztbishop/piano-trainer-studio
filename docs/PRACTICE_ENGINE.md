@@ -78,7 +78,9 @@ Follow Me uses remaining scheduled time when positive. Late hits, or a remaining
 
 `rebuildMeasureTimingCache()` derives event starts and observed next starts while traversing the score, with meter fallback. Pickup measures, long rests, repeat topology, and empty measures require real-score tests; nominal meter alone is insufficient.
 
-`getCombinedTieLength()` attempts same-pitch tie traversal. The synthetic three-segment/shared-array case is incomplete in the current helper; real OSMD tie topology needs a fixture before a fix. Score playback uses 90% of calculated duration, while visual sustain has its own shortening rules.
+`getCombinedTieLength()` follows the current note's successor in OSMD's ordered shared `NoteTie.Notes` array, with explicit next-note links as a fallback. It sums each visited same-pitch segment once, stops at a pitch mismatch and guards against cycles. Real bundled scores confirmed the former helper returned to the start after two segments, truncating longer ties. The fix changes only traversal, not cursor advancement or scheduling policy.
+
+Score playback retains 90% of the calculated duration at the attack's effective tempo, and visual sustain retains 85% (including Wait's musical end timestamp). Continuation notes still require no new attack and create no fresh sustain marker. Ties crossing tempo changes, structural jumps and loop boundaries retain existing behavior; this fix does not introduce tempo integration across segments or change pause/reset cleanup. See [real-score regression checks](DEVELOPMENT.md#multi-segment-tie-checks) and the [fix evidence](CHANGELOG.md#2026-10-30--multi-segment-tie-duration-no-application-release).
 
 Metronome clicks can be local or MIDI channel 10. Wait uses a dedicated ticking path; other progression windows schedule clicks from musical timing. Count-in currently uses the meter numerator with `60 / effectiveBpm` seconds per click, so compound/denominator-sensitive meter should be acceptance-tested rather than assumed correct.
 

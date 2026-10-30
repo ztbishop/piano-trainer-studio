@@ -935,9 +935,11 @@ function getCombinedTieLength(note) {
         const tie = current.NoteTie;
         if (!tie) break;
 
-        // Prefer an explicit next note link if present
+        // OSMD shares one ordered Notes array across the entire chain. Picking
+        // any different note jumps back to the start after the second segment.
+        const index = tie.Notes?.indexOf(current) ?? -1;
         const next =
-            tie.Notes?.find(n => n !== current) ||
+            (index >= 0 ? tie.Notes[index + 1] : null) ||
             tie.NextNote ||
             tie.nextNote ||
             null;
