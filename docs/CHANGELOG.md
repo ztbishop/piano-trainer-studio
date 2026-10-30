@@ -1,5 +1,12 @@
 # Change history and future update records
 
+## 2026-10-30 — Backlog reconciliation (documentation only)
+
+- Separate confirmed limitations, unverified investigations/acceptance and optional improvements. Identify settings-backup validation as a source-confirmed gap without claiming a reproduced data-loss incident.
+- Consolidate repeated hardware, geometry, browser and hosting checks; retire obsolete updater acceptance and acknowledge established regression suites. Move implemented work to a compact history summary while preserving outstanding checks and historical IDs/evidence.
+- Validation: reviewed current importer, test inventory and recorded change/acceptance evidence; checked local Markdown targets/anchors and diff whitespace. No runtime files, versions or browser data changed. Browser/hardware tests were not run because this update only reorganizes documentation; no pending acceptance was marked passed.
+
+
 ## 2026-10-30 — Unavailable storage recovery (no application release)
 
 - Route all application preference reads/writes through a guarded adapter loaded before state initialization. Denied storage getters/operations no longer interrupt startup or control handlers. Warn with a dismissible banner, retain session values, preserve readable saved values and stop persistent writes after failure until reload. First-run defaults no longer overwrite existing keys when the marker is absent.
@@ -139,7 +146,7 @@ Versions identify chosen releases; commits preserve implementation history. Deta
 
 - Matched Guitar Trainer Studio's blue `#4DAEEA` and soft narrow appearance, using 0.4 cursor alpha and a painted band approximately 16px wide at 100% score zoom. Width scales with OSMD zoom. The user authorized this focused appearance change; no version bump was requested.
 - Retained OSMD's standard cursor type, native image bounds/center, height, and follow behavior. A CSS mask narrows paint only because feedback fallbacks and auto-scroll read the cursor's bounding rectangle. Engraving, timing, matching, routing, source loading, and other colors were not edited.
-- Updated [rendering documentation](RENDERING_AND_TRANSPOSE.md#score-cursor-appearance) and [UI-002](TODO.md#ui-002-thinner-blue-score-cursor-matching-guitar-trainer-studio), replacing its earlier Piano Marvel reference with the user's supplied Guitar Trainer Studio reference.
+- Updated [rendering documentation](RENDERING_AND_TRANSPOSE.md#score-cursor-appearance) and [completed UI-002](TODO.md#completed-or-superseded-work), replacing its earlier Piano Marvel reference with the user's supplied Guitar Trainer Studio reference.
 - Validation: `node --check js/trainer-core.js` and `git diff --check` passed. No application automated test suite exists; the unrelated review probes were not rerun.
 - Browser: separate Codex in-app browser tab at the existing `http://127.0.0.1:5500/index.html`; no server restart or storage clearing. Tested at 825x728 and 1440x900. Built-in Mary Had a Little Lamb rendered with blue cursor in Realtime, Wait for Me, and Follow Me; virtual E4/D4/C4 input exercised progression and feedback as a smoke check, not comprehensive matching/timing acceptance. Pause/reset worked. Native cursor widths measured 15/30/45px at 50/100/150% score zoom; the mask remained applied.
 - Built-in Fur Elise Easy Piano showed the full two-staff cursor and attached beams after narrowing/widening the viewport and letting the existing resize lifecycle settle. Realtime loop measures 1-2, loop count-in off: observed the cursor return from late measure 2 to earlier in the loop, retaining its blue appearance. Loop enable/count-in choices were restored afterward.

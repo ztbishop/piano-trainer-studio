@@ -1,89 +1,59 @@
 # Piano Trainer Studio to-do list
 
-This backlog tracks requested enhancements and outstanding review findings. Adding an item records follow-up work; it does not authorize implementation. Follow [AGENTS.md](../AGENTS.md), inspect the current code, and agree on the scope when starting an item. Mark completion only after recording actual validation and pending checks in [CHANGELOG.md](CHANGELOG.md).
+Reconciled October 30, 2026 against current source and the [change history](CHANGELOG.md). This is an outstanding-work list, not a list of known failures. An unchecked test means evidence is still needed. Recording an item does not authorize implementation; follow [AGENTS.md](../AGENTS.md).
 
-**Status as of October 20, 2026:** UI-001/UI-002 owner acceptance is complete. All six reproduced review findings (FIX-001 through FIX-006) have implementations with focused regressions and browser validation; further acceptance remains pending as listed below. Investigations and recommendations are separate from those fixes. Reproduced issues, conditional risks, and maintenance recommendations have different evidence levels; do not present them all as proven live-user failures.
+## Confirmed problems and limitations
 
-## October 30 requested library/display/workflow changes
+- [ ] **Settings backup validation (remaining part of INV-007).** `importSettingsBackupPayload()` accepts supported keys without checking the backup version and converts global preference values to strings without validating their types/ranges. This is a confirmed code limitation, not a reproduced report of lost scores. Define compatible validation for current and older settings backups, reject malformed/unsupported input before changes, and add isolated tests. Storage-failure recovery is already implemented; settings and library backup validation are separate. Evidence: [current importer](../js/trainer-state.js), [storage semantics](SCORES_AND_STORAGE.md#backups-and-restore-semantics).
 
-- [x] Implement updater removal/version link, permanent demos, appearance selection, saved-score downloads/folder exports, and title/filename/metadata search. Preserve existing starter records; do not retain extra original uploads.
-- [x] Align app launcher defaults with 127.0.0.1:5500; keep WLED at 4818 and LAN console addresses. Add occupied-port guidance.
-- [x] Focused automated checks and Node-served browser smoke checks; see [actual evidence and limitations](CHANGELOG.md#2026-10-30--library-appearance-and-local-launch-workflow-no-application-release).
-- [ ] Acceptance: physical MIDI/WLED, protected complex geometry/timing cases, Mac/LAN/iPad, VS Code Live Server run, and browser restore/import checks listed in that change record. These are pending checks, not reproduced defects.
-- [ ] Historical FIX-006 update-check acceptance is superseded by updater removal; deployed manifest/install/shortcut acceptance remains pending.
+The previously reproduced runtime defects FIX-001–FIX-007 have implementations and recorded regression results. Their remaining device/score acceptance is consolidated below; they are not outstanding unfixed bugs. This does not establish that the app has no other defects.
 
-## October 30 library feedback and menu follow-up
+## Things still to test or investigate
 
-- [x] Import progress/partial failures/busy protection, exact ordinary-file duplicate recognition, explicit Save a copy, and current-score status.
-- [x] Practice/Settings/Audio menu cleanup and responsive menu positioning; Node, isolated IndexedDB and actual UI checks completed. See [evidence and limits](CHANGELOG.md#2026-10-30--library-feedback-and-menu-workflow-no-application-release).
-- [x] Duplicate-aware backup merge with preview, stable import identities, preserved copies/changed versions, uncertain defaults and version-1 compatibility. See [validation](CHANGELOG.md#2026-10-30--safe-library-backup-merging-no-application-release).
-- [ ] Acceptance, not reproduced defects: actual converted-file imports, physical MIDI/audio/WLED, complex-score engraving/timing cases. Existing protected-system acceptance items below remain open.
+Reproduce the relevant case before deciding on a fix. The [October 20 review](CODE_REVIEW_2026-10-20.md#conditional-risks-and-design-questions) records the original hypotheses; the [development checklist](DEVELOPMENT.md#manual-regression-checklist) defines protected behavior.
 
-## Requested UI enhancements
+### Score and input investigations
 
-### UI-001: One-step sliders with coarse numeric buttons and free numeric entry
+- [ ] **INV-001 — Multi-segment ties.** Test an actual three-segment OSMD tie. The old synthetic shared-array probe suggested a truncated duration; it did not establish a real-score defect.
+- [ ] **INV-002 — Same-pitch unison voices.** Check playable-note deduplication against distinct XML-note feedback anchors, including separate same-pitch voices. Preserve distinct visual positions even where one piano key satisfies the musical target.
+- [ ] **INV-003 — Missing canonical XML.** Exercise failed MXL extraction/conversion and verify that unrelated scores cannot share hand assignments through an empty-source fingerprint. Confirm raw-source identity and voice-metadata fallback before changing the policy.
+- [ ] **INV-004 — Clef-change feedback.** Check wrong/unanchored-note fallback across clef changes and multiple instruments before modifying geometry rules.
+- [ ] **INV-005 — Smaller keyboards.** Compare physical lowest/highest keys with symmetric trimming; determine whether explicit endpoint configuration is needed.
+- [ ] **INV-006 — MIDI connection changes.** Test unplugging while held, input/channel changes, identical pitches on multiple channels, legitimate input near echoed output, and note-off delivery after output switches.
+- [ ] **INV-008 — Complex transposition.** Test timewise documents, multiple staff keys, explicit accidental elements and microtones. The enharmonic octave fix does not establish these cases.
 
-- [x] Revised with user approval October 20, 2026: keep sliders at **1**, retain valid typed integers, and add horizontal **minus/plus** buttons moving to the previous/next multiple of five (73 → 70/75).
-- [x] Implement for BPM, Speed, metronome volume/level, App Audio volume, MIDI Out volume, MIDI In Boost, Zoom and Master LED brightness. Preserve Master minimum 1. Leave Looper/hold-to-repeat, transpose and Future brightness unchanged.
-- [x] Follow-up clarification October 20: Future note brightness also gets matching horizontal minus/plus buttons, with **one-unit** steps and the existing 0–100 bounds. This supersedes leaving that row unchanged.
-- [x] Reuse original setting handlers and preserve Zoom preview-on-input/apply-on-change. Document [control ownership and scoped layout](UI_CONTROLS.md).
-- [x] Focused adapter/zoom-source regressions and Live Server UI smoke checks completed; see the [change record](CHANGELOG.md#2026-10-20-coarse-numeric-menu-buttons-no-application-release) for exact coverage and limits.
-- [x] Owner confirmed usual-display layout and physical audio/MIDI/WLED acceptance complete on October 20, 2026. This is owner-reported acceptance, separate from the earlier automated/browser smoke checks.
+### Acceptance of implemented changes
 
-### UI-002: Thinner blue score cursor, matching Guitar Trainer Studio
+Each item consolidates checks previously repeated under several updates. Prior passing checks remain valid for their recorded scope; these are the remaining cases, not instructions to rerun everything after every update.
 
-- [x] Implemented October 20, 2026. The user's Guitar Trainer Studio screenshots/current local CSS supersede the earlier Piano Marvel reference: blue **#4DAEEA**, soft edges, approximately **16px** painted width at 100% score zoom, scaling with score zoom.
-- [x] Retain OSMD's standard cursor geometry and follow behavior; narrow only its paint with a CSS mask. No changes to navigation, timing, engraving, feedback anchors, or hand/note/LED color rules.
-- [x] Live Server browser smoke checks used built-in Mary Had a Little Lamb, Fur Elise Easy Piano, and Minuet in G Major: score zoom, narrow/desktop viewports, resize/beaming, all three mode appearances, virtual input/feedback, seek/reset, a Realtime loop, and a backward repeat. See [actual validation and limitations](CHANGELOG.md#2026-10-20-thinner-blue-score-cursor-no-application-release).
-- [x] Owner confirmed visual/device acceptance and remaining protected geometry/timing checks complete on October 20, 2026. This acceptance covers UI-002; separately recorded review defects remain separate.
+- [ ] **Playback and feedback (FIX-003/FIX-004 and later regression acceptance).** Real-score loop count-in, final-note sustain, early-input chords, rests/hidden notes, long ties, repeats/endings, and pause/restart/load during count-in; measured metronome synchronization and physical MIDI/audio/LED cleanup. Include original MXL and protected side-shifted chord, ornament, lead-in and clef-change geometry cases. Simple-score browser tests and mocked regressions have passed; use [practice](PRACTICE_ENGINE.md) and [rendering](RENDERING_AND_TRANSPOSE.md) guidance for the remaining cases.
+- [ ] **Transformed scores (FIX-005 acceptance).** Physical playback/listening and an end-to-end transpose → save → reopen → hand assignment → loop test. Existing pitch regressions and OSMD/virtual-input checks are recorded in the [transpose update](CHANGELOG.md#2026-10-20-enharmonic-transpose-octaves-no-application-release).
+- [ ] **Device settings (FIX-007 and later preference changes).** Verify audible saved MIDI output volume on startup/reconnect, and current audio/MIDI/WLED preferences and routing on actual hardware. No-device tests do not establish audible/device behavior. See [MIDI/audio/LED guidance](MIDI_AUDIO_LED.md).
+- [ ] **Import and browser workflows.** Real converted-format imports and a disposable-data library/settings transfer between browser profiles/origins; verify the current app through VS Code Live Server. Isolated IndexedDB merge/rollback tests and Node-served browser checks already passed. Do not mutate or clear the user's library for testing. See [storage guidance](SCORES_AND_STORAGE.md).
+- [ ] **Hosting and devices (remaining FIX-001/FIX-002/FIX-006 acceptance).** Mac launchers, remote LAN/iPad access, deployed custom-domain/GitHub Pages assets, and install/relaunch/existing shortcuts. The user-started Windows launcher and local Node-served browser were exercised on October 30. Automatic update-check/CORS acceptance is obsolete because the updater was removed; deployed manifest/shortcut behavior still needs checking. See [hosting guidance](DEVELOPMENT.md#hosting-and-version-display).
 
-## Outstanding reproduced issues
+### Storage limits (remaining INV-007 investigation)
 
-Evidence and suggested fix boundaries are in the [October 20 code review, findings F1–F6](CODE_REVIEW_2026-10-20.md). These were isolated source/control-flow reproductions, not full browser/MIDI acceptance tests. The optional Node server findings do not describe VS Code Live Server.
+- [ ] **Physical limits and interrupted access.** Actual quota exhaustion, permission revocation during settings rollback, extreme duplicate-heavy libraries and memory pressure. Use disposable profiles/origins; never fill the user's shared storage quota or clear site data. Completed coverage includes 3,200 real IndexedDB entries, 10,000-entry planner fixtures, bounded quota-error rollback/retry, opaque-origin denial, and full-app blocked-storage startup/control checks. See [stress results](CHANGELOG.md#2026-10-30--large-library-and-storage-failure-checks-no-application-release) and [unavailable-storage recovery](CHANGELOG.md#2026-10-30--unavailable-storage-recovery-no-application-release). Simulated failure is not physical quota testing.
 
-- [x] **FIX-001 / F1 — Handle malformed URL encoding in the optional Node server.** Malformed paths now return 400; real HTTP tests confirm a subsequent valid request succeeds. See the [change record](CHANGELOG.md#2026-10-20-optional-server-request-and-path-protection-no-application-release).
-- [x] **FIX-002 / F2 — Enforce real site-root containment in the optional Node server.** Separator-aware normalized and canonical containment rejects sibling-prefix traversal and external junction/symlink targets. Windows/POSIX resolver cases, real Windows junction and HTTP checks passed; see the same change record.
-- [ ] **FIX-001/FIX-002 acceptance:** actual desktop/LAN launcher execution and remote iPad access remain pending. Loopback app boot, starter score rendering and connection-info were checked; Live Server, launchers and WLED helper were not changed.
-- [x] **FIX-003 / F3 — Preserve the final required-note gate at Wait loop boundaries.** Wait/Follow now require the entire final practiced group before restarting. Realtime and boundaries without required notes retain timed looping. See the [baseline reproduction, validation and limitations](CHANGELOG.md#2026-10-20-final-loop-note-gate-no-application-release). The owner authorized retaining this fix after clarifying the observed behavior.
-- [ ] **FIX-003 acceptance:** physical MIDI/audio/LED and measured metronome/final-note sustain; browser loop count-in, early-input chords, rests/hidden notes, long ties, original MXL and complex repeats/endings remain pending. Mocked coverage does not establish these real-score/device cases.
-- [x] **FIX-004 / F4 — Prevent callbacks from a prior playback run from reviving after pause/restart.** Implemented run-owned count-in/advance timers, frames, score-note releases and async startup cancellation. Focused regressions and Live Server smoke checks passed; see the [change record](CHANGELOG.md#2026-10-20-playback-callback-ownership-no-application-release).
-- [ ] **FIX-004 acceptance:** physical MIDI/audio/LED cleanup, measured metronome/count-in synchronization, real-score loop count-in/repeats/endings/ties and full Wait/Follow early-input progression remain pending for this lifecycle change. UI acceptance above predates this patch.
-- [x] **FIX-005 / F5 — Correct enharmonic octave-boundary transposition.** Absolute pitch now retains octave crossings before pitch-class normalization. Integer-alter/double-accidental regressions passed; actual OSMD reload, key/semitone/reset and virtual matching checked with a CC0 fixture. See [validation](CHANGELOG.md#2026-10-20-enharmonic-transpose-octaves-no-application-release).
-- [ ] **FIX-005 acceptance:** physical MIDI/audio playback and transformed save/reopen/hand-assignment/loop acceptance remain pending. Complex keys, explicit accidental elements, microtones/timewise and original-MXL regression coverage remain separate; this focused fix does not close INV-008 or establish all engraving cases.
-- [x] **FIX-006 / F6 — Define update/manifest behavior for nested hosting and local installs.** Update/installation paths are deployment-relative. Local checks are explicitly labeled as local files and reload newer local assets; saved remote overrides retain download behavior. Root/subpath URL tests, local browser previews and HTTP icon/manifest checks passed. See [scope](DEVELOPMENT.md#hosting-and-update-check-scope) and the [change record](CHANGELOG.md#2026-10-20-deployment-relative-update-and-install-paths-no-application-release).
-- [ ] **FIX-006 acceptance:** deployed custom-domain/GitHub Pages checks, install/relaunch and existing shortcuts remain pending. Remote newer-release/CORS/download behavior was tested with mocks; no live remote endpoint was selected or tested. Hardware/timing regressions were not rerun for these update-path changes.
+## Optional improvements
 
-## GitHub follow-up fixes
+These are maintenance or product recommendations, not confirmed runtime failures or approved feature work.
 
-- [x] **FIX-007 / [GitHub #17](https://github.com/ztbishop/piano-trainer-studio/issues/17) — Apply saved MIDI output volume at startup.** Isolated reproduction confirmed that saved output restoration sent no CC11 until the volume was touched. Restoration now sends the current level when its destination becomes available, including reconnect. Automated setup/reconnect/output/channel regressions and no-device Live Server smoke passed; see the [change record](CHANGELOG.md#2026-10-20-saved-midi-output-volume-initialization-no-application-release).
-- [ ] **FIX-007 acceptance:** audible startup/reconnect volume on a real MIDI piano remains pending. Original reporter participation is not required; owner verification can establish device acceptance. GitHub issue status was not changed by this code update.
+- [ ] **Regression fixtures and remaining coverage (ENG-001/ENG-002).** Expand timing-math coverage and add redistributable MusicXML fixtures for repeats/endings, one-hand gaps, reused part voice IDs/cross-staff voices, hidden notes, unisons, clef changes, dots and long ties. The original request to establish focused regressions is fulfilled for loop gating, callback ownership, transpose octaves and server handling; see [existing checks](DEVELOPMENT.md#checks-available-today).
+- [ ] **MIDI helper consolidation (ENG-003).** Consider removing duplicate global output helpers after channel, velocity, echo, routing and note-off coverage protects their behavior.
+- [ ] **Diagnostic cleanup (ENG-004).** Correct misleading success-at-error-level logging; review the apparently unused synth-cleanup reference, legacy help fragments and stale comments before removing anything.
+- [ ] **Vendor inventory (ENG-005).** Record bundled versions, sources, modifications and referenced notice files before vendor updates. The historical packaging observation is not a legal-compliance determination.
+- [ ] **Helper version guidance (ENG-006).** Reconcile package/runtime version reporting and document app versus helper/protocol version policy.
 
-## Investigations requiring further evidence
+Maintenance evidence: [review recommendations](CODE_REVIEW_2026-10-20.md#maintenance-recommendations). Longer-term scales, triads, arpeggios, chord progressions and bundled desktop runtimes remain [unapproved product ideas](PROJECT_CONTEXT.md#future-ideas-not-implementation-requests).
 
-The [review's conditional risks/design questions](CODE_REVIEW_2026-10-20.md) hold the detailed rationale. Reproduce the real score/device case before choosing a fix.
+## Completed or superseded work
 
-- [ ] **INV-001 — Multi-segment ties.** Inspect actual bundled OSMD topology with a three-segment tie fixture; the synthetic shared-array probe summed only two segments.
-- [ ] **INV-002 — Same-pitch unison voices and distinct anchors.** Reconcile current staff/role/pitch deduplication with preserving distinct XML-note anchors; decide playable-target versus visual-marker identity.
-- [ ] **INV-003 — Assignment identity when canonical XML is unavailable.** Prevent unrelated affected scores from sharing the empty-source fingerprint; verify MXL extraction/conversion fallback and voice metadata behavior.
-- [ ] **INV-004 — Wrong/unanchored-note feedback after clef changes.** Exercise the cursor/staff-index fallback on clef changes and multiple instruments before altering the protected geometry pipeline.
-- [ ] **INV-005 — Smaller-keyboard pitch endpoints.** Verify actual supported device endpoints against symmetric trimming; determine whether explicit lowest/highest-key configuration is needed.
-- [ ] **INV-006 — MIDI holds, disconnects, echo filtering, and output switching.** Test unplug while held, input/channel changes, identical pitches on multiple channels, legitimate input matching recent output, and old/new output note-off destinations.
-- [ ] **INV-007 — Storage failure and backup validation.** Library backup structural/version validation, repeat-import handling and atomic rollback are implemented and tested in the [merge update](CHANGELOG.md#2026-10-30--safe-library-backup-merging-no-application-release). The [stress checks](CHANGELOG.md#2026-10-30--large-library-and-storage-failure-checks-no-application-release) cover 3,200 real IndexedDB entries, 10,000-entry planner fixtures, bounded quota-error rollback/retry and opaque-origin storage denial; slow matching and failed-open retry are fixed. The [unavailable-storage update](CHANGELOG.md#2026-10-30--unavailable-storage-recovery-no-application-release) adds guarded app preferences, honest settings-operation failures and library/demo fallback. Remaining investigation: actual quota exhaustion, settings backup schema validation, storage revocation during rollback, extreme duplicate-heavy libraries and memory pressure. Do not treat simulated write failure as physical quota testing.
-- [ ] **INV-008 — Complex/timewise transposition support.** Verify timewise documents, multiple staff keys, explicit accidentals, and microtonal inputs before broad compatibility claims.
+Keep detailed implementation and validation in [CHANGELOG.md](CHANGELOG.md), rather than repeating completed checklists here.
 
-## Testing and maintenance recommendations
-
-These are recommendations, not completed fixes or authorization for a broad refactor. Detailed context is in the [review](CODE_REVIEW_2026-10-20.md).
-
-- [ ] **ENG-001 — Establish focused automated regressions.** Prioritize the reproduced loop gate, callback ownership, transpose octave cases, timing math, and server request/path handling. Read-only review probes are not an application regression suite.
-- [ ] **ENG-002 — Add redistributable minimal MusicXML fixtures.** Cover repeats/endings, one-hand gaps, reused part voice IDs/cross-staff voices, hidden notes, unisons, clef changes, dots, and long tie chains; record actual browser/hardware acceptance separately.
-- [ ] **ENG-003 — Consolidate duplicate MIDI output globals after tests exist.** Preserve current channel, velocity, echo, routing, and note-off behavior when removing load-order-dependent declarations.
-- [ ] **ENG-004 — Improve logging and review stale/unused diagnostics.** Log successful loads at an appropriate level; investigate the unused synth-cleanup reference, legacy help fragments, and misleading scaffold comments before removing anything.
-- [ ] **ENG-005 — Inventory vendor provenance and referenced notices.** Record exact bundled sources/versions/modifications and review missing adjacent notice files named by bundle banners before updating vendors.
-- [ ] **ENG-006 — Align helper package/runtime version guidance.** Resolve the 0.1.0 package versus 0.1.2 health-report distinction and document any protocol/release implications.
-
-## Backlog maintenance and longer-term ideas
-
-During each authorized code update, review related entries, add material newly discovered follow-ups, and update the relevant developer docs. Record completed work with validation and explicitly pending browser/MIDI/hardware acceptance. Keep historical review evidence intact; link the actual fix/change record rather than rewriting an old observation as if it never occurred.
-
-Descriptive commits and deliberate releases are the ongoing workflow documented in [CHANGELOG.md](CHANGELOG.md), not a pending repair to old Git history. Longer-term scales, triads, arpeggios, chord-progressions, and bundled-runtime ideas remain proposals in [Project context](PROJECT_CONTEXT.md). They require a separate scoped request before implementation.
+- **UI-001/UI-002:** numeric controls and thinner cursor implemented; owner acceptance recorded October 20. That acceptance does not cover later playback patches.
+- **FIX-001–FIX-007:** server request/path protection, final-loop note gating, playback callback ownership, enharmonic octave transposition, deployment-relative paths and saved MIDI output volume implemented. Remaining acceptance is listed once above.
+- **October 30 requests:** updater removal/release link, permanent demos, appearance, downloads/folder exports/search, launcher alignment, import feedback, Save a copy/current status, menu cleanup and duplicate-aware backup merging implemented.
+- **Storage follow-ups:** large-library matching improvements, transaction rollback/error recovery and app-wide unavailable-preference handling implemented with isolated regression coverage. Only the specific validation/limit work listed above remains open.
+- Removed obsolete updater acceptance, duplicate hardware/geometry/hosting checks, and the stale blanket request to establish tests. Historical change records retain their original evidence and limitations; this cleanup does not mark unperformed tests as passed.
