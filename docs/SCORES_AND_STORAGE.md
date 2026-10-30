@@ -95,7 +95,13 @@ Voice keys combine part ID and XML voice ID. Only voices unambiguously matched t
 
 Roles are left, right, accompaniment, or ignore. Accompaniment has a separate enable flag and uses the Other audio/MIDI routing bucket. A visible mute hint can offer to enable local accompaniment output. Role changes pause active playback, clear pending audio/visuals/reservations, invalidate preview, and rebuild the current group.
 
-The persistence fingerprint is a deterministic identity hash of canonical source XML, not a security hash or filename ID. Whitespace/converter output changes can change it; copying identical XML can share assignments. Unavailable canonical XML currently falls back to an empty input, which needs a safer identity policy before promising score-local persistence for every MXL.
+The persistence fingerprint is a deterministic identity hash, not a security hash or filename ID. Valid canonical MusicXML keeps its existing fingerprint unchanged. Whitespace/converter output changes can change it; identical XML can share assignments.
+
+When canonical XML is missing, blank or malformed, identity falls back to the original source contents passed by `loadScoreIntoApp()`. Text and binary inputs have separate hash prefixes, distinct from canonical XML; Blob/File, ArrayBuffer and byte-view inputs resolve to their exact bytes (respecting view bounds). Names and library IDs do not affect identity. Identical source copies share assignments, while changed contents get a different identity. The original source is used across transpose operations; OSMD still receives the original MXL render payload without converter substitution.
+
+Fallback permits staff assignments, with a notice that voice metadata is unavailable. If no usable source exists or it cannot be read, assignments are temporary for that load and do not read/write a shared identity. The historical empty-XML entry is neither read, migrated nor deleted because its owner cannot be determined. Fallback and canonical-XML assignments remain separate: when extraction succeeds again, the normal XML identity takes precedence rather than guessing a staff/voice migration. Repacking an MXL can change its raw-byte identity even if the music is unchanged.
+
+Fallback keys retain the `pt_handAssignment_v1_<32 hex characters>` format, so current settings export/import includes them without a schema/version change. See [identity regression checks](DEVELOPMENT.md#hand-assignment-identity-checks).
 
 ## Before changing this subsystem
 

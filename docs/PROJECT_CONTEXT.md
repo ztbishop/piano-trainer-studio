@@ -34,7 +34,7 @@ The [developer index](README.md) links subsystem guides. The [October 20 review]
 - Unmapped/unavailable voices follow staff assignments. Voice IDs are resolved within their instrument/part, not globally.
 - A unique two-staff piano part can be chosen from a multi-part score; otherwise initial assignments use the first two staves. Other staves start as Ignore.
 - Cross-staff suggestions require user selection; the module does not silently switch to voice mode.
-- Assignments persist in localStorage under a content fingerprint, not the filename. Changing score XML can produce a different assignment identity.
+- Assignments persist in localStorage under a content fingerprint, not the filename. Valid canonical XML retains existing keys; failed extraction uses the original source contents with a separate identity and staff-only fallback. No usable source means temporary assignments. Changing source content can produce a different identity; see [storage semantics](SCORES_AND_STORAGE.md#handvoice-roles).
 - Settings backups include hand-assignment entries. Library backup and settings backup serve different purposes.
 - Assignment changes pause active playback and refresh expected notes, preview state, and visuals.
 

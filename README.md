@@ -275,7 +275,7 @@ If browser storage is unavailable, the app warns you and keeps preference change
 
 Use **Settings → Backup All Settings / Import Settings** for preferences, connections, LED calibration and score-specific hand assignments. Current version-1 and older unversioned backups are supported. Invalid versions or supported values are rejected before settings change, with an error identifying the problem. Unknown legacy keys are ignored.
 
-A successful import replaces global preferences; omitted globals return to defaults. Unrelated browser data and scores are preserved. Back up your current settings first if you want to keep both configurations. Library backups remain separate.
+A successful import replaces global preferences; omitted globals return to defaults. Unrelated browser data and scores are preserved. Back up your current settings first if you want to keep both configurations. Library backups remain separate. If XML metadata cannot be extracted, staff assignments are tied to the exact original file contents; voice mapping is unavailable. Without usable source data, assignments are temporary.
 
 ## ⚙️ Key Controls
 

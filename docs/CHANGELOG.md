@@ -1,5 +1,13 @@
 # Change history and future update records
 
+## 2026-10-30 — Hand-assignment identity without XML (no application release)
+
+- Preserve normal canonical-XML assignment keys. When XML extraction yields no usable MusicXML, fingerprint the original source text/bytes with separate type prefixes instead of the shared empty string. Blob/File, ArrayBuffer and byte views retain exact content identity; filenames do not influence it. Without usable/readable source data, assignments are temporary for that load. Leave the historical empty-XML entry untouched and unused; do not guess its owner or migrate it.
+- Pass original source data from the existing load pipeline to assignment initialization. Keep OSMD's original MXL payload, rendering, staff/voice role rules and playback behavior unchanged. Explain missing voice metadata in the existing assignment notice. Fallback identities retain the version-1 settings-key format and travel through existing backup validation/export/import. Canonical and fallback identities remain separate when extraction later recovers; repacked MXL bytes may produce a new fallback identity.
+- Validation: hand-assignment-identity, settings-backup, storage-unavailable, library-workflow, midi-output-init, transpose-octaves, playback-lifecycle and loop-gate Node suites passed. Fourteen isolated full-app browser checks on the existing 127.0.0.1:5500 server used real bundled MXL scores with controlled extraction failure: same-name separation, rename/reopen restoration, settings backup round trip, no-identity isolation, normal identity recovery, staff-only notice, original MXL byte delivery and identical Hot Cross Buns SVG path data. Inspected the fallback notice and disabled voice option at desktop and narrow widths. Native settings/scores were never accessed. JavaScript/inline syntax, documentation links and diff checks passed.
+- Pending: physical MIDI/audio/WLED, complex cross-staff/clef-change/ornament/hidden-note geometry and timing acceptance, and naturally failing ZIP/converter cases beyond the controlled failure. Source-content fingerprinting follows the existing deterministic identity convention, not a cryptographic uniqueness guarantee. No version or library schema change.
+
+
 ## 2026-10-30 — Settings backup validation (no application release)
 
 - Validate complete settings backups before storage mutation: numeric version 1, older unversioned wrappers and flat maps remain supported. Check supported choices, numeric ranges, booleans/text, LED calibration and fingerprinted hand-assignment structures. Preserve typed legacy primitives and null-as-absent behavior; ignore unknown legacy keys. Unsupported versions/malformed known values reject the entire import with an explanatory error.

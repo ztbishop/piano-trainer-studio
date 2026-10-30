@@ -15,10 +15,11 @@ window.HandAssignment = (() => {
 
     // Deterministic content fingerprint also works on HTTP LAN/iPad connections,
     // where SubtleCrypto is unavailable. This is an identity key, not a security hash.
-    function fingerprint(text) {
+    function fingerprint(text, domain = '') {
         let a = 1779033703, b = 3144134277, c = 1013904242, d = 2773480762;
-        for (let i = 0; i < text.length; i++) {
-            const k = text.charCodeAt(i);
+        for (let i = 0; i < domain.length + text.length; i++) {
+            const offset = i - domain.length;
+            const k = offset < 0 ? domain.charCodeAt(i) : typeof text === 'string' ? text.charCodeAt(offset) : text[offset];
             a = b ^ Math.imul(a ^ k, 597399067);
             b = c ^ Math.imul(b ^ k, 2869860233);
             c = d ^ Math.imul(c ^ k, 951274213);
@@ -31,7 +32,19 @@ window.HandAssignment = (() => {
         return [a ^ b ^ c ^ d, b ^ a, c ^ a, d ^ a].map(n => (n >>> 0).toString(16).padStart(8, '0')).join('');
     }
 
-    async function initialize(xml) {
+    async function assignmentStorageKey(xml, rawSource) {
+        // Keep all existing canonical-XML keys byte-for-byte compatible.
+        if (typeof xml === 'string' && xml.trim()) return 'pt_handAssignment_v1_' + fingerprint(xml);
+        let source = rawSource;
+        if (typeof Blob !== 'undefined' && source instanceof Blob) source = await source.arrayBuffer();
+        if (typeof source === 'string' && source.trim()) return 'pt_handAssignment_v1_' + fingerprint(source, 'raw-text-v1\0');
+        const bytes = source instanceof ArrayBuffer ? new Uint8Array(source)
+            : ArrayBuffer.isView(source) ? new Uint8Array(source.buffer, source.byteOffset, source.byteLength) : null;
+        if (bytes?.length) return 'pt_handAssignment_v1_' + fingerprint(bytes, 'raw-bytes-v1\0');
+        return null;
+    }
+
+    async function initialize(xml, rawSource = null) {
         state = null;
         storageKey = null;
         storageWarning = '';
@@ -39,6 +52,8 @@ window.HandAssignment = (() => {
         voices = [];
         noteVoices = new WeakMap();
         const doc = new DOMParser().parseFromString(xml || '', 'application/xml');
+        const hasXml = typeof xml === 'string' && !!xml.trim() && !doc.querySelector('parsererror')
+            && ['score-partwise', 'score-timewise'].includes(doc.documentElement?.localName);
         const parts = Array.from(doc.querySelectorAll('score-partwise > part'));
         const instruments = osmd.Sheet.Instruments || [];
         const partMetadata = [];
@@ -97,8 +112,12 @@ window.HandAssignment = (() => {
         voices = partMetadata.flatMap(p => [...p.stats.values()]).filter(v => v.available);
         state = { mode: 'staff', staff: { ...defaults }, voice: {}, playAccompaniment: true };
         try {
-            storageKey = 'pt_handAssignment_v1_' + fingerprint(xml || '');
-            const saved = JSON.parse(appLocalStorage.getItem(storageKey) || 'null');
+            storageKey = await assignmentStorageKey(hasXml ? xml : null, rawSource);
+            if (!hasXml) storageWarning = storageKey
+                ? 'XML metadata unavailable. Staff assignments use this exact source file; voice mapping is unavailable.'
+                : 'Score identity unavailable. Assignments apply only until another score is loaded.';
+            // Never read the old shared empty-XML key or guess its owner.
+            const saved = storageKey ? JSON.parse(appLocalStorage.getItem(storageKey) || 'null') : null;
             if (saved) {
                 state.mode = saved.mode === 'voice' && voices.length ? 'voice' : 'staff';
                 for (const s of staffInfo) if (validRole(saved.staff?.[s.id])) state.staff[s.id] = saved.staff[s.id];
@@ -106,7 +125,7 @@ window.HandAssignment = (() => {
                 state.playAccompaniment = saved.playAccompaniment !== false;
             }
         } catch (error) {
-            storageWarning = 'Assignments work for this session; browser storage is unavailable.';
+            storageWarning = 'Assignments work for this load; source identity or saved settings could not be read.';
         }
         syncLegacyHands();
         render();

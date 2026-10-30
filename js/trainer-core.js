@@ -1243,7 +1243,7 @@ async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType
         renderScoreAndRefreshGeometry();
         HandAssignment.deactivate();
         initSongUI();
-        await HandAssignment.initialize(canonicalOriginalMusicXml);
+        await HandAssignment.initialize(canonicalOriginalMusicXml, transposeSourceRawData);
 
         if (osmd.cursor) {
             osmd.cursor.reset();
