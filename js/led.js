@@ -1127,7 +1127,16 @@ function refreshPlayerRangeDependentState() {
 }
 
 function setPlayerPianoType(value, { save = true, rerender = true } = {}) {
-    AppState.playerPianoType = normalizePlayerPianoType(value);
+    const nextType = normalizePlayerPianoType(value);
+    const refreshCurrentFrame = rerender && nextType !== AppState.playerPianoType;
+    // Like hand-assignment changes, stop queued output before replacing current targets.
+    // Filtering alone cannot restore notes when the playable range expands.
+    if (refreshCurrentFrame) {
+        if (AppState.isPlaying || AppState.countInActive) pausePlaybackFromToolbar();
+        AppState.pendingAudio = [];
+        clearVisuals();
+    }
+    AppState.playerPianoType = nextType;
     AppState.playerRange = derivePlayerRangeFromKeyboardSize(AppState.playerPianoType);
 
     if (save) {
@@ -1139,6 +1148,14 @@ function setPlayerPianoType(value, { save = true, rerender = true } = {}) {
     AppState.ledPreviewTimelineDirty = true;
     AppState.lastLedPreviewEvents = [];
     AppState.ledPreviewTraversalIndex = -1;
+
+    if (refreshCurrentFrame) {
+        AppState.ledPreviewTimeline = [];
+        const it = osmd?.cursor?.Iterator;
+        if (it) {
+            buildExpectedNotesFromEntries(it.CurrentVoiceEntries || [], it.CurrentMeasureIndex, it.currentTimeStamp?.RealValue ?? null);
+        }
+    }
 
     if (rerender) {
         renderVirtualKeyboard();

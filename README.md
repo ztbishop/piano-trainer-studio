@@ -97,6 +97,7 @@ Open:
 - USB recommended
 - Bluetooth may vary by browser
 - Optional: CME WIDI Bud Pro for wireless
+- Choose your key count in Settings. Changing it pauses practice and refreshes the current notes. The 88-key setting covers A0–C8; smaller sizes use centered ranges (see [keyboard range details](docs/MIDI_AUDIO_LED.md#virtual-input-and-playable-range)).
 
 ### 4. Load a song
 - Best: **MusicXML / MXL**

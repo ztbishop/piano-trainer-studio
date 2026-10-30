@@ -20,6 +20,23 @@ Full piano range is MIDI 21–108. Smaller keyboard sizes are implemented by sym
 
 `renderVirtualKeyboard()` combines expected, held/correct, wrong, active, out-of-range, and future-preview states. The preview timeline is also used by early-grace matching; invalidating it after role/range changes is behaviorally important even when LED hardware is disabled.
 
+The existing selector and its endpoints remain unchanged:
+
+| Keys | Lowest MIDI | Highest MIDI |
+| --- | --- | --- |
+| 88 | 21 (A0) | 108 (C8) |
+| 76 | 27 | 102 |
+| 73 | 28 | 100 |
+| 61 | 34 | 94 |
+| 49 | 40 | 88 |
+| 37 | 46 | 82 |
+| 32 | 49 | 80 |
+| 25 | 52 | 76 |
+
+Both endpoints are included. Changing size pauses active practice/count-in through the existing stop path, clears transient feedback/reservations and rebuilds current score targets and preview state. This restores newly playable notes on expansion and records excluded notes on shrink; accuracy totals remain intact. Selecting the same size does not restart the current attempt. Startup restoration does not trigger this reset. Score playback scheduling, live-input routing, saved size format and per-MIDI LED calibration are unchanged.
+
+The October 30 checks cover every listed size and real-score size changes; see [keyboard regression instructions](DEVELOPMENT.md#keyboard-size-checks). Key count alone does not identify a physical keyboard's pitch endpoints. A future endpoint-learning/custom-range option remains optional pending an actual device mismatch; no new controls or device detection were added.
+
 ## Audio and MIDI routing
 
 | Source | Local audio/MIDI bucket |

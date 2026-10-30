@@ -1,5 +1,12 @@
 # Change history and future update records
 
+## 2026-10-30 — Keyboard size target refresh (no application release)
+
+- Confirmed that changing keyboard size only filtered existing lists: expansion omitted newly playable current notes, while shrink did not populate the current out-of-range list. Reproduced with actual target functions and bundled Moonlight Sonata in the browser.
+- Size changes now use existing pause/cleanup and rebuild current targets from the cursor's voice entries. Clear stale preview/reservations, retain accuracy, and preserve same-size attempts and startup restoration. All eight size choices and centered ranges, the 88-key A0–C8 default, saved preference format, calibration, rendering and playback scheduling remain unchanged. No custom-key controls were added.
+- Validation: 157 isolated browser assertions passed on the existing 127.0.0.1:5500 server: generated MusicXML boundary chords for every size, endpoint hits/adjacent exclusions in all three modes, virtual-key styling, forward/reverse LED mapping, memory-only persistence, and Moonlight current-event shrink/expand/pause/accuracy/engraving in every mode. Native scores/settings were never opened. Output and advance helpers were stubbed; no continuous audible playback or physical device claim.
+- Node keyboard-range, unison-feedback, resize-geometry, multi-segment-ties, playback-lifecycle, loop-gate, settings-backup, storage-unavailable and midi-output-init passed; changed-script/inline syntax and diff checks passed. Physical smaller-keyboard endpoints, actual MIDI/audio/WLED and broader timing acceptance remain pending. Custom endpoint learning is optional if a real device mismatch is demonstrated.
+
 ## 2026-10-30 — Clef-change feedback (no application release)
 
 - Confirmed a 60-SVG-unit wrong/unanchored feedback error after lower-staff treble changes in Fur Elise and upper-staff bass changes within Prelude measure 32. The old fallback inferred treble/bass from staff number. Explicit rendered-note anchors remained aligned.

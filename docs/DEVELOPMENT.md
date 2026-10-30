@@ -164,6 +164,14 @@ Historical score examples in `DEV_NOTES.md` include Mozart Fantasy in D minor K.
 - GitHub commits, pushes, tags, and releases remain the user's responsibility unless explicitly delegated.
 - Historical version instructions in `DEV_NOTES.md` are superseded by this section.
 
+## Keyboard size checks
+
+Run `node tests/keyboard-range.cjs` plus unison-feedback, resize-geometry, multi-segment-ties, playback-lifecycle, loop-gate, settings-backup, storage-unavailable and midi-output-init. The range suite runs actual range/mapping/target functions with isolated adapters: all eight unchanged spans, inclusive endpoints, adjacent exclusions, reversed/calibrated LED endpoints, expansion/shrink, pause/count-in delegation, unchanged accuracy, same-size preservation and startup/persistence.
+
+Open `docs/diagnostics/keyboard-range.html` through the existing server, load the isolated app and run checks. It installs memory-only preferences before startup, blocks IndexedDB/MIDI and omits analytics. Original generated MusicXML chords test both endpoints plus adjacent outside pitches for each size, using actual OSMD and `triggerVirtualKey` matching in Realtime/Wait/Follow. The bundled Moonlight Sonata XML supplies a real event for shrinking/expanding the current range in all three modes. The 157 assertions include virtual-key endpoint styling, forward/reverse LED mapping, size persistence, retained accuracy and engraving, and same-size preservation.
+
+Live audio/MIDI routing, early-input reservations and Wait/Follow advancement are stubbed to hold events for inspection. This is not continuous playback, physical MIDI/WLED acceptance or proof that all keyboards of a given size share these endpoints. Native scores/settings are never opened. Check the real device's lowest/highest MIDI notes before proposing custom-range support; the owner's 88-key A–C instrument fits the existing full-range model.
+
 ### Hosting and version display
 
 The relative `version.json` bootstrap supplies the running version and asset cache keys, with an embedded fallback if unavailable. Settings displays that version and a fixed GitHub Releases link. Automatic/manual update checks, forced reloads and remote manifest overrides have been removed. Legacy updater keys/URL parameters are ignored without clearing browser data. Manifest start/scope/icons stay deployment-relative. Test root/subpath hosting and installed shortcuts after deployment; local mocks cannot establish public-host behavior.

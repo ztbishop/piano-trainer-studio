@@ -1,0 +1,68 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>pre{white-space:pre-wrap;max-height:150px;overflow:auto}iframe{box-sizing:border-box}</style><title>Isolated keyboard ranges</title>
+<h1>Keyboard sizes: boundary checks</h1><p>Uses memory-only preferences and blocks score storage/MIDI. Loads bundled scores through real OSMD; checks keyboard boundaries and changing size without accessing your library.</p>
+<button id="run">Load isolated app</button><button id="checks" disabled>Run isolated app checks</button><pre id="results"></pre><iframe id="app" style="width:100%;height:800px;border:1px solid" allow="autoplay"></iframe>
+<script>
+document.getElementById('run').onclick=async function(){
+ this.disabled=true;
+ let html=await(await fetch('../../index.html')).text();
+ const root=new URL('../../',location.href).href;
+ const block=`<base href="${root}"><script>
+ window.testErrors=[];addEventListener('error',e=>testErrors.push(e.message));addEventListener('unhandledrejection',e=>testErrors.push(String(e.reason)));
+ window.assignmentTestData={};
+ const memoryStore=data=>new Proxy(data,{get(target,key){if(key==='getItem')return k=>target[k]??null;if(key==='setItem')return(k,v)=>{target[k]=String(v);};if(key==='removeItem')return k=>{delete target[k];};return target[key];}});
+ Object.defineProperty(window,'localStorage',{value:memoryStore(assignmentTestData)});
+ Object.defineProperty(window,'sessionStorage',{value:memoryStore({})});
+ Object.defineProperty(window,'indexedDB',{get(){throw Error('Score storage blocked in keyboard test');}});
+ Object.defineProperty(navigator,'requestMIDIAccess',{value:()=>Promise.reject(Error('Hardware disabled for keyboard test'))});
+ <\/script>`;
+ html=html.replace('<head>','<head>'+block).replace(/<script[^>]+src="https:[\s\S]*?<\/script>/g,'');
+ const frame=document.getElementById('app');
+ frame.onload=()=>{
+ document.getElementById('checks').disabled=false;
+ const doc=frame.contentDocument;const report=document.getElementById('results');
+ report.textContent='App loaded with isolated preferences; native settings/scores untouched.';
+ const check=doc.createElement('script');check.textContent=`setTimeout(()=>{parent.document.getElementById('results').textContent+='\\nStartup errors: '+JSON.stringify(testErrors);},1500);`;doc.body.appendChild(check);
+ };
+ frame.srcdoc=html;
+};
+
+document.getElementById('checks').onclick=function(){this.disabled=true;const f=document.getElementById('app'),script=f.contentDocument.createElement('script');script.textContent='('+async function(){
+ const output=parent.document.getElementById('results');let count=0;
+ const check=(ok,label)=>{if(!ok)throw Error(label);count++;output.textContent+='\nPASS: '+label;};
+ const original={advance:checkWaitModeAdvance,audio:shouldRouteLiveSourceToLocalAudio,midi:shouldRouteLiveSourceToMidiOut,early:tryReserveSingleHandEarlyGrace,upcoming:tryReserveRealtimeUpcomingHeldNote};
+ const paths=()=>[...document.querySelectorAll('#osmdSvgPage1 path')].filter(p=>!p.closest('#pt-feedback-group,#pt-debug-group,#pt-looper-group')).map(p=>p.getAttribute('d')).join('|');
+ const change=size=>{const select=document.getElementById('select-player-piano-type');select.value=String(size);select.dispatchEvent(new Event('change',{bubbles:true}));};
+ const xml=midis=>'<?xml version="1.0"?><score-partwise version="3.1"><part-list><score-part id="P1"><part-name>Boundary test</part-name></score-part></part-list><part id="P1"><measure number="1"><attributes><divisions>1</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>'+midis.map((m,i)=>{const names=['C','C','D','D','E','F','F','G','G','A','A','B'],pc=m%12;return '<note>'+(i?'<chord/>':'')+'<pitch><step>'+names[pc]+'</step>'+([1,3,6,8,10].includes(pc)?'<alter>1</alter>':'')+'<octave>'+(Math.floor(m/12)-1)+'</octave></pitch><duration>4</duration><type>whole</type></note>';}).join('')+'</measure></part></score-partwise>';
+ try{
+ document.getElementById('btn-help-close').click();
+ checkWaitModeAdvance=()=>{};shouldRouteLiveSourceToLocalAudio=()=>false;shouldRouteLiveSourceToMidiOut=()=>false;tryReserveSingleHandEarlyGrace=()=>null;tryReserveRealtimeUpcomingHeldNote=()=>null;
+ for(const [size,lo,hi] of [[88,21,108],[76,27,102],[73,28,100],[61,34,94],[49,40,88],[37,46,82],[32,49,80],[25,52,76]]){
+ await loadScoreIntoApp(xml([lo-1,lo,hi,hi+1]),{fileName:'keyboard-boundaries.musicxml',fileType:'musicxml',title:'Keyboard boundary fixture'});
+ change(size);AppState.practice={right:true,left:true};const it=osmd.cursor.Iterator;const engraved=paths();
+ for(const mode of ['realtime','wait','follow']){
+ AppState.mode=mode;AppState.earlyGraceReservations.clear();buildExpectedNotesFromEntries(it.CurrentVoiceEntries,it.CurrentMeasureIndex,it.currentTimeStamp.RealValue);
+ check(AppState.expectedNotes.length===2&&AppState.expectedNotes.some(n=>n.midi===lo)&&AppState.expectedNotes.some(n=>n.midi===hi),size+' '+mode+': both endpoints required');
+ check(AppState.outOfRangeCurrentNotes.length===2,size+' '+mode+': adjacent outside notes excluded');
+ for(const midi of [lo,hi]){const credit=AppState.score.correct;AppState.isPlaying=true;triggerVirtualKey(midi,true,'midi');AppState.isPlaying=false;triggerVirtualKey(midi,false,'midi');check(AppState.score.correct===credit+1,size+' '+mode+': endpoint '+midi+' earns one credit');}
+ }
+ for(const reverse of [false,true]){AppState.ledReverse=reverse;updateLedKeyMapping();check(LedEngine.keyToLed.size===size&&LedEngine.keyToLed.get(lo)===(reverse?LedEngine.config.ledCount-1:0)&&LedEngine.keyToLed.get(hi)===(reverse?0:LedEngine.config.ledCount-1),size+': LED endpoints reverse='+reverse);}
+ check(paths()===engraved,size+': unchanged engraving');
+ check(appLocalStorage.getItem(PLAYER_PIANO_STORAGE_KEY)===String(size),size+': selected size persisted in memory only');
+ renderVirtualKeyboard();check([lo,hi].every(m=>!document.querySelector('.key[data-midi="'+m+'"]').classList.contains('out-of-range')),size+': virtual keyboard includes both endpoints');
+ }
+ const demos=await ScoreLibrary.getDemoScores(),score=demos.find(s=>s.title==='Moonlight Sonata 1st Movement');
+ check(!!score,'Bundled Moonlight available');await loadScoreIntoApp(score.rawData,{fileName:score.fileName,fileType:score.fileType,title:score.title});
+ AppState.practice={left:true,right:true};osmd.cursor.reset();let steps=0,found=false;
+ while(!osmd.cursor.Iterator.EndReached&&steps++<5000){const it=osmd.cursor.Iterator;setPlayerPianoType(88,{rerender:false,save:false});buildExpectedNotesFromEntries(it.CurrentVoiceEntries,it.CurrentMeasureIndex,it.currentTimeStamp.RealValue);if(AppState.expectedNotes.some(n=>n.midi<52||n.midi>76)){found=true;break;}it.moveToNext();}
+ check(found,'Real score event includes notes outside 25-key range');osmd.cursor.update();const it=osmd.cursor.Iterator,engraved=paths();
+ const expected=AppState.expectedNotes.map(n=>n.midi).sort().join(',');
+ for(const mode of ['realtime','wait','follow']){AppState.mode=mode;change(25);check(AppState.outOfRangeCurrentNotes.length>0,mode+': shrinking marks current out-of-range notes');
+ const accuracy=JSON.stringify(AppState.score);AppState.isPlaying=true;change(88);
+ check(AppState.expectedNotes.map(n=>n.midi).sort().join(',')===expected,'Expanding restores real-score current targets');
+ check(!AppState.isPlaying&&!AppState.countInActive,'Size change pauses through existing transport cleanup');check(JSON.stringify(AppState.score)===accuracy,'Size change preserves accuracy');check(paths()===engraved,'Size change preserves original real-score engraving');
+ const target=AppState.expectedNotes[0];target.hit=true;change(88);check(AppState.expectedNotes[0]===target&&target.hit,'Selecting same size preserves current attempt');
+ }
+ check(testErrors.length===0,'No uncaught errors');output.textContent='Completed '+count+' checks; native scores/settings untouched.\n'+output.textContent;
+ }catch(e){output.textContent+='\nFAIL '+e.stack;}finally{AppState.isPlaying=false;checkWaitModeAdvance=original.advance;shouldRouteLiveSourceToLocalAudio=original.audio;shouldRouteLiveSourceToMidiOut=original.midi;tryReserveSingleHandEarlyGrace=original.early;tryReserveRealtimeUpcomingHeldNote=original.upcoming;}
+ }.toString()+')()';f.contentDocument.body.appendChild(script);};
+</script>
