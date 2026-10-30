@@ -6,9 +6,9 @@ Sources: [feedback-engine.js](../js/feedback-engine.js), [feedback-debug.js](../
 
 OSMD owns MusicXML interpretation and engraving through its bundled VexFlow renderer. Application geometry adapts to the existing rendered result. It must not become an independent notation layout engine.
 
-`renderScoreAndRefreshGeometry()` calls OSMD render, invalidates geometry caches, and redraws feedback, loop shading, and optional sticky diagnostics. Resize is debounced by 300 ms in the core; zoom is constrained to 50–150%. Existing resize handling does invoke OSMD render: the protected rule forbids introducing a separate custom beam recalculation, not the established OSMD render lifecycle.
+`renderScoreAndRefreshGeometry()` calls OSMD render, records the score container width used, invalidates geometry caches, refreshes active expected-note anchors from their original logical notes, and redraws feedback, loop shading, and optional sticky diagnostics. Resize is debounced by 300 ms in the core and only re-engraves when the score container width changed; duplicate/height-only events retain the existing SVG. Explicit load/zoom renders still run normally; zoom is constrained to 50–150%. No custom beam recalculation or second layout pass is introduced.
 
-`clearFeedbackVisualStatePreserveScoring()` clears transient overlays before layout changes without resetting accuracy. Do not confuse that with `clearVisuals()`, which also cancels tracked visual timers, clears holds/reservations, and updates hardware state.
+`clearFeedbackVisualStatePreserveScoring()` clears transient overlays before layout changes without resetting accuracy. This transient-feedback clearing still runs on resize even when engraving is skipped. Anchor refresh changes only `anchor`/`anchors` on existing targets, using their `sourceNotes`; it must not rebuild targets, reset hits/accuracy, consume reservations, or schedule playback. Do not confuse that with `clearVisuals()`, which also cancels tracked visual timers, clears holds/reservations, and updates hardware state.
 
 ## Coordinate and identity conventions
 
@@ -32,7 +32,7 @@ Expected correct feedback receives the note's cached rendered anchor. A playable
 
 Overlay groups disable pointer events. OSMD's score/cursor remain distinct. `renderFeedbackOverlay()` rebuilds from correct history plus released/held incorrect feedback, scoped by the expected-event context. A held wrong marker and a released wrong marker have different lifetimes; changing one must not unexpectedly change grading.
 
-The matching engine currently merges same-staff/same-role/same-pitch expectations even if multiple XML notes exist. That is separate from geometric note identity. See `SCORES_AND_STORAGE.md` and the review before deciding whether unison notation requires multiple anchors versus one playable target.
+The matching engine retains one playable target per staff/role/pitch while keeping every eligible source-note identity for feedback. See [Practice engine](PRACTICE_ENGINE.md) for scoring and unison semantics.
 
 ### Score cursor appearance
 

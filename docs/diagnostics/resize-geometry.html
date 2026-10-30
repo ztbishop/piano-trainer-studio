@@ -1,0 +1,82 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>pre{white-space:pre-wrap;max-height:150px;overflow:auto}iframe{box-sizing:border-box}</style><title>Isolated resize geometry</title>
+<h1>Resize geometry: real-score checks</h1><p>Uses memory-only preferences and blocks score storage/MIDI. Loads bundled scores through real OSMD; checks resize stability, pending targets and feedback without accessing your library.</p>
+<button id="run">Load isolated app</button><button id="checks" disabled>Run isolated app checks</button><pre id="results"></pre><iframe id="app" style="width:100%;height:800px;border:1px solid" allow="autoplay"></iframe>
+<script>
+document.getElementById('run').onclick=async function(){
+ this.disabled=true;
+ let html=await(await fetch('../../index.html')).text();
+ const root=new URL('../../',location.href).href;
+ const block=`<base href="${root}"><script>
+ window.testErrors=[];addEventListener('error',e=>testErrors.push(e.message));addEventListener('unhandledrejection',e=>testErrors.push(String(e.reason)));
+ window.assignmentTestData={};
+ const memoryStore=data=>new Proxy(data,{get(target,key){if(key==='getItem')return k=>target[k]??null;if(key==='setItem')return(k,v)=>{target[k]=String(v);};if(key==='removeItem')return k=>{delete target[k];};return target[key];}});
+ Object.defineProperty(window,'localStorage',{value:memoryStore(assignmentTestData)});
+ Object.defineProperty(window,'sessionStorage',{value:memoryStore({})});
+ Object.defineProperty(window,'indexedDB',{get(){throw Error('Score storage blocked in unison test');}});
+ Object.defineProperty(navigator,'requestMIDIAccess',{value:()=>Promise.reject(Error('Hardware disabled for unison test'))});
+ <\/script>`;
+ html=html.replace('<head>','<head>'+block).replace(/<script[^>]+src="https:[\s\S]*?<\/script>/g,'');
+ const frame=document.getElementById('app');
+ frame.onload=()=>{
+ document.getElementById('checks').disabled=false;
+ const doc=frame.contentDocument;const report=document.getElementById('results');
+ report.textContent='App loaded with isolated preferences; native settings/scores untouched.';
+ const check=doc.createElement('script');check.textContent=`setTimeout(()=>{parent.document.getElementById('results').textContent+='\\nStartup errors: '+JSON.stringify(testErrors);},1500);`;doc.body.appendChild(check);
+ };
+ frame.srcdoc=html;
+};
+
+document.getElementById('checks').onclick=function(){
+ this.disabled=true;
+ const frame=document.getElementById('app'),script=frame.contentDocument.createElement('script');
+ script.textContent='('+async function(){
+ const output=parent.document.getElementById('results');let count=0;
+ const check=(ok,label)=>{if(!ok)throw Error(label);count++;output.textContent+='\nPASS: '+label;};
+ const pause=()=>new Promise(r=>setTimeout(r,500));
+ const paths=()=>[...document.querySelectorAll('#osmdSvgPage1 path')].filter(p=>!p.closest('#pt-feedback-group,#pt-debug-group,#pt-looper-group')).map(p=>p.getAttribute('d')).join('|');
+ const snapshot=()=>({targets:AppState.expectedNotes,states:AppState.expectedNotes.map(n=>n.hit),score:JSON.stringify(AppState.score),context:AppState.currentExpectedContext,reservations:[...AppState.earlyGraceReservations],visuals:AppState.visualNotesToStart});
+ const invariant=(before,label)=>check(AppState.expectedNotes===before.targets&&AppState.expectedNotes.every((n,i)=>n.hit===before.states[i])&&JSON.stringify(AppState.score)===before.score&&AppState.currentExpectedContext===before.context&&AppState.visualNotesToStart===before.visuals&&[...AppState.earlyGraceReservations].every((r,i)=>r[0]===before.reservations[i]?.[0]&&r[1]===before.reservations[i]?.[1])&&AppState.earlyGraceReservations.size===before.reservations.length,label+': target identity, hits, score, context, reservations and sustains unchanged');
+ const aligned=label=>check(AppState.expectedNotes.length>0&&AppState.expectedNotes.every(n=>{const fresh=n.sourceNotes.map(note=>GeometryEngine.getNoteAnchor(note,n.mIdx,n.staffId-1)).filter(Boolean);return fresh.length>0&&n.anchor===fresh[0]&&fresh.every(a=>n.anchors.includes(a));}),label+': pending targets use current rendered note anchors');
+ const original={advance:checkWaitModeAdvance,audio:shouldRouteLiveSourceToLocalAudio,midi:shouldRouteLiveSourceToMidiOut};
+ try{
+ document.getElementById('btn-help-close').click();const demos=await ScoreLibrary.getDemoScores();
+ checkWaitModeAdvance=()=>{};shouldRouteLiveSourceToLocalAudio=()=>false;shouldRouteLiveSourceToMidiOut=()=>false;
+ for(const title of ['Moonlight Sonata 1st Movement','Prelude I in C major BWV 846','The Entertainer']){
+ const score=demos.find(s=>s.title===title);await loadScoreIntoApp(score.rawData,{fileName:score.fileName,fileType:score.fileType,title});
+ osmd.cursor.reset();AppState.practice={left:true,right:true};AppState.feedbackEnabled=true;
+ if(title.startsWith('Moonlight'))while(osmd.cursor.Iterator.CurrentMeasureIndex<22)osmd.cursor.Iterator.moveToNext();
+ let i=osmd.cursor.Iterator;buildExpectedNotesFromEntries(i.CurrentVoiceEntries,i.CurrentMeasureIndex,i.currentTimeStamp.RealValue);
+ while(!AppState.expectedNotes.length&&!i.EndReached){i.moveToNext();buildExpectedNotesFromEntries(i.CurrentVoiceEntries,i.CurrentMeasureIndex,i.currentTimeStamp.RealValue);}
+ AppState.expectedNotes[0].hit=true;AppState.earlyGraceReservations.set(-1,{measureIndex:999,timestamp:999});
+ for(const zoom of [100,125,75]){
+ const before=snapshot();applyZoom(zoom,{save:false});invariant(before,title+' zoom '+zoom);aligned(title+' zoom '+zoom);
+ for(const width of [1100,740,1100]){
+ const stable=snapshot();parent.document.getElementById('app').style.width=width+'px';await pause();invariant(stable,title+' width '+width);aligned(title+' width '+width);
+ const svg=document.getElementById('osmdSvgPage1'),data=paths();
+ check(svg.querySelectorAll('.vf-beam').length>0,title+': real beamed notation present');
+ for(let repeat=0;repeat<2;repeat++){window.dispatchEvent(new Event('resize'));await pause();}
+ check(document.getElementById('osmdSvgPage1')===svg&&paths()===data,title+' '+zoom+'% '+width+'px: repeated same-width resize retains identical engraving, beams and glyphs');
+ parent.document.getElementById('app').style.height='760px';await pause();
+ check(document.getElementById('osmdSvgPage1')===svg&&paths()===data,title+': height-only resize retains engraving');
+ parent.document.getElementById('app').style.height='800px';await pause();
+ }
+ }
+ AppState.earlyGraceReservations.clear();
+ for(const mode of ['realtime','wait','follow']){
+ AppState.mode=mode;AppState.expectedNotes.forEach(n=>n.hit=false);AppState.correctFeedbackHistory=[];AppState.releasedIncorrectFeedback=[];
+ const scoreBefore=AppState.score.correct;const expected=AppState.expectedNotes;
+ AppState.isPlaying=true;for(const n of expected){triggerVirtualKey(n.midi,true,'midi');triggerVirtualKey(n.midi,false,'midi');}AppState.isPlaying=false;
+ check(expected.every(n=>n.hit)&&AppState.score.correct===scoreBefore+expected.length,title+' '+mode+': input after resize hits existing targets once');
+ check(AppState.correctFeedbackHistory.length===expected.reduce((sum,n)=>sum+new Set(n.anchors.map(a=>a.x+'|'+a.y)).size,0)&&AppState.correctFeedbackHistory.every(m=>expected.some(n=>n.midi===m.midi&&n.staffId===m.staffId&&n.anchors.some(a=>a.x===m.anchor.x&&a.y===m.anchor.y))),title+' '+mode+': correct markers align to refreshed geometry');
+ }
+ }
+ const moon=demos.find(s=>s.title==='Moonlight Sonata 1st Movement');await loadScoreIntoApp(moon.rawData,{fileName:moon.fileName,fileType:moon.fileType,title:moon.title});
+ applyZoom(100,{save:false});osmd.cursor.reset();while(osmd.cursor.Iterator.CurrentMeasureIndex<22)osmd.cursor.Iterator.moveToNext();osmd.cursor.update();
+ const it=osmd.cursor.Iterator;buildExpectedNotesFromEntries(it.CurrentVoiceEntries,it.CurrentMeasureIndex,it.currentTimeStamp.RealValue);applyZoom(125,{save:false});aligned('Moonlight m23 final zoom');
+ const target=AppState.expectedNotes.find(n=>n.anchors.length>1);drawExpectedNoteFeedback(target,true);
+ const svg=GeometryEngine.getSvg(),point=svg.createSVGPoint();point.x=target.anchor.x;point.y=target.anchor.y;const client=point.matrixTransform(svg.getScreenCTM()),area=document.getElementById('music-area');area.scrollTop+=client.y-area.getBoundingClientRect().top-230;
+ check(testErrors.length===0,'No uncaught app errors');output.textContent='Completed '+count+' checks; native scores/settings untouched.\n'+output.textContent;
+ }catch(e){output.textContent+='\nFAIL '+e.stack;}finally{AppState.isPlaying=false;checkWaitModeAdvance=original.advance;shouldRouteLiveSourceToLocalAudio=original.audio;shouldRouteLiveSourceToMidiOut=original.midi;}
+ }.toString()+')()';frame.contentDocument.body.appendChild(script);
+};
+</script>

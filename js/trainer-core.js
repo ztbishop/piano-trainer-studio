@@ -3411,7 +3411,8 @@ window.addEventListener('resize', () => {
     resizeTimer = setTimeout(() => {
         if (osmd.IsReadyToRender()) {
             clearFeedbackVisualStatePreserveScoring();
-            renderScoreAndRefreshGeometry();
+            // Height-only/duplicate resize events must not re-engrave an unchanged score.
+            if (scoreRenderWidthChanged()) renderScoreAndRefreshGeometry();
         }
         positionLedCalibrationPanel();
     }, 300);

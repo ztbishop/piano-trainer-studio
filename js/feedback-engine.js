@@ -18,10 +18,29 @@
 // ==========================================
 // VISUAL LOOPER ENGINE
 // ==========================================
+let lastRenderedScoreWidth = null;
+
+function scoreRenderWidthChanged() {
+    return document.getElementById('osmd-container')?.offsetWidth !== lastRenderedScoreWidth;
+}
+
+function refreshExpectedNoteAnchors() {
+    for (const expected of AppState.expectedNotes) {
+        if (!expected.sourceNotes) continue;
+        expected.anchors = [...new Set(expected.sourceNotes.map(note =>
+            GeometryEngine.getNoteAnchor(note, expected.mIdx, expected.staffId - 1)).filter(Boolean))];
+        expected.anchor = expected.anchors[0] || null;
+    }
+}
+
 function renderScoreAndRefreshGeometry() {
     if (!osmd || !osmd.IsReadyToRender || !osmd.IsReadyToRender()) return;
+    const width = document.getElementById('osmd-container')?.offsetWidth;
     osmd.render();
+    lastRenderedScoreWidth = width;
     GeometryEngine.invalidate();
+    // Refresh geometry only: rebuilding targets would reset hits and consume reservations.
+    refreshExpectedNoteAnchors();
     renderFeedbackOverlay();
     GeometryEngine.renderLooper();
     if (window.FeedbackDebug?.renderStickyDebug) {
@@ -1025,7 +1044,7 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
 
                         const existingExpected = mergedExpected.get(key);
                         if (!existingExpected) {
-                            mergedExpected.set(key, { midi, staffId: sid, handRole, hit: false, mIdx: currentMeasureIdx, anchor, anchors: anchor ? [anchor] : [] });
+                            mergedExpected.set(key, { midi, staffId: sid, handRole, hit: false, mIdx: currentMeasureIdx, anchor, anchors: anchor ? [anchor] : [], sourceNotes: [n] });
                         } else {
                             debugLogAnchorResolution('EXPECTED_NOTE_DEDUPE_COLLISION', {
                                 key,
@@ -1042,6 +1061,7 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
                                     anchor: existingExpected.anchor ? { x: existingExpected.anchor.x, y: existingExpected.anchor.y } : null
                                 }
                             });
+                            if (!existingExpected.sourceNotes.includes(n)) existingExpected.sourceNotes.push(n);
                             if (anchor && !existingExpected.anchors.includes(anchor)) existingExpected.anchors.push(anchor);
                             if (!existingExpected.anchor && anchor) {
                                 existingExpected.anchor = anchor;

@@ -1,0 +1,17 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const feedback=fs.readFileSync('js/feedback-engine.js','utf8'),core=fs.readFileSync('js/trainer-core.js','utf8');
+let width=1000,renders=0,clears=0,panel=0,callback;const handlers={};const a={},b={},missing={};let anchors=new Map([[a,{x:1,y:2}],[b,{x:3,y:2}]]);
+const target={midi:60,staffId:2,mIdx:4,hit:true,anchor:{x:99,y:99},anchors:[],sourceNotes:[a,b,a,missing]};
+const state={expectedNotes:[target],score:{correct:3,wrong:1},currentExpectedContext:{timestamp:2},earlyGraceReservations:new Map([[60,{allowTapCarry:true}]]),visualNotesToStart:[{durationMs:400}]};
+const context=vm.createContext({AppState:state,document:{getElementById:()=>({offsetWidth:width})},window:{addEventListener:(name,fn)=>handlers[name]=fn},osmd:{IsReadyToRender:()=>true,render(){renders++;}},GeometryEngine:{invalidate(){},getNoteAnchor:(note,measure,staff)=>{assert.equal(measure,4);assert.equal(staff,1);return anchors.get(note)||null;},renderLooper(){}},renderFeedbackOverlay(){},clearFeedbackVisualStatePreserveScoring(){clears++;},positionLedCalibrationPanel(){panel++;},setTimeout(fn){callback=fn;return 1;},clearTimeout(){}});
+vm.runInContext(feedback.slice(feedback.indexOf('let lastRenderedScoreWidth'),feedback.indexOf('const GeometryEngine')),context);
+vm.runInContext(core.slice(core.indexOf('let resizeTimer;'),core.indexOf('const zoomSlider')),context);
+const expected=state.expectedNotes,reservations=state.earlyGraceReservations,visuals=state.visualNotesToStart;
+context.renderScoreAndRefreshGeometry();assert.equal(renders,1);assert.equal(target.anchor,anchors.get(a));assert.deepEqual([...target.anchors],[anchors.get(a),anchors.get(b)]);
+handlers.resize();callback();assert.equal(renders,1);assert.equal(clears,1);assert.equal(panel,1);
+width=740;anchors=new Map([[a,{x:200,y:400}],[b,{x:220,y:400}]]);handlers.resize();callback();assert.equal(renders,2);assert.equal(target.anchor,anchors.get(a));assert.equal(target.anchors[1],anchors.get(b));
+assert.equal(target.hit,true);assert.equal(state.expectedNotes,expected);assert.equal(state.earlyGraceReservations,reservations);assert.equal(state.visualNotesToStart,visuals);assert.deepEqual(state.score,{correct:3,wrong:1});
+anchors=new Map([[b,{x:40,y:60}]]);context.renderScoreAndRefreshGeometry();assert.equal(renders,3);assert.equal(target.anchor,anchors.get(b));assert.equal(target.anchors.length,1);
+anchors.clear();context.renderScoreAndRefreshGeometry();assert.equal(target.anchor,null);assert.equal(target.anchors.length,0);
+handlers.resize();handlers.resize();callback();assert.equal(renders,4);
+console.log('Resize geometry passed: unchanged width skips engraving, width changes refresh source anchors, explicit renders remain enabled, missing anchors discard stale positions, and practice state remains intact.');
