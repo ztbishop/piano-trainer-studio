@@ -8,7 +8,7 @@ Use the [developer index](README.md) to route a task to focused subsystem docs. 
 
 The frontend is static HTML/CSS/JavaScript with ordered classic scripts and shared globals, principally `AppState`. There is no frontend build step, framework, account service, or required application backend. OSMD uses VexFlow for engraving; Tone.js provides audio and metronome scheduling. Core libraries, Salamander piano samples, and webmscore/WASM conversion assets are bundled locally.
 
-`index.html` reads `version.json` during bootstrap and applies version query strings to app assets. It loads Tone.js and OSMD first, then state, transpose engine/UI, toolbar, library/UI, LEDs, MIDI, import conversion, feedback/debug, timing, hand assignment, and finally the trainer core. Preserve dependency order: earlier modules can define callbacks that are invoked only after core initialization.
+`index.html` reads `version.json` during bootstrap and applies version query strings to app assets. It loads Tone.js and OSMD first, then storage adapters, state, transpose engine/UI, toolbar, library/UI, LEDs, MIDI, import conversion, feedback/debug, timing, hand assignment, and finally the trainer core. Preserve dependency order: earlier modules can define callbacks that are invoked only after core initialization.
 
 ## Current structure
 
@@ -21,6 +21,7 @@ The frontend is static HTML/CSS/JavaScript with ordered classic scripts and shar
 
 ## Current modules
 
+- `js/storage.js` = guarded preference/session storage, session fallback and settings batch rollback; loads before state. IndexedDB scores never fall back to memory.
 - `js/trainer-state.js` = shared state and persisted preference helpers
 - `js/trainer-timing.js` = shared timing math for traversal waits, measure remainder checks, and playback scheduling inputs
 - `js/toolbar-ui.js` = toolbar/menu shell

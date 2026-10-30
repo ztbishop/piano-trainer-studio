@@ -41,7 +41,7 @@ The [developer index](README.md) links subsystem guides. The [October 20 review]
 ## Constraints and limitations
 
 - This is a static app using ordered classic scripts/shared globals, not a bundled framework application.
-- Scores are stored in IndexedDB and settings in localStorage. Different browser origins have separate data; there is no account/cloud synchronization.
+- Scores are stored in IndexedDB and settings in localStorage. Guarded preference access supports session-only operation with a warning when storage fails; unavailable libraries retain direct file/demo access without pretending scores were saved. Different browser origins have separate data; there is no account/cloud synchronization.
 - Timing remains iterator-driven with an accumulated realtime anchor. Browser timers and complex structural navigation remain important regression areas; no scheduler rewrite is planned by default.
 - Rendering relies on OSMD/VexFlow internals and stabilized feedback geometry heuristics. See `../AGENTS.md` for strict protections.
 - Standalone regression scripts are checked in under `tests/`; there is no unified application test runner. `docs/diagnostics/review-probes.cjs` contains limited read-only source probes, not browser acceptance tests. Browser, MIDI, audio, and hardware verification require the manual workflow in `DEVELOPMENT.md`.

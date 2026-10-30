@@ -98,7 +98,7 @@ const saved = [];
 vm.runInNewContext(zoomSource, {
     document: { getElementById: id => id === 'slider-zoom' ? zoomRange : zoomNumber },
     osmd: { IsReadyToRender: () => true, zoom: 1 }, AppState: {},
-    localStorage: { setItem: (...args) => saved.push(args) }, TRAINER_ZOOM_STORAGE_KEY: 'test-zoom',
+    appLocalStorage: { setItem: (...args) => saved.push(args) }, TRAINER_ZOOM_STORAGE_KEY: 'test-zoom',
     clearFeedbackVisualStatePreserveScoring() {}, renderScoreAndRefreshGeometry() { renderCount++; }
 });
 zoomRange.dispatchEvent({ type: 'input', target: { value: '103' } });

@@ -1,0 +1,58 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>pre{white-space:pre-wrap}iframe{box-sizing:border-box}</style><title>Unavailable storage isolation</title>
+<h1>Unavailable storage: isolated app</h1><p>Blocks both preference stores and IndexedDB before app scripts run. No app storage is opened. Hardware access is disabled.</p>
+<button id="run">Load isolated app</button><button id="checks" disabled>Run isolated app checks</button><pre id="results"></pre><iframe id="app" style="width:100%;height:800px;border:1px solid" allow="autoplay"></iframe>
+<script>
+document.getElementById('run').onclick=async function(){
+ this.disabled=true;
+ let html=await(await fetch('../../index.html')).text();
+ const root=new URL('../../',location.href).href;
+ const block=`<base href="${root}"><script>
+ window.testErrors=[];addEventListener('error',e=>testErrors.push(e.message));addEventListener('unhandledrejection',e=>testErrors.push(String(e.reason)));
+ for(const key of ['localStorage','sessionStorage','indexedDB'])Object.defineProperty(window,key,{configurable:false,get(){throw new DOMException('Isolated storage denial','SecurityError');}});
+ Object.defineProperty(navigator,'requestMIDIAccess',{value:()=>Promise.reject(Error('Hardware disabled for storage test'))});
+ <\/script>`;
+ html=html.replace('<head>','<head>'+block).replace(/<script[^>]+src="https:[\s\S]*?<\/script>/g,'');
+ const frame=document.getElementById('app');
+ frame.onload=()=>{
+ document.getElementById('checks').disabled=false;
+ const doc=frame.contentDocument;const report=document.getElementById('results');
+ report.textContent='App loaded with storage blocked.\n'+(doc.getElementById('storage-warning')?.textContent||'FAIL: warning missing');
+ const check=doc.createElement('script');check.textContent=`setTimeout(()=>{parent.document.getElementById('results').textContent+='\\nStartup errors: '+JSON.stringify(testErrors);},1500);`;doc.body.appendChild(check);
+ };
+ frame.srcdoc=html;
+};
+
+document.getElementById('checks').onclick=function(){
+ this.disabled=true;
+ const frame=document.getElementById('app'), script=frame.contentDocument.createElement('script');
+ script.textContent='('+async function(){
+ const output=parent.document.getElementById('results');let count=0;
+ const check=(ok,label)=>{if(!ok)throw Error(label);output.textContent+='\nPASS: '+label;count++;};
+ try {
+ check(!!document.getElementById('storage-warning'),'Persistent session-only warning');
+ for(const action of [buildSettingsBackupPayload,()=>importSettingsBackupPayload({settings:{pt_appearance:'dark'}}),clearSavedPreferences]){
+ let rejected=false;try{action();}catch(_){rejected=true;}check(rejected,'Unavailable settings operation rejected');
+ }
+ document.getElementById('btn-help-close').click();
+ await refreshScoresDrawer();
+ check(document.getElementById('scores-library-list').textContent.includes('Retry library'),'Unavailable library offers retry');
+ const demo=(await ScoreLibrary.getDemoScores()).find(s=>s.title.includes('Hot Cross Buns'));
+ await loadScoreIntoApp(demo.rawData,{fileName:demo.fileName,fileType:demo.fileType,title:demo.title});
+ check(!!document.querySelector('#osmdSvgPage1'),'Demo renders with storage denied');
+ const testName='storage-test.'+demo.fileType;
+ const opened=await readScoreFile(new File([demo.rawData],testName));
+ await loadScoreIntoApp(opened.rawData,opened);
+ check(AppState.currentScoreFileName===testName && !!document.querySelector('#osmdSvgPage1'),'Direct file renders without library storage');
+ await updateScoresActionButtonsState();
+ check(document.getElementById('btn-scores-save-current').disabled,'Unavailable save cannot claim success');
+ const appearance=document.getElementById('appearance');appearance.value='dark';appearance.dispatchEvent(new Event('change'));
+ check(document.documentElement.dataset.appearance==='dark','Appearance changes in session');
+ check(appLocalStorage.getItem('pt_appearance')==='dark','Session value retained');
+ appearance.value='light';appearance.dispatchEvent(new Event('change'));
+ check(testErrors.length===0,'No uncaught startup/control errors');
+ output.textContent+='\nCompleted '+count+' checks. No native storage was accessed.';
+ }catch(error){output.textContent+='\nFAIL: '+error.stack;}
+ } .toString()+')()';
+ frame.contentDocument.body.appendChild(script);
+};
+</script>

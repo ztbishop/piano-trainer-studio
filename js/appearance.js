@@ -8,10 +8,10 @@
         control.value = appearance;
     }
     let saved = 'light';
-    try { saved = localStorage.getItem('pt_appearance'); } catch (_) {}
+    try { saved = appLocalStorage.getItem('pt_appearance'); } catch (_) {}
     apply(saved);
     control.addEventListener('change', () => {
         apply(control.value);
-        try { localStorage.setItem('pt_appearance', control.value); } catch (_) {}
+        try { appLocalStorage.setItem('pt_appearance', control.value); } catch (_) {}
     });
 })();

@@ -98,7 +98,7 @@ function setFollowPracticeHand(hand) {
 
 
 function applyPersistedTrainerAndSettingsPreferences() {
-    AppState.mode = localStorage.getItem(TRAINER_MODE_STORAGE_KEY) || 'realtime';
+    AppState.mode = appLocalStorage.getItem(TRAINER_MODE_STORAGE_KEY) || 'realtime';
     AppState.feedbackEnabled = getStoredBool(TRAINER_FEEDBACK_STORAGE_KEY, true);
     AppState.futurePreviewEnabled = getStoredBool(TRAINER_FUTURE_PREVIEW_STORAGE_KEY, true);
     AppState.futurePreviewDepth = 1;
@@ -191,8 +191,8 @@ function applyPersistedTrainerAndSettingsPreferences() {
     updateMidiInBoost(midiInBoost, { save: false });
 
     const zoomPercent = getClampedNumber(TRAINER_ZOOM_STORAGE_KEY, 50, 150, 100);
-    if (localStorage.getItem(TRAINER_ZOOM_STORAGE_KEY) === null || localStorage.getItem(TRAINER_ZOOM_STORAGE_KEY) === '') {
-        localStorage.setItem(TRAINER_ZOOM_STORAGE_KEY, String(zoomPercent));
+    if (appLocalStorage.getItem(TRAINER_ZOOM_STORAGE_KEY) === null || appLocalStorage.getItem(TRAINER_ZOOM_STORAGE_KEY) === '') {
+        appLocalStorage.setItem(TRAINER_ZOOM_STORAGE_KEY, String(zoomPercent));
     }
     syncZoomControls(zoomPercent);
     applyZoom(zoomPercent, { save: false });
@@ -231,7 +231,7 @@ function applyPersistedTrainerAndSettingsPreferences() {
 }
 
 function restoreDefaultPreferences({ reloadDevices = true } = {}) {
-    clearSavedPreferences();
+    try { clearSavedPreferences(); } catch (error) { window.alert(error.message); return; }
 
     AppState.mode = 'realtime';
     const realtimeRadio = document.getElementById('mode-realtime');
@@ -1267,7 +1267,8 @@ async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType
         AppState.currentScoreTitle = title || getScoreDisplayTitle(fileName || '');
 
         if (libraryScoreId && window.ScoreLibrary) {
-            await ScoreLibrary.markScoreOpened(libraryScoreId);
+            try { await ScoreLibrary.markScoreOpened(libraryScoreId); }
+            catch (error) { setLibraryStatus('Score opened, but its recent-open date could not be saved.', 'error'); }
             await refreshScoresDrawer();
         }
 
@@ -2970,7 +2971,7 @@ document.querySelectorAll('input[name="practice-mode"]').forEach((radio) => {
             pausePlaybackFromToolbar();
         }
         AppState.mode = nextMode;
-        localStorage.setItem(TRAINER_MODE_STORAGE_KEY, AppState.mode);
+        appLocalStorage.setItem(TRAINER_MODE_STORAGE_KEY, AppState.mode);
         clearScheduledMetronomeEvents();
         stopWaitModeMetronome();
         silencePlaybackOutputsImmediately();
@@ -3440,7 +3441,7 @@ function applyZoom(val, { save = true } = {}) {
     zoomInput.value = normalized;
     AppState.zoom = normalized / 100;
     if (save) {
-        localStorage.setItem(TRAINER_ZOOM_STORAGE_KEY, String(normalized));
+        appLocalStorage.setItem(TRAINER_ZOOM_STORAGE_KEY, String(normalized));
     }
     if (osmd.IsReadyToRender()) {
         osmd.zoom = AppState.zoom;
@@ -3536,7 +3537,7 @@ function updatePianoVolume(value, { save = true } = {}) {
     if (pianoVolSlider) pianoVolSlider.value = val;
     if (pianoVolInput) pianoVolInput.value = val;
     if (save) {
-        localStorage.setItem(TRAINER_PIANO_VOL_STORAGE_KEY, String(val));
+        appLocalStorage.setItem(TRAINER_PIANO_VOL_STORAGE_KEY, String(val));
     }
     if (val === 0) masterPianoVolume.volume.value = -Infinity;
     else masterPianoVolume.volume.value = 20 * Math.log10(val / 100);
@@ -3551,7 +3552,7 @@ function updateMidiOutVolume(value, { save = true } = {}) {
     if (midiOutVolSlider) midiOutVolSlider.value = val;
     if (midiOutVolInput) midiOutVolInput.value = val;
     if (save) {
-        localStorage.setItem(TRAINER_MIDIOUT_VOL_STORAGE_KEY, String(val));
+        appLocalStorage.setItem(TRAINER_MIDIOUT_VOL_STORAGE_KEY, String(val));
     }
     sendMidiOutExpressionLevel(val);
 }
@@ -3571,7 +3572,7 @@ function updateMidiInBoost(value, { save = true } = {}) {
     if (midiInBoostSlider) midiInBoostSlider.value = val;
     if (midiInBoostInput) midiInBoostInput.value = val;
     if (save) {
-        localStorage.setItem(TRAINER_MIDIIN_BOOST_STORAGE_KEY, String(val));
+        appLocalStorage.setItem(TRAINER_MIDIIN_BOOST_STORAGE_KEY, String(val));
     }
     syncMidiInBoostUi();
 }
@@ -3581,7 +3582,7 @@ function updateMetroVolume(value, { save = true } = {}) {
     if (metroVolSlider) metroVolSlider.value = val;
     if (metroVolInput) metroVolInput.value = val;
     if (save) {
-        localStorage.setItem(METRONOME_VOL_STORAGE_KEY, String(val));
+        appLocalStorage.setItem(METRONOME_VOL_STORAGE_KEY, String(val));
     }
     if (val === 0) metronomeSynth.volume.value = -Infinity;
     else metronomeSynth.volume.value = 20 * Math.log10(val / 100);

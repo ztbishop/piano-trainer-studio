@@ -34,7 +34,7 @@ function fixture(volume = 65, channel = 1, savedOut = 'piano') {
         MIDI_IN_ID_STORAGE_KEY:'in', MIDI_OUT_ID_STORAGE_KEY:'out', MIDI_LIGHTS_ID_STORAGE_KEY:'lights',
         MIDI_OUT_NAME_STORAGE_KEY:'out-name', MIDI_OUT_CHANNEL_STORAGE_KEY:'channel',
         document:{getElementById:id=>elements[id], createElement:()=>({})},
-        localStorage:{getItem:key=>stored.get(key)??null, setItem:(key,value)=>stored.set(key,value),removeItem:key=>stored.delete(key)},
+        appLocalStorage:{getItem:key=>stored.get(key)??null, setItem:(key,value)=>stored.set(key,value),removeItem:key=>stored.delete(key)},
         populateMidiChannelSelect() {}, normalizeMidiChannel:value=>Math.max(1,Math.min(16,Number(value)||1)),
         updateConnectionStatuses() {}, refreshConnectionStatuses() {}, syncMidiInputConfigVisibility() {},
         syncMidiOutChannelVisibility() {}, syncTrainerRoutingUiState() {}

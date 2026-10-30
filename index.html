@@ -181,7 +181,7 @@
                 <section class="info-panel-section">
                     <h3>Library &amp; Backups</h3>
                     <ul>
-                        <li>Your score library is stored in your browser. Back it up if it matters to you.</li>
+                        <li>Your score library is stored in your browser. Back it up if it matters to you. If storage is unavailable, Open File and demos still work; preference changes are session-only. Restore browser storage access and retry or reload. Do not clear site data.</li>
                         <li>Search title or filename within the selected folder. Song menus download saved MusicXML/MXL; folder menus export a JSON backup.</li>
                         <li>Use <strong>Scores → Backup Library</strong> to back up your song library. Restore a folder or library with Import Library (Merge).</li>
                         <li>Display offers Light, Soft Light and Dark appearance. Settings shows your version and a link to download releases.</li>
@@ -761,6 +761,7 @@
         <input type="file" id="input-led-calibration-import" accept=".json,application/json" class="hidden">
     </div>
 
+    <script>document.write('<script src="js/storage.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
     <script>document.write('<script src="js/trainer-state.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
     <script>document.write('<script src="js/transpose/transpose-engine.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
     <script>document.write('<script src="js/transpose/transpose-ui.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>

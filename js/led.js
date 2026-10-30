@@ -83,7 +83,7 @@ window.clearWledPermissionHelp = clearWledPermissionHelp;
 
 function loadLedCalibration() {
     try {
-        const stored = localStorage.getItem(LED_CALIBRATION_STORAGE_KEY);
+        const stored = appLocalStorage.getItem(LED_CALIBRATION_STORAGE_KEY);
         ledCalibration = stored ? JSON.parse(stored) : {};
     } catch (e) {
         console.warn('LED calibration load failed', e);
@@ -93,7 +93,7 @@ function loadLedCalibration() {
 
 function saveLedCalibration() {
     try {
-        localStorage.setItem(LED_CALIBRATION_STORAGE_KEY, JSON.stringify(ledCalibration));
+        appLocalStorage.setItem(LED_CALIBRATION_STORAGE_KEY, JSON.stringify(ledCalibration));
     } catch (e) {
         console.warn('LED calibration save failed', e);
     }
@@ -451,7 +451,7 @@ function setLedCount(value, { save = true } = {}) {
     LedEngine.lastFrameTime = 0;
 
     if (save) {
-        localStorage.setItem(LED_COUNT_STORAGE_KEY, String(ledCount));
+        appLocalStorage.setItem(LED_COUNT_STORAGE_KEY, String(ledCount));
     }
 
     syncLedCountControl();
@@ -502,7 +502,7 @@ function setLedMasterBrightness(value, { save = true, rerender = true } = {}) {
     const normalized = normalizeLedMasterBrightness(value);
     LedEngine.config.masterBrightness = normalized / 100;
     if (save) {
-        localStorage.setItem(LED_MASTER_BRIGHTNESS_STORAGE_KEY, String(normalized));
+        appLocalStorage.setItem(LED_MASTER_BRIGHTNESS_STORAGE_KEY, String(normalized));
     }
     applyLedBrightnessSettings({ rerender });
 }
@@ -511,7 +511,7 @@ function setLedFuture1BrightnessPct(value, { save = true, rerender = true } = {}
     const normalized = normalizeLedFuturePct(value, 1);
     LedEngine.config.future1BrightnessPct = normalized;
     if (save) {
-        localStorage.setItem(LED_FUTURE1_PCT_STORAGE_KEY, String(normalized));
+        appLocalStorage.setItem(LED_FUTURE1_PCT_STORAGE_KEY, String(normalized));
     }
     applyLedBrightnessSettings({ rerender });
 }
@@ -520,7 +520,7 @@ function setLedFuture2BrightnessPct(value, { save = true, rerender = true } = {}
     const normalized = normalizeLedFuturePct(value, 1);
     LedEngine.config.future2BrightnessPct = normalized;
     if (save) {
-        localStorage.setItem(LED_FUTURE2_PCT_STORAGE_KEY, String(normalized));
+        appLocalStorage.setItem(LED_FUTURE2_PCT_STORAGE_KEY, String(normalized));
     }
     applyLedBrightnessSettings({ rerender });
 }
@@ -584,7 +584,7 @@ function initAboutControls() {
 }
 
 function hasAcceptedWledDdpWarning() {
-    return localStorage.getItem(WLED_TRANSPORT_WARNING_ACCEPTED_STORAGE_KEY) === '1';
+    return appLocalStorage.getItem(WLED_TRANSPORT_WARNING_ACCEPTED_STORAGE_KEY) === '1';
 }
 
 function syncWledTransportControls() {
@@ -667,7 +667,7 @@ function syncWledTransportControls() {
 function setWledTransport(value, { save = true } = {}) {
     const previousTransport = normalizeWledTransport(AppState.wledTransport);
     AppState.wledTransport = normalizeWledTransport(value);
-    if (save) localStorage.setItem(WLED_TRANSPORT_STORAGE_KEY, AppState.wledTransport);
+    if (save) appLocalStorage.setItem(WLED_TRANSPORT_STORAGE_KEY, AppState.wledTransport);
     AppState.wledDdpLastSendOk = false;
     AppState.wledDdpLastSendAt = 0;
     AppState.wledDdpLastError = '';
@@ -719,7 +719,7 @@ function confirmAndSetWledTransport(value) {
         return false;
     }
 
-    localStorage.setItem(WLED_TRANSPORT_WARNING_ACCEPTED_STORAGE_KEY, '1');
+    appLocalStorage.setItem(WLED_TRANSPORT_WARNING_ACCEPTED_STORAGE_KEY, '1');
     setWledTransport('ddp');
     return true;
 }
@@ -871,7 +871,7 @@ function armWledIfNeeded(statusText = 'WLED ready.') {
 function setLedOutputMode(value, { save = true } = {}) {
     AppState.ledOutputMode = normalizeLedOutputMode(value);
 
-    if (save) localStorage.setItem(LED_OUTPUT_MODE_STORAGE_KEY, AppState.ledOutputMode);
+    if (save) appLocalStorage.setItem(LED_OUTPUT_MODE_STORAGE_KEY, AppState.ledOutputMode);
 
     if (AppState.ledOutputMode !== 'midi') {
         wipeHardwareLEDs();
@@ -925,7 +925,7 @@ function buildChromaticTestNotes() {
 
 function setWledIp(value, { save = true } = {}) {
     AppState.wledIp = String(value || '').trim();
-    if (save) localStorage.setItem(WLED_IP_STORAGE_KEY, AppState.wledIp);
+    if (save) appLocalStorage.setItem(WLED_IP_STORAGE_KEY, AppState.wledIp);
     WLEDController.clearLastSignature();
     WLEDController.cancelReconnect();
     AppState.wledConnectionState = AppState.wledIp ? 'disconnected' : 'none';
@@ -943,9 +943,9 @@ function setWledIp(value, { save = true } = {}) {
 }
 
 function initLedOutputControls() {
-    const savedMode = localStorage.getItem(LED_OUTPUT_MODE_STORAGE_KEY);
-    const savedIp = localStorage.getItem(WLED_IP_STORAGE_KEY);
-    const savedTransport = localStorage.getItem(WLED_TRANSPORT_STORAGE_KEY);
+    const savedMode = appLocalStorage.getItem(LED_OUTPUT_MODE_STORAGE_KEY);
+    const savedIp = appLocalStorage.getItem(WLED_IP_STORAGE_KEY);
+    const savedTransport = appLocalStorage.getItem(WLED_TRANSPORT_STORAGE_KEY);
 
     AppState.ledOutputMode = normalizeLedOutputMode(savedMode || 'none');
     AppState.wledIp = String(savedIp || '').trim();
@@ -997,7 +997,7 @@ function initLedOutputControls() {
         ddpDebugCheckbox.checked = !!AppState.wledDdpDebugEnabled;
         ddpDebugCheckbox.addEventListener('change', (e) => {
             AppState.wledDdpDebugEnabled = !!e.target.checked;
-            localStorage.setItem(WLED_DDP_DEBUG_STORAGE_KEY, AppState.wledDdpDebugEnabled ? 'true' : 'false');
+            appLocalStorage.setItem(WLED_DDP_DEBUG_STORAGE_KEY, AppState.wledDdpDebugEnabled ? 'true' : 'false');
             syncWledTransportControls();
             if (AppState.ledOutputMode === 'wled') {
                 WLEDController.checkLocalHelperAvailability({ force: true }).catch(() => {});
@@ -1131,7 +1131,7 @@ function setPlayerPianoType(value, { save = true, rerender = true } = {}) {
     AppState.playerRange = derivePlayerRangeFromKeyboardSize(AppState.playerPianoType);
 
     if (save) {
-        localStorage.setItem(PLAYER_PIANO_STORAGE_KEY, String(AppState.playerPianoType));
+        appLocalStorage.setItem(PLAYER_PIANO_STORAGE_KEY, String(AppState.playerPianoType));
     }
 
     syncPlayerPianoTypeControl();
@@ -1146,7 +1146,7 @@ function setPlayerPianoType(value, { save = true, rerender = true } = {}) {
 }
 
 function initPlayerPianoTypeControl() {
-    const saved = localStorage.getItem(PLAYER_PIANO_STORAGE_KEY);
+    const saved = appLocalStorage.getItem(PLAYER_PIANO_STORAGE_KEY);
     setPlayerPianoType(saved ?? 88, { save: false, rerender: false });
 
     const select = document.getElementById('select-player-piano-type');

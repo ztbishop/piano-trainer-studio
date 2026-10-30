@@ -48,7 +48,7 @@ Song menus download the saved payload, accurately labeled MusicXML or MXL. Conve
 | Backup | Format | Restore behavior |
 | --- | --- | --- |
 | Score library | `{version: 1, exportedAt, folders, scores}`; binary data serialized as `{kind: 'arraybuffer', bytes: [...]}`, text as `{kind: 'text', text}` | Identity-aware merge with a preview; existing entries remain. Known identical entries are skipped, changed versions added separately, and uncertain matches kept separate by default. |
-| Settings | `{version: 1, exportedAt, appVersion, settings}`; supported localStorage values plus fingerprinted hand assignments | Clears the known resettable global preferences, imports supported entries, sets first-run markers, and reloads. Existing unrelated/assignment entries not explicitly cleared can remain. |
+| Settings | `{version: 1, exportedAt, appVersion, settings}`; supported localStorage values plus fingerprinted hand assignments | Snapshots affected keys, writes supported entries and removes omitted resettable preferences, sets the first-run marker, and reloads only on success. Attempts rollback on failure; Web Storage cannot guarantee atomicity if access is revoked during rollback. Existing unrelated/assignment entries not explicitly cleared can remain. |
 | LED calibration | Dedicated calibration JSON export/import in `led.js` | Applies calibration separately from songs; inspect calibration validation when changing its format. |
 
 Both a library backup and settings backup are needed for a fuller move to a new browser/origin. Neither is a backup of source code, releases, or external analytics. Library backups validate version, unique IDs, folder references, metadata and text/binary payload structure before any write. Unsupported versions or malformed records reject the entire import. Settings backup validation is separate and unchanged.
@@ -69,12 +69,13 @@ Use disposable data and backups for restore/deletion tests. Never clear the user
 
 `RESETTABLE_PREFERENCE_KEYS` is the canonical global settings allowlist. Key families cover device IDs/names/channels, piano size, audio/MIDI routing, volumes, UI display, debug, LED transport/brightness/calibration, and trainer/metronome options. Do not infer active persistence from a declared key alone.
 
-- `seedFirstRunDefaults()` uses `pt_firstRunInit_20260321`; imports use a session skip marker to avoid overwriting imported values on reload.
+- `seedFirstRunDefaults()` uses `pt_firstRunInit_20260321`; imports set the persistent first-run marker; the legacy session skip marker remains readable for compatibility.
 - Input velocity and live low-latency monitoring are explicitly forced on at startup, even though legacy storage keys exist.
 - Per-mode practice/playback hand choices live in `AppState.modeSettings`; old corresponding storage keys remain in the backup/reset list but are not used by current change handlers/startup restoration.
 - Hand assignments use dynamic `pt_handAssignment_v1_<32 hex characters>` keys. They are included in settings export/import, but not the resettable global-preference list.
 - Legacy starter-import and updater keys remain untouched but are no longer consumed. `pt_appearance` is included in settings backup/reset. Reset Settings is not a full wipe of the origin.
-- Many global storage reads/writes are unguarded. Hand-assignment storage has its own fallback warning, but that does not make the entire app safe when localStorage is blocked.
+- All app preference access uses `appLocalStorage`/`appSessionStorage` from `storage.js`. Blocked getters, reads or writes produce a dismissible warning and session-only values. After a failure, writes remain in memory until reload; readable saved values remain available and no deferred defaults are flushed to disk. First-run defaults fill missing keys only. Settings export refuses incomplete/session-only data; import/reset reject unavailable storage and report failed rollback explicitly. Restore browser access and reload rather than clearing site data.
+- IndexedDB remains a persistent-only library: failures never become an empty replacement database or a fake successful save. The drawer offers Retry library and bundled demos; direct Open File remains available. Saved status is unknown while reads fail, and a failed recent-open timestamp does not prevent score rendering.
 
 There is no cross-origin/browser/device cloud sync. Hostname, scheme, and port define storage identity. A different Live Server port can appear to lose songs while leaving them in the previous origin.
 

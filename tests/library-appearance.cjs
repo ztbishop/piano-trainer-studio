@@ -28,7 +28,7 @@ const section=(start,end)=>ui.slice(ui.indexOf(start),ui.indexOf(end,ui.indexOf(
  context.AppState.scoreLibrarySearch='no match';assert.equal(context.getFilteredLibraryScores(searchable,'__all__').length,0);
  context.AppState.scoreLibrarySearch='';assert.equal(context.getFilteredLibraryScores(searchable,'__demos__').length,16);
  const handlers={},control={value:'',addEventListener:(name,fn)=>handlers[name]=fn},storedPrefs=new Map([['pt_appearance','dark']]);
- const appearanceContext={document:{documentElement:{dataset:{}},getElementById:()=>control},localStorage:{getItem:k=>storedPrefs.get(k),setItem:(k,v)=>storedPrefs.set(k,v)}};
+ const appearanceContext={document:{documentElement:{dataset:{}},getElementById:()=>control},appLocalStorage:{getItem:k=>storedPrefs.get(k),setItem:(k,v)=>storedPrefs.set(k,v)}};
  vm.runInNewContext(read('js/appearance.js'),appearanceContext);assert.equal(control.value,'dark');
  for(const value of ['soft-light','light','dark','invalid']){control.value=value;handlers.change();assert.equal(appearanceContext.document.documentElement.dataset.appearance,value==='invalid'?'light':value);}
  assert(read('js/trainer-state.js').includes("'pt_appearance'"));

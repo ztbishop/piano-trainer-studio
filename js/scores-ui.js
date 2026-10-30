@@ -249,7 +249,9 @@ async function updateScoresActionButtonsState(scores = null) {
         if (status) status.textContent = rawData == null ? 'Open a file or choose a demo to begin.' : match ? `Saved as ${match.title}` : demo ? 'Demo · not saved to library' : 'Not saved to library';
     } catch (error) {
         if (generation !== currentScoreStatusGeneration) return;
-        if (status) status.textContent = 'Could not check library status.';
+        save.hidden = false; save.disabled = true;
+        if (copy) { copy.hidden = true; copy.disabled = true; }
+        if (status) status.textContent = 'Library unavailable · saved status unknown. Current score remains open.';
     }
 }
 
@@ -413,15 +415,15 @@ function createFoldersLibraryToolbar({ folders = [], activeFolderId = '__all__' 
         const selectedIds = Array.from(getFolderLibrarySelectionSet());
         if (!selectedIds.length) return;
 
-        const selectedFolders = realFolders.filter(folder => selectedIds.includes(folder.id));
-        const selectedScores = (await ScoreLibrary.getAllScores()).filter(score => selectedIds.includes(score.folderId));
-        const confirmed = window.confirm(
-            `Delete ${selectedFolders.length} selected folder${selectedFolders.length === 1 ? '' : 's'}? ` +
-            `Any scores inside ${selectedFolders.length === 1 ? 'it will' : 'them will'} also be deleted.`
-        );
-        if (!confirmed) return;
-
         try {
+            const selectedFolders = realFolders.filter(folder => selectedIds.includes(folder.id));
+            const selectedScores = (await ScoreLibrary.getAllScores()).filter(score => selectedIds.includes(score.folderId));
+            const confirmed = window.confirm(
+                `Delete ${selectedFolders.length} selected folder${selectedFolders.length === 1 ? '' : 's'}? ` +
+                `Any scores inside ${selectedFolders.length === 1 ? 'it will' : 'them will'} also be deleted.`
+            );
+            if (!confirmed) return;
+
             await ScoreLibrary.deleteFoldersAndScores(selectedIds);
             if (AppState.currentScoreLibraryId && selectedScores.some(score => score.id === AppState.currentScoreLibraryId)) {
                 AppState.currentScoreLibraryId = null;
@@ -534,13 +536,13 @@ function createFolderListRow(option, { activeFolderId = '__all__', folders = [],
         }
 
         if (action === 'delete') {
-            const folderScores = (await ScoreLibrary.getAllScores()).filter(score => score.folderId === folder.id);
-            const confirmed = window.confirm(
-                `Delete folder "${folder.name || 'New Folder'}"? ` +
-                `${folderScores.length ? `This will also delete ${folderScores.length} score${folderScores.length === 1 ? '' : 's'} inside it.` : 'This cannot be undone.'}`
-            );
-            if (!confirmed) return;
             try {
+                const folderScores = (await ScoreLibrary.getAllScores()).filter(score => score.folderId === folder.id);
+                const confirmed = window.confirm(
+                    `Delete folder "${folder.name || 'New Folder'}"? ` +
+                    `${folderScores.length ? `This will also delete ${folderScores.length} score${folderScores.length === 1 ? '' : 's'} inside it.` : 'This cannot be undone.'}`
+                );
+                if (!confirmed) return;
                 await ScoreLibrary.deleteFolderAndScores(folder.id);
                 if (AppState.currentScoreLibraryId && folderScores.some(score => score.id === AppState.currentScoreLibraryId)) {
                     AppState.currentScoreLibraryId = null;
@@ -872,6 +874,7 @@ function createScoreRow(score, { compact = false, manageMode = false } = {}) {
             closeScoresDrawer();
         } catch (err) {
             console.error('Could not open library score', err);
+            setLibraryStatus('Could not open this saved score. Restore browser storage access and retry; do not clear site data.', 'error');
         }
     });
 
@@ -1121,7 +1124,22 @@ async function refreshScoresDrawer() {
     } catch (err) {
         console.error('Could not refresh scores drawer', err);
         if (generation !== scoresDrawerRefreshGeneration) return;
-        libraryList.innerHTML = '<div class="scores-empty-state">Could not load the library.</div>';
+        libraryList.innerHTML = '';
+        const message = document.createElement('p');
+        message.textContent = 'Saved library unavailable. Your scores have not been cleared. You can still open a file or play a demo. Restore browser storage access and retry; do not clear site data.';
+        libraryList.appendChild(message);
+        const retry = document.createElement('button');
+        retry.textContent = 'Retry library';
+        retry.onclick = () => refreshScoresDrawer();
+        libraryList.appendChild(retry);
+        try {
+            const demos = await ScoreLibrary.getDemoScores();
+            if (generation !== scoresDrawerRefreshGeneration) return;
+            for (const demo of demos) libraryList.appendChild(createScoreRow(demo));
+        } catch (_) {
+            message.textContent += ' Demo files could not be loaded; Open File remains available.';
+        }
+        await updateScoresActionButtonsState();
     }
 }
 

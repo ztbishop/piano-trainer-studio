@@ -156,9 +156,9 @@ function populateMIDIDevices() {
     const midiOutSelect = document.getElementById('midi-out');
     const midiLightsSelect = document.getElementById('midi-lights');
 
-    const savedIn = localStorage.getItem(MIDI_IN_ID_STORAGE_KEY);
-    const savedOut = localStorage.getItem(MIDI_OUT_ID_STORAGE_KEY);
-    const savedLights = localStorage.getItem(MIDI_LIGHTS_ID_STORAGE_KEY);
+    const savedIn = appLocalStorage.getItem(MIDI_IN_ID_STORAGE_KEY);
+    const savedOut = appLocalStorage.getItem(MIDI_OUT_ID_STORAGE_KEY);
+    const savedLights = appLocalStorage.getItem(MIDI_LIGHTS_ID_STORAGE_KEY);
 
     populateMidiChannelSelect('midi-in-channel', AppState.midiInChannel || 0, { includeAny: true });
     populateMidiChannelSelect('midi-out-channel', AppState.midiOutChannel || 1);
@@ -219,12 +219,12 @@ function populateMIDIDevices() {
 }
 
 document.getElementById('midi-in').addEventListener('change', (e) => {
-    localStorage.setItem(MIDI_IN_ID_STORAGE_KEY, e.target.value);
+    appLocalStorage.setItem(MIDI_IN_ID_STORAGE_KEY, e.target.value);
     if (e.target.value !== 'none') {
         const selectedName = e.target.selectedOptions?.[0]?.textContent?.replace(/\s*\(Disconnected\)\s*$/, '') || 'MIDI In';
-        localStorage.setItem(MIDI_IN_NAME_STORAGE_KEY, selectedName);
+        appLocalStorage.setItem(MIDI_IN_NAME_STORAGE_KEY, selectedName);
     } else {
-        localStorage.removeItem(MIDI_IN_NAME_STORAGE_KEY);
+        appLocalStorage.removeItem(MIDI_IN_NAME_STORAGE_KEY);
     }
     if (activeMidiInput) activeMidiInput.onmidimessage = null;
     
@@ -260,16 +260,16 @@ document.getElementById('midi-in-channel').addEventListener('change', (e) => {
     const nextChannel = normalizeMidiInputChannel(e.target.value, 0);
     e.target.value = String(nextChannel);
     AppState.midiInChannel = nextChannel;
-    localStorage.setItem(MIDI_IN_CHANNEL_STORAGE_KEY, String(nextChannel));
+    appLocalStorage.setItem(MIDI_IN_CHANNEL_STORAGE_KEY, String(nextChannel));
 });
 
 document.getElementById('midi-out').addEventListener('change', (e) => {
-    localStorage.setItem(MIDI_OUT_ID_STORAGE_KEY, e.target.value);
+    appLocalStorage.setItem(MIDI_OUT_ID_STORAGE_KEY, e.target.value);
     if (e.target.value !== 'none') {
         const selectedName = e.target.selectedOptions?.[0]?.textContent?.replace(/\s*\(Disconnected\)\s*$/, '') || 'MIDI Out';
-        localStorage.setItem(MIDI_OUT_NAME_STORAGE_KEY, selectedName);
+        appLocalStorage.setItem(MIDI_OUT_NAME_STORAGE_KEY, selectedName);
     } else {
-        localStorage.removeItem(MIDI_OUT_NAME_STORAGE_KEY);
+        appLocalStorage.removeItem(MIDI_OUT_NAME_STORAGE_KEY);
     }
     updateConnectionStatuses();
     syncMidiOutChannelVisibility();
@@ -282,7 +282,7 @@ document.getElementById('midi-out-channel').addEventListener('change', (e) => {
     const nextChannel = normalizeMidiChannel(e.target.value, 1);
     e.target.value = String(nextChannel);
     AppState.midiOutChannel = nextChannel;
-    localStorage.setItem(MIDI_OUT_CHANNEL_STORAGE_KEY, String(nextChannel));
+    appLocalStorage.setItem(MIDI_OUT_CHANNEL_STORAGE_KEY, String(nextChannel));
     if (typeof syncTrainerRoutingUiState === 'function') syncTrainerRoutingUiState();
     if (typeof sendMidiOutExpressionLevel === 'function') sendMidiOutExpressionLevel();
 });
@@ -291,19 +291,19 @@ document.getElementById('midi-lights-channel').addEventListener('change', (e) =>
     const nextChannel = normalizeMidiChannel(e.target.value, 1);
     e.target.value = String(nextChannel);
     AppState.midiLightsChannel = nextChannel;
-    localStorage.setItem(MIDI_LIGHTS_CHANNEL_STORAGE_KEY, String(nextChannel));
+    appLocalStorage.setItem(MIDI_LIGHTS_CHANNEL_STORAGE_KEY, String(nextChannel));
     wipeHardwareLEDs();
     MidiLedTestController.stop({ statusText: document.getElementById('midi-lights')?.value === 'none' ? 'Select an LED MIDI device first.' : 'MIDI LED idle.' });
     if (typeof renderVirtualKeyboard === 'function') renderVirtualKeyboard();
 });
 
 document.getElementById('midi-lights').addEventListener('change', (e) => {
-    localStorage.setItem(MIDI_LIGHTS_ID_STORAGE_KEY, e.target.value);
+    appLocalStorage.setItem(MIDI_LIGHTS_ID_STORAGE_KEY, e.target.value);
     if (e.target.value !== 'none') {
         const selectedName = e.target.selectedOptions?.[0]?.textContent?.replace(/\s*\(Disconnected\)\s*$/, '') || 'LED MIDI';
-        localStorage.setItem(MIDI_LIGHTS_NAME_STORAGE_KEY, selectedName);
+        appLocalStorage.setItem(MIDI_LIGHTS_NAME_STORAGE_KEY, selectedName);
     } else {
-        localStorage.removeItem(MIDI_LIGHTS_NAME_STORAGE_KEY);
+        appLocalStorage.removeItem(MIDI_LIGHTS_NAME_STORAGE_KEY);
     }
     wipeHardwareLEDs(); 
     MidiLedTestController.stop({ statusText: e.target.value === 'none' ? 'Select an LED MIDI device first.' : 'MIDI LED idle.' });

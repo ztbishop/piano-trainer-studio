@@ -286,13 +286,13 @@ function closeFirstRunIntro() {
 }
 
 function markFirstRunIntroSeen() {
-    try { localStorage.setItem('pt_firstRunIntroSeen', 'true'); } catch (err) {}
+    try { appLocalStorage.setItem('pt_firstRunIntroSeen', 'true'); } catch (err) {}
 }
 
 function maybeShowFirstRunIntro() {
     if (!helpOverlay) return false;
     try {
-        if (localStorage.getItem('pt_firstRunIntroSeen') === 'true') return false;
+        if (appLocalStorage.getItem('pt_firstRunIntroSeen') === 'true') return false;
     } catch (err) {}
     showFirstRunIntro();
     return true;

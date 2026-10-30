@@ -1,5 +1,5 @@
 // trainer-state.js
-// Centralized app state and persisted settings (localStorage).
+// Centralized app state and persisted settings (appLocalStorage).
 // This file should NOT contain rendering, playback, or UI logic.
 // Other modules should read/write shared state and preference helpers through here first.
 
@@ -201,27 +201,27 @@ const SKIP_FIRST_RUN_ONCE_STORAGE_KEY = 'pt_skipFirstRunOnce';
 let pendingFirstRunNotice = false;
 
 function seedFirstRunDefaults() {
-    const skipOnce = sessionStorage.getItem(SKIP_FIRST_RUN_ONCE_STORAGE_KEY) === 'true';
+    const skipOnce = appSessionStorage.getItem(SKIP_FIRST_RUN_ONCE_STORAGE_KEY) === 'true';
     if (skipOnce) {
-        sessionStorage.removeItem(SKIP_FIRST_RUN_ONCE_STORAGE_KEY);
-        localStorage.setItem(FIRST_RUN_INIT_STORAGE_KEY, 'true');
+        appSessionStorage.removeItem(SKIP_FIRST_RUN_ONCE_STORAGE_KEY);
+        appLocalStorage.setItem(FIRST_RUN_INIT_STORAGE_KEY, 'true');
         pendingFirstRunNotice = false;
         return;
     }
 
-    if (localStorage.getItem(FIRST_RUN_INIT_STORAGE_KEY) === 'true') return;
+    if (appLocalStorage.getItem(FIRST_RUN_INIT_STORAGE_KEY) === 'true') return;
 
-    localStorage.setItem(PLAYER_PIANO_STORAGE_KEY, String(DEFAULT_PREFERENCES.playerPianoType));
-    localStorage.setItem(LED_COUNT_STORAGE_KEY, String(DEFAULT_PREFERENCES.ledCount));
-    localStorage.setItem(TRAINER_PIANO_VOL_STORAGE_KEY, String(DEFAULT_PREFERENCES.trainerPianoVolume));
-    localStorage.setItem(TRAINER_MIDIOUT_VOL_STORAGE_KEY, String(DEFAULT_PREFERENCES.trainerMidiOutVolume));
-    localStorage.setItem(TRAINER_MIDIIN_BOOST_STORAGE_KEY, String(DEFAULT_PREFERENCES.trainerMidiInBoost));
-    localStorage.setItem(METRONOME_VOL_STORAGE_KEY, String(DEFAULT_PREFERENCES.metronomeVolume));
-    localStorage.setItem(LED_MASTER_BRIGHTNESS_STORAGE_KEY, String(DEFAULT_PREFERENCES.ledMasterBrightness));
-    localStorage.setItem(LED_FUTURE1_PCT_STORAGE_KEY, String(DEFAULT_PREFERENCES.ledFuture1Pct));
-    localStorage.setItem(LED_FUTURE2_PCT_STORAGE_KEY, String(DEFAULT_PREFERENCES.ledFuture2Pct));
+    if (appLocalStorage.getItem(PLAYER_PIANO_STORAGE_KEY) === null) appLocalStorage.setItem(PLAYER_PIANO_STORAGE_KEY, String(DEFAULT_PREFERENCES.playerPianoType));
+    if (appLocalStorage.getItem(LED_COUNT_STORAGE_KEY) === null) appLocalStorage.setItem(LED_COUNT_STORAGE_KEY, String(DEFAULT_PREFERENCES.ledCount));
+    if (appLocalStorage.getItem(TRAINER_PIANO_VOL_STORAGE_KEY) === null) appLocalStorage.setItem(TRAINER_PIANO_VOL_STORAGE_KEY, String(DEFAULT_PREFERENCES.trainerPianoVolume));
+    if (appLocalStorage.getItem(TRAINER_MIDIOUT_VOL_STORAGE_KEY) === null) appLocalStorage.setItem(TRAINER_MIDIOUT_VOL_STORAGE_KEY, String(DEFAULT_PREFERENCES.trainerMidiOutVolume));
+    if (appLocalStorage.getItem(TRAINER_MIDIIN_BOOST_STORAGE_KEY) === null) appLocalStorage.setItem(TRAINER_MIDIIN_BOOST_STORAGE_KEY, String(DEFAULT_PREFERENCES.trainerMidiInBoost));
+    if (appLocalStorage.getItem(METRONOME_VOL_STORAGE_KEY) === null) appLocalStorage.setItem(METRONOME_VOL_STORAGE_KEY, String(DEFAULT_PREFERENCES.metronomeVolume));
+    if (appLocalStorage.getItem(LED_MASTER_BRIGHTNESS_STORAGE_KEY) === null) appLocalStorage.setItem(LED_MASTER_BRIGHTNESS_STORAGE_KEY, String(DEFAULT_PREFERENCES.ledMasterBrightness));
+    if (appLocalStorage.getItem(LED_FUTURE1_PCT_STORAGE_KEY) === null) appLocalStorage.setItem(LED_FUTURE1_PCT_STORAGE_KEY, String(DEFAULT_PREFERENCES.ledFuture1Pct));
+    if (appLocalStorage.getItem(LED_FUTURE2_PCT_STORAGE_KEY) === null) appLocalStorage.setItem(LED_FUTURE2_PCT_STORAGE_KEY, String(DEFAULT_PREFERENCES.ledFuture2Pct));
 
-    localStorage.setItem(FIRST_RUN_INIT_STORAGE_KEY, 'true');
+    if (appLocalStorage.getItem(FIRST_RUN_INIT_STORAGE_KEY) === null) appLocalStorage.setItem(FIRST_RUN_INIT_STORAGE_KEY, 'true');
     pendingFirstRunNotice = true;
 }
 
@@ -309,7 +309,7 @@ function normalizeLedFuturePct(value, fallback) {
 }
 
 function getStoredBool(key, fallback) {
-    const value = localStorage.getItem(key);
+    const value = appLocalStorage.getItem(key);
     if (value === null) return fallback;
     if (value === 'true') return true;
     if (value === 'false') return false;
@@ -317,36 +317,37 @@ function getStoredBool(key, fallback) {
 }
 
 function getStoredNumber(key, fallback) {
-    const value = Number(localStorage.getItem(key));
+    const value = Number(appLocalStorage.getItem(key));
     return Number.isFinite(value) ? value : fallback;
 }
 
 function getClampedNumber(key, min, max, defaultVal) {
-    const raw = localStorage.getItem(key);
+    const raw = appLocalStorage.getItem(key);
     if (raw === null || raw === '') return Math.min(max, Math.max(min, defaultVal));
     const num = Number(raw);
     return Math.min(max, Math.max(min, Number.isFinite(num) ? num : defaultVal));
 }
 
 function setStoredBool(key, value) {
-    localStorage.setItem(key, value ? 'true' : 'false');
+    appLocalStorage.setItem(key, value ? 'true' : 'false');
 }
 
 function clearSavedPreferences() {
-    RESETTABLE_PREFERENCE_KEYS.forEach((key) => localStorage.removeItem(key));
-    localStorage.removeItem(FIRST_RUN_INIT_STORAGE_KEY);
-    sessionStorage.removeItem(SKIP_FIRST_RUN_ONCE_STORAGE_KEY);
+    appSessionStorage.replace({}, [SKIP_FIRST_RUN_ONCE_STORAGE_KEY]);
+    appLocalStorage.replace({}, [...RESETTABLE_PREFERENCE_KEYS, FIRST_RUN_INIT_STORAGE_KEY]);
 }
 
 function buildSettingsBackupPayload() {
+    appLocalStorage.requireStorage();
     const settings = {};
     RESETTABLE_PREFERENCE_KEYS.forEach((key) => {
-        const value = localStorage.getItem(key);
+        const value = appLocalStorage.getItem(key);
         if (value !== null) settings[key] = value;
     });
 
-    Object.keys(localStorage).filter(key => /^pt_handAssignment_v1_[a-f0-9]{32}$/.test(key)).forEach(key => { settings[key] = localStorage.getItem(key); });
+    appLocalStorage.keys().filter(key => /^pt_handAssignment_v1_[a-f0-9]{32}$/.test(key)).forEach(key => { settings[key] = appLocalStorage.getItem(key); });
 
+    appLocalStorage.requireStorage();
     return {
         version: 1,
         exportedAt: new Date().toISOString(),
@@ -370,7 +371,7 @@ function downloadSettingsBackup() {
         URL.revokeObjectURL(url);
     } catch (err) {
         console.warn('Settings backup export failed', err);
-        window.alert('Could not export settings backup.');
+        window.alert(err.message || 'Could not export settings backup.');
     }
 }
 
@@ -399,13 +400,8 @@ function importSettingsBackupPayload(payload) {
         throw new Error('No supported settings found in backup');
     }
 
-    clearSavedPreferences();
-    Object.entries(normalizedSettings).forEach(([key, value]) => {
-        localStorage.setItem(key, value);
-    });
-
-    sessionStorage.setItem(SKIP_FIRST_RUN_ONCE_STORAGE_KEY, 'true');
-    localStorage.setItem(FIRST_RUN_INIT_STORAGE_KEY, 'true');
+    appSessionStorage.replace({}, [SKIP_FIRST_RUN_ONCE_STORAGE_KEY]);
+    appLocalStorage.replace({ ...normalizedSettings, [FIRST_RUN_INIT_STORAGE_KEY]: 'true' }, RESETTABLE_PREFERENCE_KEYS);
     pendingFirstRunNotice = false;
 }
 
@@ -421,7 +417,7 @@ function handleSettingsBackupImportFile(file) {
             window.location.reload();
         } catch (err) {
             console.warn('Settings backup import failed', err);
-            window.alert('Invalid settings backup file.');
+            window.alert(err.message || 'Could not import settings backup.');
         }
     };
     reader.readAsText(file);
@@ -443,9 +439,9 @@ function normalizeMidiInputChannel(value, fallback = 0) {
 
 seedFirstRunDefaults();
 
-AppState.midiInChannel = normalizeMidiInputChannel(localStorage.getItem(MIDI_IN_CHANNEL_STORAGE_KEY), 0);
-AppState.midiOutChannel = normalizeMidiChannel(localStorage.getItem(MIDI_OUT_CHANNEL_STORAGE_KEY), 1);
-AppState.midiLightsChannel = normalizeMidiChannel(localStorage.getItem(MIDI_LIGHTS_CHANNEL_STORAGE_KEY), 1);
+AppState.midiInChannel = normalizeMidiInputChannel(appLocalStorage.getItem(MIDI_IN_CHANNEL_STORAGE_KEY), 0);
+AppState.midiOutChannel = normalizeMidiChannel(appLocalStorage.getItem(MIDI_OUT_CHANNEL_STORAGE_KEY), 1);
+AppState.midiLightsChannel = normalizeMidiChannel(appLocalStorage.getItem(MIDI_LIGHTS_CHANNEL_STORAGE_KEY), 1);
 
 AppState.midiLedLowVelocity = getStoredBool(MIDI_LED_LOW_VELOCITY_STORAGE_KEY, false);
 AppState.ledReverse = getStoredBool(LED_REVERSE_STORAGE_KEY, false);

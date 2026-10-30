@@ -223,6 +223,8 @@ LEDs are optional but provide powerful real-time visual guidance while practicin
 
 Songs are stored in your browser (IndexedDB).
 
+If browser storage is unavailable, the app warns you and keeps preference changes only for the current page session. Open File and bundled demos still work. The library offers **Retry library**; unavailable storage is not treated as an empty library or a successful save. Restore browser storage access and reload; **do not clear site data**, which could delete your saved scores. Settings backup/import/reset report failures rather than claiming success.
+
 ⚠️ Browsers may clear this data.
 
 ### Always:

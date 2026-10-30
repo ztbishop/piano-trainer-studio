@@ -98,7 +98,7 @@ window.HandAssignment = (() => {
         state = { mode: 'staff', staff: { ...defaults }, voice: {}, playAccompaniment: true };
         try {
             storageKey = 'pt_handAssignment_v1_' + fingerprint(xml || '');
-            const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+            const saved = JSON.parse(appLocalStorage.getItem(storageKey) || 'null');
             if (saved) {
                 state.mode = saved.mode === 'voice' && voices.length ? 'voice' : 'staff';
                 for (const s of staffInfo) if (validRole(saved.staff?.[s.id])) state.staff[s.id] = saved.staff[s.id];
@@ -132,7 +132,7 @@ window.HandAssignment = (() => {
         }
     }
     function saveAndRefresh() {
-        try { if (storageKey) localStorage.setItem(storageKey, JSON.stringify(state)); }
+        try { if (storageKey) appLocalStorage.setItem(storageKey, JSON.stringify(state)); }
         catch (_) { storageWarning = 'Assignments work for this session; browser storage is unavailable.'; }
         syncLegacyHands();
         // Stop queued notes and clear old hand colors before rebuilding the current frame.

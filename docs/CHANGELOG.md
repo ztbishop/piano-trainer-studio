@@ -1,5 +1,14 @@
 # Change history and future update records
 
+## 2026-10-30 — Unavailable storage recovery (no application release)
+
+- Route all application preference reads/writes through a guarded adapter loaded before state initialization. Denied storage getters/operations no longer interrupt startup or control handlers. Warn with a dismissible banner, retain session values, preserve readable saved values and stop persistent writes after failure until reload. First-run defaults no longer overwrite existing keys when the marker is absent.
+- Settings export refuses incomplete/session-only backups. Import/reset snapshot affected keys, attempt rollback on storage failure and report incomplete restoration explicitly; no success/reload after failure. Web Storage cannot guarantee atomicity when access is revoked during rollback. Library scores remain separate and are never cleared or replaced by a temporary store.
+- Unavailable libraries show recovery guidance, Retry library and bundled demos. Direct file opening continues; unavailable saved status is identified and save disabled until it can be checked. A failed recent-open timestamp cannot turn a rendered score into a load failure. Update README, in-app help, subsystem/architecture/development docs and outstanding investigations.
+- Validation: 11 Node suites passed (storage-unavailable, library-storage, library-scale, library-merge, library-workflow, library-appearance, midi-output-init, numeric-controls, hosting-paths, playback-lifecycle, loop-gate); changed JavaScript and inline scripts parsed and diff checks passed. The full-app denial harness passed 11 checks through the existing 127.0.0.1:5500 server, including zero uncaught errors, settings-operation rejection, demo/direct-file OSMD rendering and session appearance. Inspected desktop/narrow layout and warning dismissal. The existing isolated library browser harness passed 19 checks. Tests used blocked getters or disposable stores; existing application scores/settings were never accessed.
+- Pending: physical quota exhaustion, real device permission revocation during settings rollback, platform/browser acceptance and MIDI/WLED hardware operation. Protected engraving/timing scenarios beyond demo rendering and the named mocked regressions were not manually retested; their production algorithms are unchanged.
+
+
 ## 2026-10-30 — Large-library and storage-failure checks (no application release)
 
 - Index backup identity, folder-name and score-metadata lookups before exact content comparison. Preserve matching order, intentional copies and uncertain-match defaults. A 2,000-entry legacy fixture dropped from 12 million content comparisons to 2,000 (about 1,595 ms to 10 ms in Node on the test machine); a 10,000-entry fixture took about 42 ms. These are fixture measurements, not universal performance guarantees.
