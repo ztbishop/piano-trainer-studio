@@ -5251,15 +5251,14 @@ input[type="range"] {
 .scores-folder-dialog::backdrop { background: rgba(0,0,0,.45); }
 :root[data-appearance='soft-light'] .scores-save-dialog { background: #e7ebee; }
 :root[data-appearance='dark'] .scores-save-dialog { background: #252d37; color: #e4ebf2; }
-#practice-summary { display: block; font-size: 10px; font-weight: normal; }
+#practice-summary { margin: 0 0 10px; font-size: 13px; font-weight: normal; }
 
 body > .toolbar-popup, #practice-popup, #options-overlay {
     top: var(--toolbar-panel-top, 72px);
     max-height: calc(100dvh - var(--toolbar-panel-top, 72px) - 12px);
 }
 
-#btn-practice { flex-direction: column; gap: 2px; }
-#practice-summary { max-width: 160px; white-space: normal; }
+#practice-summary { white-space: normal; }
 
 #btn-scores-save-current[hidden], #btn-scores-save-copy[hidden] { display: none !important; }
 

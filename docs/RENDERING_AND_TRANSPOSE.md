@@ -20,7 +20,7 @@ OSMD owns MusicXML interpretation and engraving through its bundled VexFlow rend
 
 `getNoteAnchor()` starts with the graphical notehead's preferred position, resolves candidate SVG noteheads, and caches the anchor. Selection safeguards distinguish side-shifted chord siblings and reject dots, fingering, text, lyrics, and nearby glyphs. Broader neighborhood searches must not override tight same-stem chord identity.
 
-Expected correct feedback receives the note's cached rendered anchor. `resolveFeedbackAnchor()` also contains a cursor/pitch/staff fallback for wrong or unanchored feedback. That fallback uses a staff-index pitch approximation rather than the expected-note anchor path; clef changes and unusual staves need focused verification. Its existence does not authorize replacing correct-note anchors with cursor positions.
+Expected correct feedback receives the note's cached rendered anchor. A playable unison group retains all source-note anchors and paints each distinct `(x,y)` once through `drawExpectedNoteFeedback()`, without changing geometry lookup or the primary matching anchor. Missing anchors retain the existing single fallback; valid anchors do not create extra cursor-derived copies. `resolveFeedbackAnchor()` also contains a cursor/pitch/staff fallback for wrong or unanchored feedback. That fallback uses a staff-index pitch approximation rather than the expected-note anchor path; clef changes and unusual staves need focused verification. Its existence does not authorize replacing correct-note anchors with cursor positions.
 
 ## Layers and feedback lifetime
 

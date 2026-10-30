@@ -25,7 +25,7 @@ Follow [Development](DEVELOPMENT.md) for browser/hardware checks. Verify native 
 
 ## Menu organization and status
 
-Practice retains modes, hand selection/playback and visual feedback, with Hand assignment in an expandable disclosure. Its toolbar button summarizes mode, practiced hands and an enabled loop range by reading the existing controls; it does not write settings or orchestrate playback. The experimental simple synth switch is in More → Audio / Routing, using its original ID and handler. Routing labels are Assigned hands and Accompaniment (performance roles, not engraving staves).
+Practice retains modes, hand selection/playback and visual feedback, with Hand assignment in an expandable disclosure. A status line at the top of the Practice popup summarizes mode, practiced hands and an enabled loop range by reading the existing controls. The toolbar button remains a single line matching neighboring buttons; it does not write settings or orchestrate playback. The experimental simple synth switch is in More → Audio / Routing, using its original ID and handler. Routing labels are Assigned hands and Accompaniment (performance roles, not engraving staves).
 
 Settings lists MIDI and LED setup before About; Debug is in Advanced. Tempo and Loop appear in More only at widths where their direct toolbar buttons are hidden (1060px and below). Menu top/max-height follows the actual wrapped toolbar bounds so phone controls remain reachable. This only positions menus; OSMD layout/feedback geometry is unchanged.
 

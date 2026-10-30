@@ -1,0 +1,118 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>pre{white-space:pre-wrap;max-height:150px;overflow:auto}iframe{box-sizing:border-box}</style><title>Isolated unison feedback</title>
+<h1>Unison voices: real-score checks</h1><p>Uses memory-only preferences and blocks score storage/MIDI. Loads bundled scores through real OSMD; inspects unison anchors without altering the renderer.</p>
+<button id="run">Load isolated app</button><button id="checks" disabled>Run isolated app checks</button><pre id="results"></pre><iframe id="app" style="width:100%;height:800px;border:1px solid" allow="autoplay"></iframe>
+<script>
+document.getElementById('run').onclick=async function(){
+ this.disabled=true;
+ let html=await(await fetch('../../index.html')).text();
+ const root=new URL('../../',location.href).href;
+ const block=`<base href="${root}"><script>
+ window.testErrors=[];addEventListener('error',e=>testErrors.push(e.message));addEventListener('unhandledrejection',e=>testErrors.push(String(e.reason)));
+ window.assignmentTestData={};
+ const memoryStore=data=>new Proxy(data,{get(target,key){if(key==='getItem')return k=>target[k]??null;if(key==='setItem')return(k,v)=>{target[k]=String(v);};if(key==='removeItem')return k=>{delete target[k];};return target[key];}});
+ Object.defineProperty(window,'localStorage',{value:memoryStore(assignmentTestData)});
+ Object.defineProperty(window,'sessionStorage',{value:memoryStore({})});
+ Object.defineProperty(window,'indexedDB',{get(){throw Error('Score storage blocked in unison test');}});
+ Object.defineProperty(navigator,'requestMIDIAccess',{value:()=>Promise.reject(Error('Hardware disabled for unison test'))});
+ <\/script>`;
+ html=html.replace('<head>','<head>'+block).replace(/<script[^>]+src="https:[\s\S]*?<\/script>/g,'');
+ const frame=document.getElementById('app');
+ frame.onload=()=>{
+ document.getElementById('checks').disabled=false;
+ const doc=frame.contentDocument;const report=document.getElementById('results');
+ report.textContent='App loaded with isolated preferences; native settings/scores untouched.';
+ const check=doc.createElement('script');check.textContent=`setTimeout(()=>{parent.document.getElementById('results').textContent+='\\nStartup errors: '+JSON.stringify(testErrors);},1500);`;doc.body.appendChild(check);
+ };
+ frame.srcdoc=html;
+};
+
+document.getElementById('checks').onclick=function(){
+ this.disabled=true;
+ const frame=document.getElementById('app'), script=frame.contentDocument.createElement('script');
+ script.textContent='('+async function(){
+ const output=parent.document.getElementById('results');let count=0;
+ const check=(ok,label)=>{if(!ok)throw Error(label);output.textContent+='\nPASS: '+label;count++;};
+ try {
+ document.getElementById('btn-help-close').click();
+ const demos=await ScoreLibrary.getDemoScores();
+ const original={advance:checkWaitModeAdvance,audio:shouldRouteLiveSourceToLocalAudio,midi:shouldRouteLiveSourceToMidiOut};
+ checkWaitModeAdvance=()=>{};shouldRouteLiveSourceToLocalAudio=()=>false;shouldRouteLiveSourceToMidiOut=()=>false;
+ let groupsTested=0,split=0,shared=0;
+ try {
+ for(const title of ['Minuet in G Major','Moonlight Sonata 1st Movement','Waltz in A Minor']){
+ const score=demos.find(s=>s.title===title);await loadScoreIntoApp(score.rawData,{fileName:score.fileName,fileType:score.fileType,title});
+ const paths=[...document.querySelectorAll('#osmdSvgPage1 path')].map(p=>[p,p.getAttribute('d')]);
+ osmd.cursor.reset();let steps=0,found=0;AppState.practice={left:true,right:true};AppState.feedbackEnabled=true;
+ while(!osmd.cursor.Iterator.EndReached&&steps++<100000){
+ const it=osmd.cursor.Iterator,groups=new Map();
+ for(const e of it.CurrentVoiceEntries||[])for(const n of e.Notes||[]){
+ if(n.isRest()||n.PrintObject===false||n.isCueNote||n.Notehead==='none'||(n.NoteTie&&n.NoteTie.StartNote!==n))continue;
+ const staff=getResolvedStaffAssignmentIdFromNote(n),role=HandAssignment.roleForNote(n);
+ if(role!=='left'&&role!=='right')continue;
+ const key=staff+'|'+role+'|'+n.halfTone;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(n);
+ }
+ for(const [key,notes] of groups)if(notes.length>1){
+ found++;groupsTested++;
+ const anchors=notes.map(n=>GeometryEngine.getNoteAnchor(n,it.CurrentMeasureIndex,getResolvedStaffAssignmentIdFromNote(n)-1));
+ const unique=[...new Set(anchors.filter(Boolean).map(a=>a.x+'|'+a.y))];
+ if(unique.length>1)split++;else shared++;
+ const label=title+' m'+(it.CurrentMeasureIndex+1)+' '+key;
+ check(anchors.every(Boolean),label+': rendered source anchors available');
+ for(const mode of ['realtime','wait','follow']){
+ AppState.mode=mode;AppState.earlyGraceReservations.clear();AppState.correctFeedbackHistory=[];AppState.releasedIncorrectFeedback=[];
+ buildExpectedNotesFromEntries([{Notes:notes}],it.CurrentMeasureIndex,it.currentTimeStamp.RealValue);
+ const target=AppState.expectedNotes[0];
+ check(AppState.expectedNotes.length===1&&target.anchor===anchors[0]&&anchors.every(a=>target.anchors.includes(a)),label+' '+mode+': one target retains all cached anchors and primary identity');
+ check(AppState.visualNotesToStart.length===1,label+' '+mode+': one visual sustain');
+ const before=AppState.score.correct;AppState.isPlaying=true;
+ triggerVirtualKey(target.midi,true,'midi');AppState.isPlaying=false;triggerVirtualKey(target.midi,false,'midi');
+ check(target.hit&&AppState.score.correct===before+1,label+' '+mode+': one key hit scores once');
+ check(AppState.correctFeedbackHistory.length===unique.length&&AppState.correctFeedbackHistory.every(m=>unique.includes(m.anchor.x+'|'+m.anchor.y)),label+' '+mode+': correct markers use distinct original positions');
+ target.hit=false;const wrong=AppState.score.wrong;processMissedNotes();
+ check(AppState.score.wrong===wrong+1&&AppState.releasedIncorrectFeedback.length===unique.length,label+' '+mode+': one miss, all distinct markers');
+ AppState.correctFeedbackHistory=[];
+ AppState.earlyGraceReservations.set(target.midi,{measureIndex:it.CurrentMeasureIndex,timestamp:it.currentTimeStamp.RealValue,allowTapCarry:true});
+ const carried=AppState.score.correct;
+ buildExpectedNotesFromEntries([{Notes:notes}],it.CurrentMeasureIndex,it.currentTimeStamp.RealValue);
+ check(AppState.expectedNotes[0].hit&&AppState.score.correct===carried+1&&AppState.correctFeedbackHistory.length===unique.length,label+' '+mode+': carried input scores once at every distinct position');
+ }
+ }
+ it.moveToNext();
+ }
+ check(paths.length>0&&paths.every(([p,d])=>p.getAttribute('d')===d),title+': original engraving paths unchanged');
+ output.textContent+='\nObserved '+found+' eligible unison groups in '+title;
+ resetPlaybackForLoadedScore();
+ }
+ check(split>0&&shared>0,'Real score includes separated and overlapping unison glyphs');
+ const sample=demos.find(s=>s.title==='Moonlight Sonata 1st Movement');
+ await loadScoreIntoApp(sample.rawData,{fileName:sample.fileName,fileType:sample.fileType,title:sample.title});
+ for(const zoom of [100,125,75,100]){
+ applyZoom(zoom,{save:false});
+ osmd.cursor.reset();while(!osmd.cursor.Iterator.EndReached&&osmd.cursor.Iterator.CurrentMeasureIndex<22)osmd.cursor.Iterator.moveToNext();
+ osmd.cursor.update();const it=osmd.cursor.Iterator;
+ buildExpectedNotesFromEntries(it.CurrentVoiceEntries,it.CurrentMeasureIndex,it.currentTimeStamp.RealValue);
+ const target=AppState.expectedNotes.find(n=>n.anchors.length>1&&new Set(n.anchors.map(a=>a.x)).size>1);
+ check(!!target,'Moonlight m23: distinct unison anchors after '+zoom+'% zoom');
+ const pathData=()=>[...document.querySelectorAll('#osmdSvgPage1 path')].filter(p=>!p.closest('#pt-feedback-group,#pt-debug-group,#pt-looper-group')).map(p=>p.getAttribute('d')).join('|');
+ const originalPaths=pathData();
+ AppState.correctFeedbackHistory=[];AppState.releasedIncorrectFeedback=[];drawExpectedNoteFeedback(target,true);
+ const positions=target.anchors.map(a=>a.x+'|'+a.y);
+ window.dispatchEvent(new Event('resize'));await new Promise(resolve=>setTimeout(resolve,400));
+ check(AppState.correctFeedbackHistory.length===0,'Resize keeps existing transient-feedback clearing behavior');
+ buildExpectedNotesFromEntries(it.CurrentVoiceEntries,it.CurrentMeasureIndex,it.currentTimeStamp.RealValue);
+ const refreshed=AppState.expectedNotes.find(n=>n.midi===target.midi&&n.staffId===target.staffId);
+ const resizedPaths=pathData();
+ drawExpectedNoteFeedback(refreshed,true);
+ const freshPositions=refreshed.anchors.map(a=>a.x+'|'+a.y);
+ output.textContent+='\nResize '+zoom+'%: '+JSON.stringify({before:positions,after:freshPositions,pathsEqual:originalPaths===pathData()});
+ check(AppState.correctFeedbackHistory.length===new Set(freshPositions).size&&AppState.correctFeedbackHistory.every(m=>freshPositions.includes(m.anchor.x+'|'+m.anchor.y))&&resizedPaths===pathData(),'Moonlight m23: fresh feedback uses resized anchors without changing engraving at '+zoom+'%');
+ }
+ check(testErrors.length===0,'No uncaught errors');
+ output.textContent+='\nGroups tested: '+groupsTested+'; distinct-position groups: '+split+'; shared-position groups: '+shared;
+ } finally {AppState.isPlaying=false;checkWaitModeAdvance=original.advance;shouldRouteLiveSourceToLocalAudio=original.audio;shouldRouteLiveSourceToMidiOut=original.midi;}
+ output.textContent='Completed '+count+' checks. Native settings and scores were never accessed.\n'+output.textContent;
+ }catch(error){output.textContent+='\nFAIL: '+error.stack;}
+ } .toString()+')()';
+ frame.contentDocument.body.appendChild(script);
+};
+</script>

@@ -50,7 +50,7 @@ Wait's UI says score playback is unavailable and disables accompaniment routing 
 
 `buildExpectedNotesFromEntries()` uses hand roles and enabled practice hands. It excludes rests, tie continuations, hidden/non-rendered cue/ornamental notes, and notes outside the configured player range. Out-of-range targets are tracked separately rather than blocking a smaller keyboard.
 
-Current groups deduplicate by `staffId|handRole|midi`, not by XML-note identity. Across different pitches/staves roles remain separate; same-pitch same-staff voices can collapse. This is a design tension with strict preservation of distinct XML-note anchors; see the review before changing it.
+Playable groups retain the existing `staffId|handRole|midi` identity: one attack/credit or missed-note penalty per group. Each group now retains every available per-note cached anchor in `anchors`; its original primary `anchor` still controls matching proximity. Correct, early-carried and missed feedback paints each distinct position once, including side-shifted unison voices; overlapping glyphs do not stack opacity. Different staves/roles remain separate. Playback scheduling and visual sustain merging are unchanged.
 
 `findExpectedMatchForMidi()` chooses an unhit matching pitch; if multiple candidates exist, rendered anchor proximity to cursor X breaks ties. A key attack can:
 

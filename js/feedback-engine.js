@@ -839,6 +839,18 @@ function drawFeedbackNote(midi, isCorrect, targetStaffId, forceMIdx = null, anch
     });
 }
 
+// Unison targets keep their existing matching identity and every cached note anchor.
+function drawExpectedNoteFeedback(expected, isCorrect, measureIndex = expected.mIdx) {
+    const anchors = expected.anchors?.length ? expected.anchors : [expected.anchor];
+    const painted = new Set();
+    for (const anchor of anchors) {
+        const key = anchor ? `${anchor.x}|${anchor.y}` : 'fallback';
+        if (painted.has(key)) continue; // Shared glyph: avoid stacking marker opacity.
+        painted.add(key);
+        drawFeedbackNote(expected.midi, isCorrect, expected.staffId, measureIndex, anchor);
+    }
+}
+
 function getCursorSvgX() {
     if (!osmd?.cursor?.cursorElement) return null;
     const rect = osmd.cursor.cursorElement.getBoundingClientRect();
@@ -1013,7 +1025,7 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
 
                         const existingExpected = mergedExpected.get(key);
                         if (!existingExpected) {
-                            mergedExpected.set(key, { midi, staffId: sid, handRole, hit: false, mIdx: currentMeasureIdx, anchor });
+                            mergedExpected.set(key, { midi, staffId: sid, handRole, hit: false, mIdx: currentMeasureIdx, anchor, anchors: anchor ? [anchor] : [] });
                         } else {
                             debugLogAnchorResolution('EXPECTED_NOTE_DEDUPE_COLLISION', {
                                 key,
@@ -1030,6 +1042,7 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
                                     anchor: existingExpected.anchor ? { x: existingExpected.anchor.x, y: existingExpected.anchor.y } : null
                                 }
                             });
+                            if (anchor && !existingExpected.anchors.includes(anchor)) existingExpected.anchors.push(anchor);
                             if (!existingExpected.anchor && anchor) {
                                 existingExpected.anchor = anchor;
                             }
@@ -1077,7 +1090,7 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
             AppState.heldCorrectNotes.set(expected.midi, expected.staffId);
             AppState.preExpectedHeldNotes.add(expected.midi);
         }
-        drawFeedbackNote(expected.midi, true, expected.staffId, currentMeasureIdx, expected.anchor);
+        drawExpectedNoteFeedback(expected, true, currentMeasureIdx);
         AppState.score.correct++;
         consumedReservationMidis.push(expected.midi);
     });
@@ -1146,7 +1159,7 @@ function processMissedNotes() {
     AppState.expectedNotes.forEach(n => {
         if (!n.hit) {
             if (!suppressMissedVisuals) {
-                drawFeedbackNote(n.midi, false, n.staffId, n.mIdx, n.anchor);
+                drawExpectedNoteFeedback(n, false);
             }
             AppState.score.wrong++;
             missedCount++;

@@ -2679,7 +2679,7 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
                 });
 
                 if (isCorrect) {
-                    drawFeedbackNote(midi, true, targetStaffId, forceMIdx, anchor);
+                    drawExpectedNoteFeedback(expectedMatch, true, forceMIdx);
                     AppState.score.correct++;
                     AppState.heldCorrectNotes.set(midi, targetStaffId);
                     updateScoreDisplay();
