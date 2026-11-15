@@ -116,6 +116,9 @@ function applyPersistedTrainerAndSettingsPreferences() {
     AppState.midiInBoost = getClampedNumber(TRAINER_MIDIIN_BOOST_STORAGE_KEY, 50, 200, 100);
     AppState.inputVelocityEnabled = true;
     AppState.liveLowLatencyMonitoringEnabled = true;
+    AppState.expressivePlaybackEnabled = getStoredBool(TRAINER_EXPRESSIVE_PLAYBACK_STORAGE_KEY, false);
+    const expressivePlaybackToggle = document.getElementById('check-expressive-playback');
+    if (expressivePlaybackToggle) expressivePlaybackToggle.checked = AppState.expressivePlaybackEnabled;
     setStoredBool(TRAINER_INPUT_VELOCITY_STORAGE_KEY, true);
     setStoredBool(TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY, true);
     AppState.visualPulseEnabled = getStoredBool(VISUAL_PULSE_STORAGE_KEY, true);
@@ -232,6 +235,11 @@ function applyPersistedTrainerAndSettingsPreferences() {
 
 function restoreDefaultPreferences({ reloadDevices = true } = {}) {
     try { clearSavedPreferences(); } catch (error) { window.alert(error.message); return; }
+
+    if (AppState.expressivePlaybackEnabled && (AppState.isPlaying || AppState.countInActive || playbackStartPending)) pausePlaybackFromToolbar();
+    AppState.expressivePlaybackEnabled = false;
+    const expressivePlaybackToggle = document.getElementById('check-expressive-playback');
+    if (expressivePlaybackToggle) expressivePlaybackToggle.checked = false;
 
     AppState.mode = 'realtime';
     const realtimeRadio = document.getElementById('mode-realtime');
@@ -541,12 +549,12 @@ function playLowLatencyPlaybackNote(midi, velocity = 100, durationMs = null) {
     lowLatencyPlaybackSynth.triggerAttack(noteName, liveTime, normalized.gain);
 }
 
-function playScheduledPlaybackNote(midi, velocity = 100, durationMs = null) {
+function playScheduledPlaybackNote(midi, velocity = 100, durationMs = null, options = {}) {
     if (shouldUseLowLatencyPlaybackPath()) {
         playLowLatencyPlaybackNote(midi, velocity, durationMs);
         return;
     }
-    playLocalPianoNote(midi, velocity, durationMs, { playbackRunId });
+    playLocalPianoNote(midi, velocity, durationMs, { playbackRunId, staccato: !!options.staccato });
 }
 
 const metronomeSynth = new Tone.MembraneSynth({
@@ -2503,7 +2511,15 @@ function playLocalPianoNote(midi, velocity = 100, durationMs = null, options = {
     if (options.lowLatencyLive || options.retrigger !== false) {
         pianoSampler.triggerRelease(noteName, liveTime);
     }
-    pianoSampler.triggerAttack(noteName, liveTime, normalized.gain);
+    // Tone captures release on each source at attack; restore the shared default
+    // synchronously so ordinary score notes and live input keep their envelope.
+    const savedRelease = pianoSampler.release;
+    try {
+        if (options.staccato) pianoSampler.release = Math.min(savedRelease, 0.08);
+        pianoSampler.triggerAttack(noteName, liveTime, normalized.gain);
+    } finally {
+        pianoSampler.release = savedRelease;
+    }
     if (Number.isFinite(durationMs) && durationMs > 0) {
         const scheduleRelease = options.playbackRunId != null ? schedulePlaybackTimeout : setTimeout;
         scheduleRelease(() => pianoSampler.triggerRelease(noteName, getLiveAudioTime()), durationMs);
@@ -2599,7 +2615,7 @@ function schedulePlaybackForDestinations(midi, durationMs, velocity = 100, optio
     if (durationMs <= 0) return;
 
     if (options.toLocalAudio) {
-        playScheduledPlaybackNote(midi, velocity, durationMs);
+        playScheduledPlaybackNote(midi, velocity, durationMs, options);
     }
 
     if (options.toMidiOut && sendMidiOutNoteOn(midi, velocity)) {
@@ -2743,7 +2759,7 @@ function checkWaitModeAdvance() {
         AppState.isAudioBusy = false;
         
         AppState.pendingAudio.forEach(audio => {
-            schedulePlaybackForDestinations(audio.midi, audio.durationMs, audio.velocity ?? 100, { toLocalAudio: !!audio.toLocalAudio, toMidiOut: !!audio.toMidiOut });
+            schedulePlaybackForDestinations(audio.midi, audio.durationMs, audio.velocity ?? 100, { toLocalAudio: !!audio.toLocalAudio, toMidiOut: !!audio.toMidiOut, staccato: !!audio.staccato });
         });
         AppState.pendingAudio = []; 
 
@@ -3625,6 +3641,17 @@ if (lowLatencyPlaybackCheckbox) {
     });
 }
 
+const expressivePlaybackCheckbox = document.getElementById('check-expressive-playback');
+if (expressivePlaybackCheckbox) {
+    expressivePlaybackCheckbox.checked = AppState.expressivePlaybackEnabled;
+    expressivePlaybackCheckbox.addEventListener('change', (e) => {
+        // Finish active/deferred notes through the existing cancellation path.
+        if (AppState.isPlaying || AppState.countInActive || playbackStartPending) pausePlaybackFromToolbar();
+        AppState.expressivePlaybackEnabled = e.target.checked;
+        setStoredBool(TRAINER_EXPRESSIVE_PLAYBACK_STORAGE_KEY, AppState.expressivePlaybackEnabled);
+    });
+}
+
 document.getElementById('practice-lh').addEventListener('change', (e) => {
     if (AppState.mode === 'follow') {
         if (!e.target.checked) {
@@ -4002,6 +4029,7 @@ function playbackLoop() {
     renderFeedbackOverlay();
     renderVirtualKeyboard(entries, currentMeasureIdx, currentTimestamp);
 
+    const expressionOutputs = [];
     entries.forEach(e => e.Notes.forEach(n => {
         const handRole = HandAssignment.roleForNote(n);
         const isRH = handRole === 'right';
@@ -4028,17 +4056,32 @@ function playbackLoop() {
                             : n.Length.RealValue;
 
                         const noteDurationSeconds = (combinedLength * 4) * (60 / (AppState.baseBpm * AppState.speedPercent));
-                        const durationMs = (noteDurationSeconds * 1000) * 0.9;
+                        const expression = AppState.expressivePlaybackEnabled
+                            ? ScoreExpression.resolve(n, osmd.Sheet)
+                            : { velocity: 100, gate: 0.9, staccato: false };
+                        const durationMs = (noteDurationSeconds * 1000) * expression.gate;
                         
-                        if ((AppState.mode === 'wait' || AppState.mode === 'follow') && AppState.expectedNotes.length > 0 && !isPracticingThisHand) {
-                            AppState.pendingAudio.push({ midi: m, durationMs: durationMs, velocity: 100, toLocalAudio: routeToLocalAudio, toMidiOut: routeToMidiOut });
+                        const deferred = (AppState.mode === 'wait' || AppState.mode === 'follow') && AppState.expectedNotes.length > 0 && !isPracticingThisHand;
+                        if (AppState.expressivePlaybackEnabled) {
+                            expressionOutputs.push({ midi: m, durationMs, velocity: expression.velocity, staccato: expression.staccato, toLocalAudio: routeToLocalAudio, toMidiOut: routeToMidiOut, deferred });
+                        } else if (deferred) {
+                            AppState.pendingAudio.push({ midi: m, durationMs: durationMs, velocity: expression.velocity, staccato: expression.staccato, toLocalAudio: routeToLocalAudio, toMidiOut: routeToMidiOut });
                         } else {
-                            schedulePlaybackForDestinations(m, durationMs, 100, { toLocalAudio: routeToLocalAudio, toMidiOut: routeToMidiOut });
+                            schedulePlaybackForDestinations(m, durationMs, expression.velocity, { toLocalAudio: routeToLocalAudio, toMidiOut: routeToMidiOut, staccato: expression.staccato });
                         }
                     }
                 }
         }
     }));
+
+    // Tone and MIDI release by pitch: mixed-articulation unisons must share
+    // the longest output gate. This does not merge source notes or feedback anchors.
+    if (AppState.expressivePlaybackEnabled) {
+        for (const output of ScoreExpression.mergeOutputs(expressionOutputs)) {
+            if (output.deferred) AppState.pendingAudio.push(output);
+            else schedulePlaybackForDestinations(output.midi, output.durationMs, output.velocity, output);
+        }
+    }
 
     osmd.cursor.Iterator.moveToNext(); 
     

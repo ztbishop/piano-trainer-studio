@@ -21,6 +21,7 @@ The [developer index](README.md) links subsystem guides. The [October 20 review]
 - Correct/wrong/missed-note feedback, accuracy display, virtual keyboard input, hand colors, and future-note preview.
 - Score tempo changes, tempo scaling, metronome/count-in, MIDI metronome output, measure looping, click-to-start navigation, zoom, scrolling, and fullscreen.
 - Sampled local piano audio, optional low-latency playback, MIDI output, input/output channel selection, and separate routing/volume controls.
+- Optional expressive score playback (off by default): staccato, ordinary accents and fixed dynamics through existing audio/MIDI routing. See [scope and limitations](MIDI_AUDIO_LED.md#optional-expressive-score-playback); crescendos remain deferred.
 - Permanent bundled demos, searchable browser library/folders, saved-score downloads, folder exports, bulk import, library backup/restore, settings backup/restore, and key/semitone transposition/reset.
 - Optional LED simulator, WLED HTTP JSON/DDP, MIDI LED devices, strip tests, brightness settings, and calibration.
 - Cloudflare Web Analytics and Google Analytics tags in `index.html`. No custom practice-event instrumentation was found in the reviewed application code.

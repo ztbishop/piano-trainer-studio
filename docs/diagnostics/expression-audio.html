@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Expression audio: offline sampler checks</title>
+    <style>
+        body { font: 16px/1.5 system-ui, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; }
+        button { font: inherit; padding: 8px 16px; }
+        pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f3f5f7; padding: 16px; }
+    </style>
+</head>
+<body>
+    <h1>Expression audio: offline sampler checks</h1>
+    <p>Renders the bundled Salamander A4 recording through the bundled Tone.js sampler into memory. Checks velocity gain and the release envelope captured at attack. No sound is sent to speakers; no MIDI or browser settings are accessed.</p>
+    <p>For the simultaneous-note test, two MIDI keys use the same recording so the remaining ordinary voice can be compared sample for sample. This isolates envelope behavior; it is not a listening test or a complete trainer playback test.</p>
+    <button id="run">Run offline audio checks</button>
+    <pre id="results" aria-live="polite">Ready. The real local sample must load; there is no synthetic fallback.</pre>
+    <script src="../../assets/js/Tone.js"></script>
+    <script>
+    document.getElementById('run').onclick = async function () {
+        this.disabled = true;
+        const output = document.getElementById('results');
+        output.textContent = 'Loading the bundled Salamander sample…';
+        let sample;
+        let checks = 0;
+        const check = (condition, label) => {
+            if (!condition) throw Error(label);
+            checks++;
+            output.textContent += '\nPASS: ' + label;
+        };
+        const rms = (buffer, start, end) => {
+            const first = Math.floor(start * buffer.sampleRate), last = Math.floor(end * buffer.sampleRate);
+            let sum = 0, count = 0;
+            for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+                const data = buffer.getChannelData(channel);
+                for (let index = first; index < Math.min(last, data.length); index++) {
+                    sum += data[index] * data[index];
+                    count++;
+                }
+            }
+            return Math.sqrt(sum / count);
+        };
+        const differenceRms = (left, right, start, end) => {
+            const first = Math.floor(start * left.sampleRate), last = Math.floor(end * left.sampleRate);
+            let sum = 0, count = 0;
+            for (let channel = 0; channel < left.numberOfChannels; channel++) {
+                const a = left.getChannelData(channel), b = right.getChannelData(channel);
+                for (let index = first; index < Math.min(last, a.length, b.length); index++) {
+                    sum += (a[index] - b[index]) ** 2;
+                    count++;
+                }
+            }
+            return Math.sqrt(sum / count);
+        };
+        const buffers = [];
+        try {
+            const extension = document.createElement('audio').canPlayType('audio/ogg; codecs="vorbis"') ? 'ogg' : 'mp3';
+            const url = '../../assets/audio/salamander/A4.' + extension;
+            sample = await Tone.ToneAudioBuffer.fromUrl(url);
+            check(sample.loaded && sample.duration > 1, 'Actual Salamander A4.' + extension + ' loaded (' + sample.duration.toFixed(2) + ' seconds)');
+            const onset = 0.05, heldSeconds = 0.25;
+            const render = async (voices, velocity) => {
+                let sampler, restored = true;
+                try {
+                    const buffer = await Tone.Offline(() => {
+                        sampler = new Tone.Sampler({ urls: { A4: sample.get(), A5: sample.get() }, attack: 0, release: 1 }).toDestination();
+                        voices.forEach((staccato, index) => {
+                            const note = index === 0 ? 'A4' : 'A5';
+                            const savedRelease = sampler.release;
+                            // Same public-API strategy as playLocalPianoNote: capture a per-attack
+                            // release without changing ordinary sources or the shared default.
+                            try {
+                                if (staccato) sampler.release = Math.min(savedRelease, 0.08);
+                                sampler.triggerAttack(note, onset, velocity / 127);
+                            } finally {
+                                sampler.release = savedRelease;
+                            }
+                            restored = restored && sampler.release === 1;
+                        });
+                        sampler.triggerRelease(voices.length === 1 ? ['A4'] : ['A4', 'A5'], onset + heldSeconds);
+                    }, 1.5, 2, sample.sampleRate);
+                    buffers.push(buffer);
+                    check(restored, voices.map(value => value ? 'staccato' : 'ordinary').join(' + ') + ' at velocity ' + velocity + ': sampler default restored to 1 second');
+                    return buffer;
+                } finally {
+                    sampler?.dispose();
+                }
+            };
+            const quiet = await render([false], 56);
+            const loud = await render([false], 112);
+            const short = await render([true], 56);
+            const ordinaryThenShort = await render([false, true], 56);
+            const shortThenOrdinary = await render([true, false], 56);
+            const onsetQuiet = rms(quiet, 0.06, 0.20), onsetLoud = rms(loud, 0.06, 0.20);
+            check(onsetQuiet > 1e-6, 'Rendered attack contains audio');
+            check(Math.abs(onsetLoud / onsetQuiet - 2) < 0.002, 'Doubling velocity doubles attack RMS (' + (onsetLoud / onsetQuiet).toFixed(6) + '×)');
+            check(differenceRms(quiet, short, 0.06, 0.20) < onsetQuiet * 0.0001, 'Staccato leaves attack waveform unchanged before note-off');
+            const ordinaryTail = rms(quiet, 0.45, 0.65), shortTail = rms(short, 0.45, 0.65);
+            check(ordinaryTail > 1e-6, 'Ordinary one-second release still has tail energy after note-off');
+            check(shortTail < ordinaryTail * 0.001, 'Staccato 80 ms release is silent by the tail window (relative RMS ' + (shortTail / ordinaryTail).toExponential(2) + ')');
+            check(differenceRms(ordinaryThenShort, quiet, 0.45, 0.65) < ordinaryTail * 0.0001, 'Starting staccato preserves an already-started ordinary voice’s one-second tail');
+            check(differenceRms(shortThenOrdinary, quiet, 0.45, 0.65) < ordinaryTail * 0.0001, 'An ordinary attack after staccato retains its one-second tail');
+            check(rms(quiet, 1.35, 1.45) < 1e-8 && rms(short, 1.35, 1.45) < 1e-8, 'Both releases finish within the offline render');
+            output.textContent = 'Completed ' + checks + ' offline audio checks. Actual bundled Tone.js and Salamander sample; no speakers, MIDI, or native settings used.\n' + output.textContent;
+        } catch (error) {
+            output.textContent += '\nFAIL: ' + error.stack;
+        } finally {
+            for (const buffer of buffers) buffer.dispose();
+            sample?.dispose();
+            this.disabled = false;
+        }
+    };
+    </script>
+</body>
+</html>

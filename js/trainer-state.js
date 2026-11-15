@@ -97,6 +97,7 @@ const AppState = {
     inputVelocityEnabled: true,
     liveLowLatencyMonitoringEnabled: true,
     lowLatencyPlaybackEnabled: false,
+    expressivePlaybackEnabled: false,
     currentScoreFileType: '',
     currentScoreOriginalFileType: '',
     currentScoreLibraryId: null,
@@ -163,6 +164,7 @@ const TRAINER_MIDIOUT_VIRTUAL_STORAGE_KEY = 'pt_midiOutVirtualKeyboard';
 const TRAINER_INPUT_VELOCITY_STORAGE_KEY = 'pt_inputVelocityEnabled';
 const TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY = 'pt_liveLowLatencyMonitoringEnabled';
 const TRAINER_LOW_LATENCY_PLAYBACK_STORAGE_KEY = 'pt_lowLatencyPlaybackEnabled';
+const TRAINER_EXPRESSIVE_PLAYBACK_STORAGE_KEY = 'pt_expressivePlaybackEnabled';
 const TRAINER_PIANO_VOL_STORAGE_KEY = 'pt_trainerPianoVolume';
 const TRAINER_MIDIOUT_VOL_STORAGE_KEY = 'pt_trainerMidiOutVolume';
 const TRAINER_MIDIIN_BOOST_STORAGE_KEY = 'pt_trainerMidiInBoost';
@@ -275,6 +277,7 @@ const RESETTABLE_PREFERENCE_KEYS = [
     TRAINER_INPUT_VELOCITY_STORAGE_KEY,
     TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY,
     TRAINER_LOW_LATENCY_PLAYBACK_STORAGE_KEY,
+    TRAINER_EXPRESSIVE_PLAYBACK_STORAGE_KEY,
     TRAINER_PIANO_VOL_STORAGE_KEY,
     TRAINER_MIDIOUT_VOL_STORAGE_KEY,
     TRAINER_MIDIIN_BOOST_STORAGE_KEY,
@@ -413,6 +416,7 @@ function validateSettingsBackupPayload(payload) {
         'pt_audioLeft', 'pt_audioRight', 'pt_audioHands', 'pt_audioOther', 'pt_audioInstrument', 'pt_audioVirtualKeyboard',
         'pt_midiOutHands', 'pt_midiOutOther', 'pt_midiOutInstrument', 'pt_midiOutVirtualKeyboard',
         'pt_inputVelocityEnabled', 'pt_liveLowLatencyMonitoringEnabled', 'pt_lowLatencyPlaybackEnabled',
+        'pt_expressivePlaybackEnabled',
         'pt_autoScroll', 'pt_virtualKeyboardVisible', 'pt_fullscreenOnPlay', 'pt_debugEnabled',
         'pt_visualPulseEnabled', 'pt_loopCountInEnabled', 'pt_metronomeMidiOutEnabled', 'pt_accentedDownbeatEnabled'
     ];
@@ -534,6 +538,7 @@ AppState.ledReverse = getStoredBool(LED_REVERSE_STORAGE_KEY, false);
 AppState.inputVelocityEnabled = true;
 AppState.liveLowLatencyMonitoringEnabled = true;
 AppState.lowLatencyPlaybackEnabled = getStoredBool(TRAINER_LOW_LATENCY_PLAYBACK_STORAGE_KEY, false);
+AppState.expressivePlaybackEnabled = getStoredBool(TRAINER_EXPRESSIVE_PLAYBACK_STORAGE_KEY, false);
 setStoredBool(TRAINER_INPUT_VELOCITY_STORAGE_KEY, true);
 setStoredBool(TRAINER_LIVE_LOW_LATENCY_STORAGE_KEY, true);
 

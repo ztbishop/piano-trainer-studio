@@ -1,5 +1,13 @@
 # Change history and future update records
 
+## 2026-11-15 — Optional basic expressive playback (no application release)
+
+- Added **More → Audio / Routing → Expressive score playback**, off by default and included in existing settings backup/import/reset. Toggling during playback/count-in uses the existing pause/cleanup path; mode changes retain the preference.
+- A read-only score-expression module supplies fixed dynamics (`ppp`–`fff`), ordinary accents and untied staccato to the existing local/MIDI output path, including deferred accompaniment. Staff-specific marks have priority; before a staff's first marking, it inherits the latest unambiguous dynamic from its instrument. Bundled Moonlight/Fur Elise confirmed why this fallback is needed. See [exact semantics and limitations](MIDI_AUDIO_LED.md#optional-expressive-score-playback).
+- Sampled staccato uses an 80 ms per-attack release with the existing samples; ordinary/live envelopes retain their default. Cursor scheduling, measure/repeat timing, ties, expected notes, feedback anchors/geometry, engraving, visual/LED sustain rules and live input interpretation were not changed. Crescendos, pedal and advanced expression remain deferred/out of scope. No vendor, dependency, version or storage-schema change.
+- Validation: 197 resolver/output assertions, 81 integration checks, and existing playback-lifecycle, loop-gate, multi-segment-ties, settings-backup, midi-output-init, resize-geometry, unison-feedback and clef-feedback suites passed. Browser: 427 assertions on two new MusicXML fixtures and three bundled XML/MXL scores; 14 offline waveform checks using the real Salamander sample and bundled Tone.js. Desktop/phone checkbox layout and Realtime startup/end/startup cancellation were exercised. Changed-script/inline syntax and diff checks passed. [Detailed scope](DEVELOPMENT.md#basic-expression-checks).
+- Pending acceptance: subjective listening and actual MIDI/VST/LED behavior, broader ambiguous staff/voice scope, complex scores and measured timing/latency. Captured output and offline rendering do not establish physical hardware or acoustic quality. Native browser data was never opened or cleared.
+
 ## 2026-10-30 — Keyboard size target refresh (no application release)
 
 - Confirmed that changing keyboard size only filtered existing lists: expansion omitted newly playable current notes, while shrink did not populate the current out-of-range list. Reproduced with actual target functions and bundled Moonlight Sonata in the browser.

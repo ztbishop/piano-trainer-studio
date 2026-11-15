@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="4.0">
+  <work><work-title>Expressive unison regression</work-title></work>
+  <identification><creator type="composer">Piano Trainer Studio test fixture</creator><rights>Original regression fixture; CC0.</rights></identification>
+  <part-list><score-part id="P1"><part-name>Piano</part-name><score-instrument id="I1"><instrument-name>Piano</instrument-name></score-instrument><midi-instrument id="I1"><midi-channel>1</midi-channel><midi-program>1</midi-program></midi-instrument></score-part></part-list>
+  <part id="P1"><measure number="1">
+    <attributes><divisions>4</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><staves>2</staves><clef number="1"><sign>G</sign><line>2</line></clef><clef number="2"><sign>F</sign><line>4</line></clef></attributes>
+    <direction placement="above"><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>120</per-minute></metronome></direction-type><staff>1</staff><sound tempo="120"/></direction>
+    <direction placement="below"><direction-type><dynamics><p/></dynamics></direction-type><staff>1</staff></direction>
+    <note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><voice>1</voice><type>quarter</type><stem>up</stem><staff>1</staff><notations><articulations><staccato/></articulations></notations></note>
+    <note><rest/><duration>12</duration><voice>1</voice><type>half</type><dot/><staff>1</staff></note>
+    <backup><duration>16</duration></backup>
+    <note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><voice>2</voice><type>quarter</type><stem>down</stem><staff>1</staff><notations><articulations><accent/></articulations></notations></note>
+    <note><rest/><duration>12</duration><voice>2</voice><type>half</type><dot/><staff>1</staff></note>
+    <backup><duration>16</duration></backup>
+    <note><rest measure="yes"/><duration>16</duration><voice>3</voice><staff>2</staff></note>
+    <barline location="right"><bar-style>light-heavy</bar-style></barline>
+  </measure></part>
+</score-partwise>
