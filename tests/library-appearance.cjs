@@ -8,7 +8,9 @@ const section=(start,end)=>ui.slice(ui.indexOf(start),ui.indexOf(end,ui.indexOf(
  const context=vm.createContext({URL,ArrayBuffer,Uint8Array,console,window:{},document:{baseURI:'http://127.0.0.1:5500/index.html'},fetch:async()=>{fetches++;return {ok:true,json:async()=>payload};}});
  vm.runInContext(read('js/score-library.js'),context);const lib=context.window.ScoreLibrary;
  lib.transaction=()=>{writes++;throw Error('Unexpected persistence');};
- const demos=await lib.getDemoScores();assert.equal(demos.length,16);assert(demos.every(s=>s.isDemo&&s.folderId==='__demos__'));
+ const demos=await lib.getDemoScores();assert.equal(demos.length,17);assert(demos.every(s=>s.isDemo&&s.folderId==='__demos__'));
+ assert.equal(demos[16].id,'__demo_16');assert.equal(demos[16].title,'Expressive Playback Demo');
+ assert.equal(demos[16].fileType,'musicxml');assert.equal(typeof demos[16].rawData,'string');
  assert.strictEqual(await lib.getDemoScores(),demos);assert.equal(fetches,1);assert.equal(writes,0);
  const bytes=new Uint8Array([0,255,17,128]).buffer,folders=[{id:'a',name:'One'},{id:'b',name:'Two'},{id:'empty',name:'Empty'}];
  const scores=[{id:'1',title:'One',folderId:'a',fileName:'one.mxl',fileType:'mxl',rawData:bytes},{id:'2',folderId:'b',rawData:'<score/>'},{id:'3',folderId:null,rawData:'unfiled'}];
@@ -26,7 +28,9 @@ const section=(start,end)=>ui.slice(ui.indexOf(start),ui.indexOf(end,ui.indexOf(
  context.AppState.scoreLibrarySearch=' embedded WALTZ ';assert.equal(context.getFilteredLibraryScores(searchable,'a').length,1);assert.equal(context.getFilteredLibraryScores(searchable,'__unfiled__').length,0);
  context.AppState.scoreLibrarySearch='other.MXL';assert.equal(context.getFilteredLibraryScores(searchable,'__all__').length,1);
  context.AppState.scoreLibrarySearch='no match';assert.equal(context.getFilteredLibraryScores(searchable,'__all__').length,0);
- context.AppState.scoreLibrarySearch='';assert.equal(context.getFilteredLibraryScores(searchable,'__demos__').length,16);
+ context.AppState.scoreLibrarySearch='expressive';assert.equal(context.getFilteredLibraryScores(searchable,'__demos__').length,1);
+ assert.equal(context.getFilteredLibraryScores(searchable,'__all__').length,0);
+ context.AppState.scoreLibrarySearch='';assert.equal(context.getFilteredLibraryScores(searchable,'__demos__').length,17);
  const handlers={},control={value:'',addEventListener:(name,fn)=>handlers[name]=fn},storedPrefs=new Map([['pt_appearance','dark']]);
  const appearanceContext={document:{documentElement:{dataset:{}},getElementById:()=>control},appLocalStorage:{getItem:k=>storedPrefs.get(k),setItem:(k,v)=>storedPrefs.set(k,v)}};
  vm.runInNewContext(read('js/appearance.js'),appearanceContext);assert.equal(control.value,'dark');

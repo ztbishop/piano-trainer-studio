@@ -1,0 +1,164 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Isolated expressive demo checks</title>
+<style>body{font:15px system-ui;margin:16px}button{margin:0 6px 8px 0;padding:6px 10px}pre{white-space:pre-wrap;max-height:320px;overflow:auto}iframe{box-sizing:border-box;display:block;max-width:100%;height:850px;border:1px solid #777}</style>
+<h1>Expressive demo: isolated browser checks</h1>
+<p>Loads the permanent Demo Scores entry through the real library loader and OSMD. Preferences stay in memory; native score storage, MIDI hardware and analytics are blocked. Output requests are captured without audible playback.</p>
+<p>Wait/Follow checks enable both practice and playback hands to exercise the shared scheduling branch. They do not establish continuous playback, physical MIDI timing or subjective audibility.</p>
+<button id="load">Load isolated app</button><button id="checks" disabled>Run demo checks</button><button id="library" disabled>Open demo library</button><button id="audio" disabled>Open audio controls</button><button id="wide">Desktop width</button><button id="narrow">Phone width</button>
+<pre id="results">Ready.</pre><iframe id="app" style="width:1100px" allow="autoplay"></iframe>
+<script>
+const report=document.getElementById('results'),frame=document.getElementById('app');
+function runInApp(fn){const script=frame.contentDocument.createElement('script');script.textContent='('+fn.toString()+')()';frame.contentDocument.body.appendChild(script);}
+document.getElementById('load').onclick=async function(){
+ this.disabled=true;
+ let html=await(await fetch('../../index.html')).text();
+ const root=new URL('../../',location.href).href;
+ const block='<base href="'+root+'"><script>'+
+ 'window.testErrors=[];addEventListener("error",e=>testErrors.push(e.message));addEventListener("unhandledrejection",e=>testErrors.push(String(e.reason)));'+
+ 'window.expressionTestData={};const memoryStore=data=>new Proxy(data,{get(target,key){if(key==="getItem")return k=>target[k]??null;if(key==="setItem")return(k,v)=>{target[k]=String(v);};if(key==="removeItem")return k=>{delete target[k];};if(key==="key")return i=>Object.keys(target)[i]??null;if(key==="length")return Object.keys(target).length;return target[key];}});'+
+ 'Object.defineProperty(window,"localStorage",{value:memoryStore(expressionTestData)});Object.defineProperty(window,"sessionStorage",{value:memoryStore({})});'+
+ 'Object.defineProperty(window,"indexedDB",{get(){throw Error("Native score storage blocked in demo test");}});'+
+ 'Object.defineProperty(navigator,"requestMIDIAccess",{value:()=>Promise.reject(Error("Hardware disabled for demo test"))});<\/script>';
+ html=html.replace('<head>','<head>'+block).replace(/<script[^>]+src="https:[\s\S]*?<\/script>/g,'');
+ frame.onload=()=>{
+  // The drawer awaits init before reading. These frame-only read adapters let its
+  // normal Demo Scores/search UI run without ever opening a native database.
+  // Any attempted write still fails because there is no database/transaction.
+  runInApp(function(){ScoreLibrary.init=async()=>null;ScoreLibrary.getAllFolders=async()=>[];ScoreLibrary.getAllScores=async()=>[];});
+  for(const id of ['checks','library','audio'])document.getElementById(id).disabled=false;
+  report.textContent='Loaded isolated app. Native scores/settings untouched.';
+ };
+ frame.srcdoc=html;
+};
+document.getElementById('wide').onclick=()=>{frame.style.width='1100px';};
+document.getElementById('narrow').onclick=()=>{frame.style.width='390px';};
+document.getElementById('audio').onclick=()=>runInApp(function(){document.getElementById('btn-help-close').click();document.getElementById('btn-more-audio').click();});
+document.getElementById('library').onclick=()=>runInApp(async function(){
+ document.getElementById('btn-help-close').click();AppState.scoreLibrarySelectedFolderId='__demos__';AppState.scoreLibraryView='scores';AppState.scoreLibrarySearch='';
+ await refreshScoresDrawer();showToolbarPanel(document.getElementById('scores-panel'));
+});
+document.getElementById('checks').onclick=function(){
+ this.disabled=true;
+ runInApp(async function(){
+  const out=parent.document.getElementById('results');let count=0;
+  out.textContent='Running isolated bundled-demo checks.';
+  const check=(ok,label)=>{if(!ok)throw Error(label);count++;out.textContent+='\nPASS: '+label;};
+  const near=(a,b)=>Math.abs(a-b)<1e-6;
+  const original={output:schedulePlaybackForDestinations,timeout:schedulePlaybackTimeout,frame:schedulePlaybackFrame,metro:scheduleMetronomeForPlaybackWindow,visual:startVisualSustains,
+   advance:checkWaitModeAdvance,localRoute:shouldRouteLiveSourceToLocalAudio,midiRoute:shouldRouteLiveSourceToMidiOut,early:tryReserveSingleHandEarlyGrace,upcoming:tryReserveRealtimeUpcomingHeldNote};
+  let scheduled=[],waits=[],metronomes=[];
+  const paths=()=>[...document.querySelectorAll('[id^="osmdSvgPage"] path')].filter(p=>!p.closest('#pt-feedback-group,#pt-debug-group,#pt-looper-group')).map(p=>p.getAttribute('d')).join('|');
+  const seek=(measure,time)=>{osmd.cursor.reset();let steps=0;while(!osmd.cursor.Iterator.EndReached&&steps++<10000){const it=osmd.cursor.Iterator;if(it.CurrentMeasureIndex===measure&&near(it.currentTimeStamp.RealValue,time)){osmd.cursor.update();return it;}it.moveToNext();}throw Error('Cannot seek '+measure+' '+time);};
+  const anchors=n=>({midi:n.midi,staffId:n.staffId,role:n.handRole,anchor:n.anchor?{x:n.anchor.x,y:n.anchor.y}:null,anchors:(n.anchors||[]).map(a=>({x:a.x,y:a.y}))});
+  const expected=(m,t)=>{
+   let velocity=m<2?88:m<4?56:m<6?Math.round(40+64*(t-4)/1.75):Math.round(104-64*(t-6)/1.75);
+   if(m===3&&(near(t,3.25)||near(t,3.75)))velocity+=24;
+   return {velocity,gate:m===1?.5:.9,staccato:m===1};
+  };
+  const runEvent=(mode,enabled,m,t,loop=false)=>{
+   AppState.isPlaying=false;resetPlaybackForLoadedScore();const it=seek(m,t);
+   document.getElementById('check-looper').checked=loop;
+   AppState.mode=mode;AppState.expressivePlaybackEnabled=enabled;AppState.practice={left:true,right:true};AppState.playback={left:true,right:true};
+   AppState.audioEnabled.hands=true;AppState.midiOutEnabled.hands=true;AppState.speedPercent=.75;AppState.pendingAudio=[];
+   AppState.isPlaying=true;AppState.anchorTime=Tone.now();scheduled=[];waits=[];metronomes=[];
+   const source=(it.CurrentVoiceEntries||[]).flatMap(e=>e.Notes).filter(n=>!n.isRest());
+   playbackLoop();AppState.isPlaying=false;
+   const result={next:[osmd.cursor.Iterator.CurrentMeasureIndex,osmd.cursor.Iterator.currentTimeStamp.RealValue],expected:AppState.expectedNotes.map(anchors),
+    visuals:AppState.visualNotesToStart.map(n=>({midi:n.midi,durationMs:n.durationMs,endTimestamp:n.endTimestamp})),
+    wait:mode==='follow'?AppState.followAdvanceInfo?.waitSeconds:metronomes[0]?.[3],beats:mode==='follow'?AppState.followAdvanceInfo?.beatsToWait:metronomes[0]?.[4],
+    pendingLoop:!!AppState.pendingLoopRestart};
+   const expr=enabled?expected(m,t):{velocity:100,gate:.9,staccato:false};
+   const duration=.25*4*60/(AppState.baseBpm*AppState.speedPercent)*1000*expr.gate;
+   check(source.length===1&&scheduled.length===1,mode+' '+enabled+' t'+t+': exactly one RH attack');
+   check(scheduled[0].midi===source[0].halfTone+12&&scheduled[0].velocity===expr.velocity&&near(scheduled[0].durationMs,duration)&&!!scheduled[0].options.staccato===expr.staccato&&scheduled[0].options.toLocalAudio&&scheduled[0].options.toMidiOut,
+    mode+' '+enabled+' t'+t+': expected velocity/gate reach audio and MIDI');
+   return result;
+  };
+  try{
+   document.getElementById('btn-help-close').click();
+   check(!document.getElementById('check-expressive-playback').checked&&!AppState.expressivePlaybackEnabled,'Expression remains off with fresh preferences');
+   const demos=await ScoreLibrary.getDemoScores(),demo=demos.find(score=>score.title==='Expressive Playback Demo');
+   check(demos.length===17&&demos.every((score,index)=>score.id==='__demo_'+index&&score.isDemo&&score.folderId==='__demos__'),'Real demo loader returns 17 stable indexed demo identities');
+   check(demo===demos[16]&&demo.fileType==='musicxml'&&typeof demo.rawData==='string','New comparison demo is appended as __demo_16 with original MusicXML');
+   check((await ScoreLibrary.getDemoScores())===demos,'Demo loader preserves its existing session cache');
+   const xml=demo.rawData,doc=new DOMParser().parseFromString(xml,'application/xml'),measures=[...doc.querySelectorAll('part > measure')];
+   check(!doc.querySelector('parsererror')&&measures.length===8&&doc.querySelector('work-title')?.textContent===demo.title,'Original bundled MusicXML has the expected title and eight measures');
+   check(doc.querySelector('sound[tempo="96"]')&&doc.querySelector('time > beats')?.textContent==='4'&&doc.querySelector('time > beat-type')?.textContent==='4','Demo declares 4/4 and quarter = 96');
+   check(doc.querySelectorAll('note > pitch').length===32&&doc.querySelectorAll('note > rest').length===8&&!doc.querySelector('grace,chord,tie'),'Demo has 32 separate attacks, eight rests and no grace/chord/tie cases');
+   check(doc.querySelectorAll('staccato').length===4&&doc.querySelectorAll('accent').length===2,'XML contains four staccatos and two ordinary accents');
+   check([...doc.querySelectorAll('rehearsal')].map(n=>n.textContent).join('|')==='1. Ordinary|Staccato|2. Even notes|Accents: 2 & 4|3. Grow louder|4. Grow softer','All listening sections and their comparison bars are labelled');
+   await loadScoreIntoApp(xml,{fileName:demo.fileName,fileType:demo.fileType,title:demo.title,libraryScoreId:null});
+   check(AppState.currentScoreData===xml&&AppState.currentScoreLibraryId===null,'App renders the original demo without assigning a saved-library identity');
+   await updateScoresActionButtonsState([]);
+   check(document.getElementById('scores-current-state').textContent==='Demo · not saved to library'&&!document.getElementById('btn-scores-save-current').disabled,'Demo remains unsaved and can be saved through the existing UI');
+   check(osmd.Sheet.Staves.length===2&&osmd.Sheet.SourceMeasures.length===8&&AppState.baseBpm===96,'Actual OSMD app load retains both staves, eight bars and tempo');
+   const sourceMap=ScoreExpressionSource.read(osmd.Sheet,xml),spans=sourceMap?[...sourceMap.entries()].flatMap(([staff,items])=>items.map(span=>({staff,...span}))):[];
+   check(spans.length===2&&spans.every(s=>s.staff===0),'Source reader finds exactly two RH hairpins');
+   check(spans.some(s=>near(s.timestamp,4)&&near(s.endTimestamp,5.75)&&s.direction===1)&&spans.some(s=>near(s.timestamp,6)&&near(s.endTimestamp,7.75)&&s.direction===-1),'Hairpin endpoints match the explicit target notes');
+   const beforePaths=paths(),events=[];let steps=0;osmd.cursor.reset();
+   while(!osmd.cursor.Iterator.EndReached&&steps++<100){const it=osmd.cursor.Iterator;events.push({measure:it.CurrentMeasureIndex,time:it.currentTimeStamp.RealValue,notes:(it.CurrentVoiceEntries||[]).flatMap(e=>e.Notes).filter(n=>!n.isRest())});it.moveToNext();}
+   check(events.length===32,'Actual iterator traverses exactly 32 quarter-note events');
+   for(const [index,event] of events.entries()){
+    const note=event.notes[0],expr=expected(event.measure,event.time),actual=note&&ScoreExpression.resolve(note,osmd.Sheet);
+    check(event.notes.length===1&&event.measure===Math.floor(index/4)&&near(event.time,index/4)&&near(note.Length.RealValue,.25)&&osmd.Sheet.Staves.indexOf(note.ParentStaffEntry.ParentStaff)===0,
+     'Parsed event '+index+': quarter-note timing and RH-only attack');
+    check(note.halfTone+12===(index<8?[72,76,79,76][index%4]:72)&&actual.velocity===expr.velocity&&actual.gate===expr.gate&&actual.staccato===expr.staccato,
+     'Parsed event '+index+': expected pitch, dynamic and articulation');
+   }
+   check(events.slice(16,24).map(e=>ScoreExpression.resolve(e.notes[0],osmd.Sheet).velocity).join(',')==='40,49,58,67,77,86,95,104','Crescendo increases all eight repeated notes from pp to f');
+   check(events.slice(24).map(e=>ScoreExpression.resolve(e.notes[0],osmd.Sheet).velocity).join(',')==='104,95,86,77,67,58,49,40','Diminuendo decreases all eight repeated notes from f to pp');
+   schedulePlaybackForDestinations=(midi,durationMs,velocity,options={})=>scheduled.push({midi,durationMs,velocity,options});
+   schedulePlaybackTimeout=(fn,delay)=>{waits.push({fn,delay});return 0;};schedulePlaybackFrame=()=>0;
+   scheduleMetronomeForPlaybackWindow=(...args)=>metronomes.push(args);startVisualSustains=()=>{};
+   for(const mode of ['realtime','wait','follow'])for(const event of events){
+    const off=runEvent(mode,false,event.measure,event.time),on=runEvent(mode,true,event.measure,event.time);
+    check(JSON.stringify(off.next)===JSON.stringify(on.next),mode+' t'+event.time+': cursor destination unchanged');
+    check(JSON.stringify(off.expected)===JSON.stringify(on.expected)&&on.expected.length===1&&!!on.expected[0].anchor,mode+' t'+event.time+': expected note and original feedback anchor unchanged');
+    check(JSON.stringify(off.visuals)===JSON.stringify(on.visuals),mode+' t'+event.time+': visual sustain timing unchanged');
+    // Preserve the existing score-end fallback as well as normal one-beat gaps.
+    // This asset-only check must not impose a new scheduler end-of-score policy.
+    check(Number.isFinite(off.wait)&&Number.isFinite(on.wait)&&near(off.wait,on.wait)&&near(off.beats,on.beats)&&(near(event.time,7.75)||near(on.beats,1)),
+     mode+' t'+event.time+': rhythmic/metronome wait unchanged '+JSON.stringify({off:[off.wait,off.beats],on:[on.wait,on.beats]}));
+   }
+   for(const t of [7.75,4,5.75,6,4.75,7.25,4,5.75,7.75,4]){
+    const note=seek(Math.floor(t),t).CurrentVoiceEntries.flatMap(e=>e.Notes).find(n=>!n.isRest());
+    check(ScoreExpression.resolve(note,osmd.Sheet).velocity===expected(Math.floor(t),t).velocity,'Backward/direct seek t'+t+' retains its score-position dynamic');
+   }
+   document.getElementById('val-loop-min').value='5';document.getElementById('val-loop-max').value='6';AppState.loopCountInEnabled=false;
+   for(let pass=0;pass<3;pass++){
+    runEvent('realtime',true,5,5.75,true);const restart=waits[0];
+    check(!!restart&&near(restart.delay,60000/(96*.75)),'Loop '+pass+': final f note retains its full beat before restart');
+    scheduled=[];waits=[];metronomes=[];AppState.isPlaying=true;restart.fn();AppState.isPlaying=false;
+    check(scheduled.length===1&&scheduled[0].velocity===40&&near(osmd.cursor.Iterator.currentTimeStamp.RealValue,4.25),'Loop '+pass+': real restart returns to pp without cumulative growth');
+   }
+   for(const mode of ['wait','follow']){
+    const off=runEvent(mode,false,5,5.75,true),on=runEvent(mode,true,5,5.75,true);
+    check(off.pendingLoop&&on.pendingLoop&&near(off.wait,on.wait)&&JSON.stringify(off.expected)===JSON.stringify(on.expected),mode+': final practiced loop note retains satisfaction gate and timing');
+    const pending=AppState.pendingLoopRestart;AppState.isPlaying=true;original.advance();AppState.isPlaying=false;
+    check(AppState.pendingLoopRestart===pending,mode+': unsatisfied note cannot restart the loop');
+   }
+   document.getElementById('check-looper').checked=false;
+   shouldRouteLiveSourceToLocalAudio=()=>false;shouldRouteLiveSourceToMidiOut=()=>false;checkWaitModeAdvance=()=>{};
+   tryReserveSingleHandEarlyGrace=()=>null;tryReserveRealtimeUpcomingHeldNote=()=>null;
+   for(const mode of ['realtime','wait','follow'])for(const enabled of [false,true]){
+    resetPlaybackForLoadedScore();const it=seek(4,4.5);AppState.mode=mode;AppState.expressivePlaybackEnabled=enabled;AppState.practice={left:true,right:true};
+    AppState.feedbackEnabled=true;AppState.currentExpectedContext={measureIndex:4,timestamp:4.5};buildExpectedNotesFromEntries(it.CurrentVoiceEntries,4,4.5);
+    const target=AppState.expectedNotes.find(n=>n.midi===72),credit=AppState.score.correct,penalty=AppState.score.wrong;
+    AppState.isPlaying=true;triggerVirtualKey(72,true,'midi',37);AppState.isPlaying=false;triggerVirtualKey(72,false,'midi',0);
+    check(AppState.score.correct===credit+1&&AppState.correctFeedbackHistory.some(n=>n.midi===72&&n.anchor.x===target.anchor.x&&n.anchor.y===target.anchor.y),mode+' '+enabled+': correct input retains grading and rendered feedback anchor');
+    AppState.isPlaying=true;triggerVirtualKey(73,true,'midi',110);AppState.isPlaying=false;triggerVirtualKey(73,false,'midi',0);
+    check(AppState.score.wrong===penalty+1,mode+' '+enabled+': wrong input retains its penalty');
+   }
+   check(paths()===beforePaths,'Expression comparison, loops and feedback preserve original engraving paths');
+   check(testErrors.length===0,'No uncaught browser errors');
+   out.textContent='Completed '+count+' checks. Native scores/settings untouched. Captured output only; no listening, continuous-timer or hardware acceptance.\n'+out.textContent;
+  }catch(e){out.textContent+='\nFAIL: '+e.stack;}finally{
+   AppState.isPlaying=false;schedulePlaybackForDestinations=original.output;schedulePlaybackTimeout=original.timeout;schedulePlaybackFrame=original.frame;scheduleMetronomeForPlaybackWindow=original.metro;startVisualSustains=original.visual;
+   checkWaitModeAdvance=original.advance;shouldRouteLiveSourceToLocalAudio=original.localRoute;shouldRouteLiveSourceToMidiOut=original.midiRoute;tryReserveSingleHandEarlyGrace=original.early;tryReserveRealtimeUpcomingHeldNote=original.upcoming;
+   document.getElementById('check-looper').checked=false;resetPlaybackForLoadedScore();AppState.mode='realtime';AppState.speedPercent=1;AppState.expressivePlaybackEnabled=false;applyModeSettings();
+   osmd.cursor.reset();osmd.cursor.update();
+  }
+ });
+};
+</script>

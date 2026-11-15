@@ -82,6 +82,26 @@ const noStartingMark = fixture();
 hairpin(noStartingMark, 0, 1, 1);
 for (const [at, velocity] of [[0, 100], [0.5, 92], [1, 84], [3, 84]]) expect(noStartingMark, at, velocity);
 
+// Separate targetless wedges accumulate modest steps, but never beyond the fixed-dynamic range.
+// A repeat/seek re-queries the score position; it must not add another step on each playback pass.
+for (const [initial, type, levels, reset] of [
+    [5, 0, [56, 72, 88, 104, 120, 124], 4], // p grows to the ceiling, then an explicit pp resets it.
+    [8, 1, [104, 88, 72, 56, 40, 28], 7] // f falls to the floor, then an explicit mf resets it.
+]) {
+    const successive = fixture();
+    dynamic(successive, 0, initial);
+    for (let index = 0; index < 5; index++) hairpin(successive, index, index + 0.75, type);
+    dynamic(successive, 5, reset);
+    const resetLevel = reset === 4 ? 40 : 88;
+    const positions = [[0, levels[0]], ...levels.slice(1).map((velocity, index) => [index + 0.75, velocity]), [4.9, levels[5]], [5, resetLevel]];
+    for (const [at, velocity] of [...positions, ...positions.slice().reverse()]) {
+        equal(resolve(note(successive, at), successive).velocity, velocity,
+            `successive ${type === 0 ? 'crescendos' : 'diminuendos'} at ${at}: bounded source level without replay drift`);
+    }
+    equal(resolve(note(successive, 4.375), successive).velocity, type === 0 ? 122 : 34,
+        'last fallback ramp interpolates toward its bounded endpoint');
+}
+
 // Paired wedges meet without a jump; later overlaps begin at the prior ramp's current value.
 const paired = fixture();
 dynamic(paired, 0, 5);

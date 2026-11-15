@@ -78,6 +78,21 @@ Pause/reset attempts local release-all and MIDI CC64=0, CC123=0, and CC120=0. Sc
 
 `getSelectedMidiOutOutput()`, `sendMidiOutNoteOn()`, and `sendMidiOutNoteOff()` are declared in both `midi.js` and the later core script. Classic-script load order means the core declarations win at runtime. Consolidating them requires deliberate comparison of velocity/channel/echo behavior, not deleting a seemingly unused duplicate blindly.
 
+### Expression comparison demo
+
+Open **Scores → Demo Scores → Expressive Playback Demo**. This original CC0 study lasts about 20 seconds at its written quarter-note tempo of 96. Use Realtime with right-hand playback enabled, leave volume and tempo unchanged, and compare from the beginning with **Expressive score playback** off and then on. Toggling the option pauses playback, so restart the passage after switching it. The left hand rests throughout to keep the comparison clear.
+
+| Measures | Listen for with expression enabled |
+| --- | --- |
+| 1–2 | The same short motif first sounds ordinary, then detached under the staccato dots. |
+| 3–4 | Repeated C notes first sound even; the marked beats 2 and 4 in measure 4 gain emphasis. |
+| 5–6 | Repeated C notes grow from **pp** to the written **f** on the last note of measure 6. |
+| 7–8 | The same pitch becomes softer from **f** to **pp** on the final note. |
+
+Explicit starting and ending levels make the ramps unambiguous and much larger than the modest targetless default. There are no articulations within the ramp sections and no sustained melody covering them. Expression off uses velocity 100 and the ordinary gate throughout.
+
+Separate successive crescendos without ending dynamics do accumulate the chosen +16 steps, bounded at 124; diminuendos are bounded at 28. Written fixed dynamics reset the level. Replaying, seeking or looping the same passage does not add another increase/decrease: the result is determined by source position. The engine retains this modest default; the demo uses written targets for a clear comparison.
+
 ## LED pipeline and mapping
 
 The core computes desired key states; `LedEngine` maps them to an RGB framebuffer and simulator/MIDI/WLED output. Mapping uses MIDI position within the derived player range, optional reverse, rounded LED index, and per-key calibration offsets clamped to strip length. Brightness and future brightness are separate multipliers; current preview depth is one despite legacy depth-2 fields/colors.

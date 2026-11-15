@@ -1,5 +1,12 @@
 # Change history and future update records
 
+## 2026-11-15 — Expressive playback comparison demo (no application release)
+
+- Appended an original CC0 eight-measure **Expressive Playback Demo** to permanent Demo Scores. At quarter = 96 it lasts about 20 seconds: ordinary/staccato motif, even/accented repeated notes, pp→f crescendo and f→pp diminuendo. Repeated pitches and explicit targets make the gradual changes easier to compare. Existing 16 demos retain their content and index identities. [Listening guide](MIDI_AUDIO_LED.md#expression-comparison-demo).
+- Added coverage for successive targetless ramps reaching their bounds, fixed-mark resets and repeated/backward queries without drift. Separate crescendos can accumulate the existing +16 steps to the ceiling; replaying or looping does not add more. No engine strengths, samples, timing, feedback, grace-note handling, engraving rules, storage schema or version changed.
+- Validation: library-appearance/library-workflow suites and 554 hairpin assertions passed; 897 isolated browser assertions confirmed actual demo parsing, off/on output in all three practice-mode branches, loops/seeks, grading, anchors and unchanged engraving. Desktop search/open and desktop/phone notation inspected. Syntax, JSON preservation and diff checks passed. [Scope and limits](DEVELOPMENT.md#expressive-comparison-demo-checks).
+- The owner tentatively found the stronger accent more noticeable, while crescendos remained unclear. Demo listening, physical MIDI/VST/LED response and measured continuous timing remain unverified. Native browser scores/settings were untouched.
+
 ## 2026-11-15 — Recover source hairpin boundaries and strengthen accents (no application release)
 
 - Added read-only source-expression metadata from current XML or directly extracted MXL XML. MusicXML stream timing recovers short/shortened wedge boundaries; original MXL still goes directly to OSMD. Source mapping uses actual OSMD measure starts and part/staff identities, with grace/chord notes excluded from cursor advancement. Invalid/ambiguous parts retain parsed-expression fallback. No scheduler, feedback, grace-note matching, engraving, sample, storage or version change.
