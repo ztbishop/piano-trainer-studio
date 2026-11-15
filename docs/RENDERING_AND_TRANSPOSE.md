@@ -52,6 +52,14 @@ Display offers Light, Soft Light (gray paper), and Dark (charcoal paper/light ne
 4. Compare preferred and selected SVG candidates before changing rejection/tie-break rules. Preserve chord siblings and non-note-glyph rejection.
 5. Retest the known Mozart/Chopin cases in `DEVELOPMENT.md`, plus a small score showing the new issue. Do not use historical replacement JS files as the baseline.
 
+### Observational notehead comparison
+
+The existing Debug toggle also compares the production anchor with the bundled renderer's indexed notehead SVG (`graphicalNote.getNoteheadSVGs()[graphicalNote.vfnoteIndex]`). Orange rings show current anchors; cyan diamonds show the direct rendered-head centers. Magenta connectors and a delta label highlight differences greater than one SVG unit. That threshold is a diagnostic aid, not proof that either position is correct. Normal red/green feedback continues using the current resolver.
+
+The comparison validates source identity, renderer index/count, visible head geometry and its transform into the existing root SVG coordinates. Unsupported or missing heads are reported as unavailable; they never provide fallback production positions. Wrong MIDI notes without a source note still use the existing clef-aware fallback and have no direct-head comparison.
+
+`FeedbackDebug.noteheadComparisons` retains at most 48 plain snapshots, deduplicated by source object within the current render. The `NOTEHEAD_COMPARISON` console trace includes source measure/staff/pitch, index/count, both positions, delta and unavailable reasons. Turning Debug off, clearing sticky debug or invalidating geometry clears comparison records. Turning Debug on inspects already-cached current targets without replacing their anchors. All comparison paint stays in `pt-debug-group`; diagnostics do not write the production cache, change targets, grade input or render OSMD. The debugger remains observational; promoting the direct path requires separate authorization and protected-case acceptance. See [comparison checks](DEVELOPMENT.md#feedback-comparison-checks).
+
 The current successful-load path writes `File loaded successfully.` using `console.error()`. Treat that specific message as misleading logging, not proof of a failed load. It was observed during the review's browser smoke check; see the dated report.
 
 ## Transposition data flow

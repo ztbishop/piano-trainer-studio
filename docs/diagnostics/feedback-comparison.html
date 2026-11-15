@@ -1,0 +1,334 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Isolated feedback notehead comparison</title>
+<style>
+body{font:15px system-ui;margin:16px}button{margin:0 6px 8px 0}pre{white-space:pre-wrap;max-height:240px;overflow:auto}iframe{box-sizing:border-box;display:block;max-width:100%;height:800px;border:1px solid #777}
+</style>
+<h1>Feedback notehead comparison</h1>
+<p>Checks the diagnostic comparison against actual indexed VexFlow notehead elements. Debug on/off must leave production feedback, grading and engraving unchanged. Uses memory-only preferences; native score storage and MIDI are blocked.</p>
+<button id="run">Load isolated app</button><button id="checks" disabled>Run comparison checks</button>
+<button id="preview" disabled>Preview first difference</button><button id="desktop">Desktop width</button><button id="phone">Phone width</button>
+<label><input id="debug" type="checkbox" disabled> Existing Debug control</label><p id="preview-status"></p>
+<pre id="results"></pre><iframe id="app" style="width:1100px" allow="autoplay"></iframe>
+<script>
+document.getElementById('run').onclick = async function () {
+    this.disabled = true;
+    let html = await (await fetch('../../index.html')).text();
+    const root = new URL('../../', location.href).href;
+    const block = `<base href="${root}"><script>
+    window.testErrors=[];
+    addEventListener('error',e=>testErrors.push(e.message));
+    addEventListener('unhandledrejection',e=>testErrors.push(String(e.reason)));
+    const memoryStore=data=>new Proxy(data,{get(target,key){if(key==='getItem')return k=>target[k]??null;if(key==='setItem')return(k,v)=>{target[k]=String(v);};if(key==='removeItem')return k=>{delete target[k];};return target[key];}});
+    Object.defineProperty(window,'localStorage',{value:memoryStore({})});
+    Object.defineProperty(window,'sessionStorage',{value:memoryStore({})});
+    Object.defineProperty(window,'indexedDB',{get(){throw Error('Native score storage blocked in feedback comparison');}});
+    Object.defineProperty(navigator,'requestMIDIAccess',{value:()=>Promise.reject(Error('Hardware disabled for feedback comparison'))});
+    <\/script>`;
+    html = html.replace('<head>', '<head>' + block).replace(/<script[^>]+src="https:[\s\S]*?<\/script>/g, '');
+    const frame = document.getElementById('app');
+    frame.onload = () => {
+        document.getElementById('checks').disabled = false;
+        document.getElementById('preview').disabled = false;
+        document.getElementById('debug').disabled = false;
+        document.getElementById('results').textContent = 'App loaded with isolated preferences; native settings and scores untouched.';
+    };
+    frame.srcdoc = html;
+};
+
+document.getElementById('desktop').onclick = () => { document.getElementById('app').style.width = '1100px'; };
+document.getElementById('phone').onclick = () => { document.getElementById('app').style.width = '390px'; };
+document.getElementById('debug').onchange = function () {
+    const checkbox = document.getElementById('app').contentDocument.getElementById('check-debug');
+    checkbox.checked = this.checked;
+    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+};
+document.getElementById('preview').onclick = function () {
+    this.disabled = true;
+    const frame = document.getElementById('app'), script = frame.contentDocument.createElement('script');
+    script.textContent = '(' + async function () {
+        const report = parent.document.getElementById('preview-status');
+        try {
+            AppState.isPlaying = false;
+            clearVisuals();
+            const demos = await ScoreLibrary.getDemoScores();
+            let found = null;
+            for (const title of ['Waltz in A Minor', 'Moonlight Sonata 1st Movement']) {
+                const score = demos.find(item => item.title === title);
+                await loadScoreIntoApp(score.rawData, { fileName: score.fileName, fileType: score.fileType, title });
+                window.FeedbackDebug.setDebugEnabled(true, { logChange: false });
+                osmd.cursor.reset();
+                let steps = 0;
+                while (!osmd.cursor.Iterator.EndReached && steps++ < 10000 && !found) {
+                    const it = osmd.cursor.Iterator;
+                    for (const entry of it.CurrentVoiceEntries || []) for (const note of entry.Notes || []) {
+                        if (note.isRest() || note.PrintObject === false || note.isCueNote || note.Notehead === 'none') continue;
+                        const staff = getResolvedStaffAssignmentIdFromNote(note) - 1;
+                        const anchor = GeometryEngine.getNoteAnchor(note, it.CurrentMeasureIndex, staff);
+                        const comparison = window.FeedbackDebug.compareNotehead(note, getGraphicalNote(note, it.CurrentMeasureIndex, staff), it.CurrentMeasureIndex, staff, anchor);
+                        if (comparison?.status === 'different') {
+                            found = { title, measure: it.CurrentMeasureIndex, comparison };
+                            break;
+                        }
+                    }
+                    if (!found) it.moveToNext();
+                }
+                if (found) break;
+            }
+            if (!found) {
+                const xml = await (await fetch('docs/diagnostics/fixtures/feedback-noteheads.musicxml')).text();
+                await loadScoreIntoApp(xml, { fileName: 'feedback-noteheads.musicxml', fileType: 'musicxml', title: 'Feedback notehead comparison' });
+                osmd.cursor.reset();
+            }
+            osmd.cursor.update();
+            const it = osmd.cursor.Iterator;
+            window.FeedbackDebug.clearNoteheadComparisons();
+            AppState.debugAnchorHistory = [];
+            AppState.practice = { left: true, right: true };
+            AppState.feedbackEnabled = true;
+            buildExpectedNotesFromEntries(it.CurrentVoiceEntries, it.CurrentMeasureIndex, it.currentTimeStamp.RealValue);
+            window.FeedbackDebug.setDebugEnabled(true, { logChange: false });
+            for (const target of AppState.expectedNotes) drawExpectedNoteFeedback(target, true);
+            window.FeedbackDebug.renderStickyDebug();
+            parent.document.getElementById('debug').checked = true;
+            report.textContent = found
+                ? found.title + ', measure ' + (found.measure + 1) + ': observed production/direct difference ' + found.comparison.delta.distance.toFixed(2) + ' SVG units. Diagnostic markers only; green production feedback remains unchanged.'
+                : 'No diagnostic difference above 1 SVG unit found in the scanned bundled scores. Showing the dotted chord fixture with production and direct markers.';
+            const anchor = AppState.expectedNotes[0]?.anchor;
+            if (anchor) {
+                const svg = GeometryEngine.getSvg(), point = svg.createSVGPoint();
+                point.x = anchor.x; point.y = anchor.y;
+                const client = point.matrixTransform(svg.getScreenCTM()), area = document.getElementById('music-area');
+                area.scrollTop += client.y - area.getBoundingClientRect().top - 230;
+            }
+        } catch (error) {
+            report.textContent = 'Preview failed: ' + error.stack;
+        } finally {
+            parent.document.getElementById('preview').disabled = false;
+        }
+    }.toString() + ')()';
+    frame.contentDocument.body.appendChild(script);
+};
+
+document.getElementById('checks').onclick = function () {
+    this.disabled = true;
+    const frame = document.getElementById('app'), script = frame.contentDocument.createElement('script');
+    script.textContent = '(' + async function () {
+        const output = parent.document.getElementById('results');
+        let count = 0, indexedHeads = 0, shiftedChords = 0, differences = 0;
+        const check = (ok, label) => {
+            if (!ok) throw Error(label);
+            count++;
+            output.textContent += '\nPASS: ' + label;
+        };
+        const pause = () => new Promise(resolve => setTimeout(resolve, 450));
+        const original = {
+            advance: checkWaitModeAdvance,
+            audio: shouldRouteLiveSourceToLocalAudio,
+            midi: shouldRouteLiveSourceToMidiOut,
+            early: tryReserveSingleHandEarlyGrace,
+            upcoming: tryReserveRealtimeUpcomingHeldNote
+        };
+        const debug = window.FeedbackDebug;
+        const toggle = enabled => debug.setDebugEnabled(enabled, { logChange: false, clearHistory: !enabled, reason: 'isolated-comparison' });
+        const paths = () => [...document.querySelectorAll('#osmd-container path')]
+            .filter(path => !path.closest('#pt-feedback-group,#pt-debug-group,#pt-looper-group'))
+            .map(path => path.getAttribute('d')).join('|');
+        const targetPoints = () => JSON.stringify(AppState.expectedNotes.map(note => ({
+            midi: note.midi, staff: note.staffId, hit: note.hit,
+            anchors: (note.anchors || []).map(anchor => [anchor.x, anchor.y])
+        })));
+        const markerPoints = marks => marks.map(mark => [mark.midi, mark.staffId, mark.anchor?.x, mark.anchor?.y]);
+        const seek = (measure, time = null) => {
+            osmd.cursor.reset();
+            let steps = 0;
+            while (!osmd.cursor.Iterator.EndReached && steps++ < 20000) {
+                const it = osmd.cursor.Iterator;
+                if (it.CurrentMeasureIndex === measure && (time === null || Math.abs(it.currentTimeStamp.RealValue - time) < 1e-8)) {
+                    osmd.cursor.update();
+                    return it;
+                }
+                it.moveToNext();
+            }
+            throw Error('Missing event: measure ' + (measure + 1) + ', timestamp ' + time);
+        };
+        const build = it => {
+            AppState.practice = { left: true, right: true };
+            AppState.feedbackEnabled = true;
+            buildExpectedNotesFromEntries(it.CurrentVoiceEntries, it.CurrentMeasureIndex, it.currentTimeStamp.RealValue);
+        };
+        // Independent DOM oracle: the indexed rendered element, not GeometryEngine's selected candidate.
+        const directCenter = element => {
+            const box = element.getBBox(), svg = GeometryEngine.getSvg(), point = svg.createSVGPoint();
+            point.x = box.x + box.width / 2;
+            point.y = box.y + box.height / 2;
+            return point.matrixTransform(svg.getScreenCTM().inverse().multiply(element.getScreenCTM()));
+        };
+        const compareEvent = (it, label) => {
+            let compared = 0;
+            const chordHeads = new Map();
+            for (const entry of it.CurrentVoiceEntries || []) for (const note of entry.Notes || []) {
+                if (note.isRest() || note.PrintObject === false || note.isCueNote || note.Notehead === 'none') continue;
+                const staff = getResolvedStaffAssignmentIdFromNote(note) - 1;
+                const graphical = getGraphicalNote(note, it.CurrentMeasureIndex, staff);
+                const heads = graphical?.getNoteheadSVGs?.();
+                const index = graphical?.vfnoteIndex;
+                if (!heads || !Number.isInteger(index) || !heads[index]) continue;
+                const current = GeometryEngine.getNoteAnchor(note, it.CurrentMeasureIndex, staff);
+                const comparison = debug.compareNotehead(note, graphical, it.CurrentMeasureIndex, staff, current);
+                const expected = directCenter(heads[index]);
+                check(comparison && comparison.directAnchor && Math.abs(comparison.directAnchor.x - expected.x) < 0.01 && Math.abs(comparison.directAnchor.y - expected.y) < 0.01,
+                    label + ': indexed head ' + index + ' agrees with independent DOM transform');
+                check(comparison.headIndex === index && comparison.headCount === heads.length, label + ': exact source-note chord index retained');
+                check(GeometryEngine.getNoteAnchor(note, it.CurrentMeasureIndex, staff) === current, label + ': comparison preserves cached production anchor identity');
+                if (comparison.status === 'different') differences++;
+                const staveNote = graphical.vfnote[0];
+                if (!chordHeads.has(staveNote)) chordHeads.set(staveNote, []);
+                chordHeads.get(staveNote).push({ index, x: expected.x, y: expected.y });
+                compared++;
+                indexedHeads++;
+            }
+            for (const heads of chordHeads.values()) {
+                if (heads.length > 1 && Math.max(...heads.map(head => head.x)) - Math.min(...heads.map(head => head.x)) > 1) {
+                    shiftedChords++;
+                    check(new Set(heads.map(head => head.index)).size === heads.length, label + ': side-shifted siblings keep separate indexed elements');
+                }
+            }
+            check(compared > 0, label + ': actual rendered indexed heads inspected');
+        };
+        const exerciseInput = (it, enabled, mode) => {
+            AppState.isPlaying = false;
+            clearVisuals();
+            toggle(enabled);
+            AppState.mode = mode;
+            AppState.score = { correct: 0, wrong: 0 };
+            AppState.earlyGraceReservations.clear();
+            AppState.correctFeedbackHistory = [];
+            AppState.releasedIncorrectFeedback = [];
+            AppState.activeHeldIncorrectFeedback.clear();
+            AppState.realtimeWrongPressInCurrentContext = false;
+            build(it);
+            const targets = AppState.expectedNotes.slice();
+            const wrong = Array.from({ length: 40 }, (_, index) => 50 + index).find(midi => !targets.some(note => note.midi === midi));
+            AppState.isPlaying = true;
+            triggerVirtualKey(wrong, true, 'midi');
+            const heldWrong = markerPoints([...AppState.activeHeldIncorrectFeedback.values()]);
+            triggerVirtualKey(wrong, false, 'midi');
+            for (const target of targets.slice(0, Math.max(1, targets.length - 1))) {
+                triggerVirtualKey(target.midi, true, 'midi');
+                triggerVirtualKey(target.midi, false, 'midi');
+            }
+            AppState.isPlaying = false;
+            AppState.realtimeWrongPressInCurrentContext = false;
+            processMissedNotes();
+            return JSON.stringify({
+                targets: targetPoints(), score: AppState.score, heldWrong,
+                correct: markerPoints(AppState.correctFeedbackHistory),
+                released: markerPoints(AppState.releasedIncorrectFeedback),
+                paint: GeometryEngine.getSvg()?.querySelector('#pt-feedback-group')?.innerHTML || ''
+            });
+        };
+        try {
+            document.getElementById('btn-help-close').click();
+            check(typeof debug.compareNotehead === 'function' && Array.isArray(debug.noteheadComparisons), 'Comparison API available');
+            checkWaitModeAdvance = () => {};
+            shouldRouteLiveSourceToLocalAudio = () => false;
+            shouldRouteLiveSourceToMidiOut = () => false;
+            tryReserveSingleHandEarlyGrace = () => null;
+            tryReserveRealtimeUpcomingHeldNote = () => null;
+            toggle(false);
+            const fixture = await (await fetch('docs/diagnostics/fixtures/feedback-noteheads.musicxml')).text();
+            await loadScoreIntoApp(fixture, { fileName: 'feedback-noteheads.musicxml', fileType: 'musicxml', title: 'Feedback notehead comparison' });
+            const fixturePaths = paths();
+            let it = seek(0);
+            build(it);
+            check(AppState.expectedNotes.length === 3, 'Fixture has three playable same-stem chord notes');
+            const before = targetPoints(), cache = GeometryEngine.noteAnchorCache, score = JSON.stringify(AppState.score);
+            check(debug.noteheadComparisons.length === 0, 'Debug off does not collect comparisons');
+            toggle(true);
+            check(debug.noteheadComparisons.length >= 3, 'Enabling Debug compares already-cached pending notes');
+            check(targetPoints() === before && GeometryEngine.noteAnchorCache === cache && JSON.stringify(AppState.score) === score, 'Enabling Debug preserves targets, anchor cache and grading');
+            compareEvent(it, 'Dotted chord');
+            check(shiftedChords > 0, 'Fixture renders actual side-shifted same-stem noteheads');
+            const graphical = getGraphicalNote(it.CurrentVoiceEntries[0].Notes[0], 0, 0);
+            check(graphical?.vfnote?.[0]?.getModifiers?.().some(modifier => String(modifier.getCategory?.()).toLowerCase().includes('dot')), 'Fixture has actual VexFlow augmentation-dot modifiers');
+            compareEvent(seek(1), 'Double-dotted chord');
+            compareEvent(seek(2, 2), 'Grace lead-in target and open noteheads');
+            debug.renderStickyDebug();
+            const comparisons = [...document.querySelectorAll('[data-feedback-comparison]')];
+            check(comparisons.length > 0 && comparisons.every(element => !!element.closest('#pt-debug-group')), 'Comparison markers stay exclusively inside the debug layer');
+            check(paths() === fixturePaths, 'Comparisons leave original notation, stems and beams unchanged');
+            it = seek(0);
+            for (const mode of ['realtime', 'wait', 'follow']) {
+                const off = exerciseInput(it, false, mode), on = exerciseInput(it, true, mode);
+                check(off === on, mode + ': actual correct/wrong/missed input, feedback paint and grading identical with Debug off/on');
+                check(paths() === fixturePaths, mode + ': Debug and input leave engraving unchanged');
+            }
+            build(it);
+            toggle(false);
+            check(debug.noteheadComparisons.length === 0 && !document.querySelector('[data-feedback-comparison]'), 'Disabling Debug clears comparison records and markers');
+            for (const note of AppState.expectedNotes) for (const source of note.sourceNotes) GeometryEngine.getNoteAnchor(source, note.mIdx, note.staffId - 1);
+            check(debug.noteheadComparisons.length === 0, 'Cached lookups stay dormant with Debug off');
+            toggle(true);
+            const oldRecords = new Set(debug.noteheadComparisons);
+            GeometryEngine.invalidate();
+            check(debug.noteheadComparisons.length === 0, 'Geometry invalidation removes stale comparison records');
+            build(it);
+            check(debug.noteheadComparisons.length > 0 && debug.noteheadComparisons.every(record => !oldRecords.has(record)), 'New geometry obtains fresh comparison records');
+            for (const zoom of [75, 125, 100]) {
+                const previous = new Set(debug.noteheadComparisons);
+                applyZoom(zoom, { save: false });
+                check(debug.noteheadComparisons.length > 0 && debug.noteheadComparisons.every(record => !previous.has(record)), zoom + '% zoom replaces comparison records');
+                compareEvent(it, zoom + '% zoom');
+            }
+            for (const width of [740, 1100]) {
+                const previous = new Set(debug.noteheadComparisons);
+                parent.document.getElementById('app').style.width = width + 'px';
+                await pause();
+                check(debug.noteheadComparisons.length > 0 && debug.noteheadComparisons.every(record => !previous.has(record)), width + 'px resize refreshes comparisons');
+                compareEvent(it, width + 'px resize');
+                const svg = GeometryEngine.getSvg(), unchanged = paths(), cached = GeometryEngine.noteAnchorCache;
+                window.dispatchEvent(new Event('resize'));
+                await pause();
+                check(GeometryEngine.getSvg() === svg && paths() === unchanged && GeometryEngine.noteAnchorCache === cached && debug.noteheadComparisons.length === 0,
+                    width + 'px duplicate resize retains engraving/cache and clears transient comparison records');
+                compareEvent(it, width + 'px cached comparison after duplicate resize');
+                check(GeometryEngine.getSvg() === svg && paths() === unchanged && GeometryEngine.noteAnchorCache === cached && debug.noteheadComparisons.length > 0,
+                    width + 'px existing cached anchors repopulate diagnostics without engraving');
+            }
+            const demos = await ScoreLibrary.getDemoScores();
+            for (const sample of [{ title: 'Moonlight Sonata 1st Movement', measure: 22 }, { title: 'Waltz in A Minor', measure: 0 }, { title: 'Fur Elise', measure: 13, time: 4.8125 }]) {
+                const demo = demos.find(score => score.title === sample.title);
+                check(!!demo, sample.title + ': bundled score available');
+                const old = new Set(debug.noteheadComparisons);
+                await loadScoreIntoApp(demo.rawData, { fileName: demo.fileName, fileType: demo.fileType, title: demo.title });
+                check(AppState.currentScoreData === demo.rawData, sample.title + ': original render source retained');
+                it = seek(sample.measure, sample.time ?? null);
+                build(it);
+                check(debug.noteheadComparisons.every(record => !old.has(record)), sample.title + ': previous score comparisons discarded');
+                const engraving = paths();
+                toggle(true);
+                compareEvent(it, sample.title + ' measure ' + (sample.measure + 1));
+                const off = exerciseInput(it, false, 'wait'), on = exerciseInput(it, true, 'wait');
+                check(off === on && paths() === engraving, sample.title + ': Debug preserves real-score feedback, scoring and engraving');
+            }
+            check(testErrors.length === 0, 'No uncaught app errors');
+            parent.document.getElementById('debug').checked = true;
+            output.textContent = 'Completed ' + count + ' checks; ' + indexedHeads + ' indexed heads and ' + shiftedChords + ' shifted chord observations. ' + differences + ' production/direct differences above 1 SVG unit are diagnostic observations, not corrections. Native settings/scores untouched.\n' + output.textContent;
+            parent.document.getElementById('checks').dataset.result = 'passed';
+        } catch (error) {
+            output.textContent += '\nFAIL: ' + error.stack;
+            parent.document.getElementById('checks').dataset.result = 'failed';
+        } finally {
+            AppState.isPlaying = false;
+            checkWaitModeAdvance = original.advance;
+            shouldRouteLiveSourceToLocalAudio = original.audio;
+            shouldRouteLiveSourceToMidiOut = original.midi;
+            tryReserveSingleHandEarlyGrace = original.early;
+            tryReserveRealtimeUpcomingHeldNote = original.upcoming;
+        }
+    }.toString() + ')()';
+    frame.contentDocument.body.appendChild(script);
+};
+</script>

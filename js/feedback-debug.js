@@ -9,6 +9,126 @@
 // - Debug overlays must stay in their own SVG layer and must not interfere with rendering.
 
 window.FeedbackDebug = window.FeedbackDebug || {
+    // Observational only. These snapshots never feed GeometryEngine's cache or grading.
+    noteheadComparisons: [],
+    comparedSourceNotes: new WeakMap(),
+    comparisonLimit: 48,
+
+    clearNoteheadComparisons() {
+        this.noteheadComparisons = [];
+        this.comparedSourceNotes = new WeakMap();
+    },
+
+    compareNotehead(sourceNote, graphicalNote, measureIndex, staffIndex, currentAnchor) {
+        if (!this.isDebugEnabled() || !sourceNote || typeof sourceNote !== 'object') return null;
+        const previous = this.comparedSourceNotes.get(sourceNote);
+        if (previous && this.noteheadComparisons.includes(previous)) return previous;
+        const point = value => value && Number.isFinite(value.x) && Number.isFinite(value.y)
+            ? { x: value.x, y: value.y } : null;
+        const comparison = {
+            note: this.describeLogicalNoteForDebug(sourceNote, measureIndex, staffIndex),
+            currentAnchor: point(currentAnchor), directAnchor: null,
+            headIndex: null, headCount: null, delta: null,
+            status: 'unavailable', reason: null
+        };
+        try {
+            if (sourceNote.PrintObject === false || sourceNote.isCueNote || sourceNote.Notehead === 'none' || sourceNote.isRest?.()) {
+                throw Error('non-playable-note');
+            }
+            if (graphicalNote?.sourceNote !== sourceNote) throw Error('source-identity-mismatch');
+            if (typeof graphicalNote.getNoteheadSVGs !== 'function') throw Error('notehead-api-missing');
+            const index = graphicalNote.vfnoteIndex;
+            const heads = graphicalNote.getNoteheadSVGs();
+            comparison.headIndex = Number.isInteger(index) ? index : null;
+            comparison.headCount = heads?.length ?? null;
+            // The renderer records its sorted chord index, not the XML note order.
+            if (!Number.isInteger(index) || index < 0 || graphicalNote.vfnote?.[1] !== index) throw Error('invalid-head-index');
+            if (!heads?.length || heads.length !== graphicalNote.vfnote?.[0]?.note_heads?.length || index >= heads.length) {
+                throw Error('head-count-mismatch');
+            }
+            const head = heads[index];
+            const svg = GeometryEngine.getSvg();
+            if (!svg || !head?.isConnected || head.ownerSVGElement !== svg || !svg.contains(head) || !head.classList.contains('vf-notehead')) {
+                throw Error('rendered-head-missing');
+            }
+            // Check ancestors too: hidden voice groups must not supply a visible target.
+            for (let node = head; node && node !== svg; node = node.parentElement) {
+                const style = window.getComputedStyle(node);
+                if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse' || style.opacity === '0') {
+                    throw Error('rendered-head-hidden');
+                }
+            }
+            const box = head.getBBox();
+            if (![box.x, box.y, box.width, box.height].every(Number.isFinite) || box.width <= 0 || box.height <= 0) {
+                throw Error('empty-head-bounds');
+            }
+            // Only this diagnostic point is transformed; production coordinates stay untouched.
+            const rootMatrix = svg.getScreenCTM(), headMatrix = head.getScreenCTM();
+            if (!rootMatrix || !headMatrix) throw Error('head-transform-missing');
+            const matrix = rootMatrix.inverse().multiply(headMatrix);
+            if (![matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f].every(Number.isFinite)) throw Error('invalid-head-transform');
+            const x = box.x + box.width / 2, y = box.y + box.height / 2;
+            comparison.directAnchor = point({ x: matrix.a * x + matrix.c * y + matrix.e, y: matrix.b * x + matrix.d * y + matrix.f });
+            if (!comparison.directAnchor) throw Error('invalid-head-center');
+            if (comparison.currentAnchor) {
+                const dx = comparison.directAnchor.x - comparison.currentAnchor.x;
+                const dy = comparison.directAnchor.y - comparison.currentAnchor.y;
+                comparison.delta = { x: dx, y: dy, distance: Math.hypot(dx, dy) };
+                // One SVG unit is a diagnostic highlight threshold, never an acceptance rule.
+                comparison.status = comparison.delta.distance > 1 ? 'different' : 'aligned';
+            } else {
+                comparison.status = 'current-unavailable';
+            }
+        } catch (error) {
+            comparison.reason = error?.message || 'comparison-failed';
+        }
+        this.comparedSourceNotes.set(sourceNote, comparison);
+        this.noteheadComparisons.push(comparison);
+        if (this.noteheadComparisons.length > this.comparisonLimit) this.noteheadComparisons.shift();
+        this.debugLogAnchorResolution('NOTEHEAD_COMPARISON', comparison);
+        return comparison;
+    },
+
+    compareCurrentExpectedNotes() {
+        if (!this.isDebugEnabled() || typeof GeometryEngine === 'undefined') return;
+        for (const expected of AppState.expectedNotes || []) {
+            for (const source of expected.sourceNotes || []) {
+                // Read the existing cache only. Enabling Debug cannot resolve or replace a production anchor.
+                this.compareNotehead(source, getGraphicalNote(source, expected.mIdx, expected.staffId - 1),
+                    expected.mIdx, expected.staffId - 1, GeometryEngine.noteAnchorCache.get(source));
+            }
+        }
+    },
+
+    renderNoteheadComparisons(group) {
+        const add = (parent, tag, attrs, text = '') => {
+            const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
+            for (const [name, value] of Object.entries(attrs)) element.setAttribute(name, value);
+            element.textContent = text;
+            parent.appendChild(element);
+            return element;
+        };
+        for (const item of this.noteheadComparisons) {
+            const a = item.currentAnchor, b = item.directAnchor;
+            const g = add(group, 'g', { 'data-debug-kind': 'notehead-comparison', 'data-comparison-status': item.status });
+            if (a) add(g, 'circle', { cx: a.x, cy: a.y, r: 6, fill: 'none', stroke: '#d97706', 'stroke-width': 1.5, 'data-feedback-comparison': 'current' });
+            if (b) add(g, 'path', { d: `M ${b.x} ${b.y - 5} L ${b.x + 5} ${b.y} L ${b.x} ${b.y + 5} L ${b.x - 5} ${b.y} Z`, fill: 'none', stroke: '#00a6c7', 'stroke-width': 1.5, 'data-feedback-comparison': 'direct' });
+            if (a && b && item.status === 'different') {
+                add(g, 'line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: '#c026d3', 'stroke-width': 1.5, 'stroke-dasharray': '2 2' });
+                add(g, 'text', { x: b.x + 7, y: b.y - 9, fill: '#c026d3', 'font-size': 10, 'font-family': 'monospace' }, `Δ ${item.delta.distance.toFixed(1)}`);
+            }
+            add(g, 'title', {}, `m${(item.note.measureIndex ?? -1) + 1} staff ${item.note.staffId} MIDI ${item.note.midi}: ${item.status}${item.reason ? ' (' + item.reason + ')' : ''}`);
+        }
+        if (this.noteheadComparisons.length) {
+            const different = this.noteheadComparisons.filter(item => item.status === 'different').length;
+            const unavailable = this.noteheadComparisons.filter(item => item.status.includes('unavailable')).length;
+            const box = GeometryEngine.getSvgViewBox();
+            const legend = add(group, 'g', { 'data-feedback-comparison': 'legend', fill: '#7c3aed', 'font-size': 11, 'font-family': 'monospace' });
+            add(legend, 'text', { x: (box?.x || 0) + 12, y: (box?.y || 0) + 14 }, 'Debug: orange ○ current; cyan ◇ direct');
+            add(legend, 'text', { x: (box?.x || 0) + 12, y: (box?.y || 0) + 28 }, `Differences: ${different} (magenta); unavailable: ${unavailable}`);
+        }
+    },
+
     isDebugEnabled() {
         return !!(AppState.debugPersistentAnchors || AppState.debugEventFlow || AppState.debugMatchLogs || AppState.debugAnchorResolution);
     },
@@ -123,7 +243,7 @@ window.FeedbackDebug = window.FeedbackDebug || {
         if (!group) return;
 
         const history = AppState.debugAnchorHistory || [];
-        if (history.length === 0) return;
+        this.renderNoteheadComparisons(group);
 
         const total = history.length;
         this.debugLogEvent('STICKY_DEBUG_RENDER', { frameCount: total });
@@ -197,6 +317,7 @@ window.FeedbackDebug = window.FeedbackDebug || {
         window.debugStickyAnchors = next;
 
         if (!next) {
+            this.clearNoteheadComparisons();
             if (clearHistory) {
                 AppState.debugAnchorHistory = [];
             }
@@ -205,6 +326,7 @@ window.FeedbackDebug = window.FeedbackDebug || {
                 this.renderStickyDebug();
             }
         } else {
+            try { this.compareCurrentExpectedNotes(); } catch (e) { /* Diagnostics cannot interrupt practice. */ }
             this.renderStickyDebug();
         }
 
@@ -320,6 +442,7 @@ window.setDebugStickyFrames = function(count) {
 
 window.clearStickyDebug = function() {
     AppState.debugAnchorHistory = [];
+    window.FeedbackDebug.clearNoteheadComparisons();
     if (AppState.debugPersistentAnchors) {
         window.FeedbackDebug.renderStickyDebug();
     } else {

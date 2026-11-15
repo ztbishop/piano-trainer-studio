@@ -58,6 +58,7 @@ const GeometryEngine = {
         this.measureBoxCache.clear();
         this.clearSvgFeedback();
         this.clearSvgLooper();
+        try { window.FeedbackDebug?.clearNoteheadComparisons?.(); } catch (e) {}
         if (window.FeedbackDebug?.clearSvgDebug) {
             window.FeedbackDebug.clearSvgDebug();
         }
@@ -459,6 +460,11 @@ const GeometryEngine = {
     getNoteAnchor(sourceNote, measureIndex, staffIndex) {
         if (this.noteAnchorCache.has(sourceNote)) {
             const cached = this.noteAnchorCache.get(sourceNote);
+            try {
+                if (window.FeedbackDebug?.isDebugEnabled?.()) {
+                    window.FeedbackDebug.compareNotehead(sourceNote, getGraphicalNote(sourceNote, measureIndex, staffIndex), measureIndex, staffIndex, cached);
+                }
+            } catch (e) { /* Observational comparison never controls feedback. */ }
             debugLogAnchorResolution('ANCHOR_CACHE_HIT', {
                 note: describeLogicalNoteForDebug(sourceNote, measureIndex, staffIndex),
                 anchor: cached ? { x: cached.x, y: cached.y, measureIndex: cached.measureIndex, staffIndex: cached.staffIndex } : null
@@ -518,6 +524,11 @@ const GeometryEngine = {
         });
 
         if (anchor) this.noteAnchorCache.set(sourceNote, anchor);
+        try {
+            if (window.FeedbackDebug?.isDebugEnabled?.()) {
+                window.FeedbackDebug.compareNotehead(sourceNote, graphicalNote, measureIndex, staffIndex, anchor);
+            }
+        } catch (e) { /* Observational comparison never controls feedback. */ }
         return anchor;
     },
 
