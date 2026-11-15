@@ -44,10 +44,10 @@ document.getElementById('checks').onclick=function(){
   const anchorData=n=>({midi:n.midi,staffId:n.staffId,role:n.handRole,anchor:n.anchor?{x:n.anchor.x,y:n.anchor.y}:null,anchors:(n.anchors||[]).map(a=>({x:a.x,y:a.y}))});
   const expectedExpression=(m,t,midi)=>{
    const rh=midi>=60;
-   let velocity=t<1?56+48*t:t<2?104-48*(t-1):t<3?56+16*Math.min(1,(t-2)/.5):t<4?72-16*Math.min(1,(t-3)/.5):56+48*Math.min(1,(t-4)/1.5);
+   let velocity=t<1?56+48*t:t<2?104-48*(t-1):t<3?56+16*Math.min(1,(t-2)/.75):t<4?72-16*Math.min(1,(t-3)/.75):56+48*Math.min(1,(t-4)/1.5);
    velocity=Math.round(velocity);
    if(!rh&&t>=1)velocity=40;
-   if(rh&&m===0&&near(t,.25))velocity+=15;
+   if(rh&&m===0&&near(t,.25))velocity+=24;
    const staccato=rh&&m===0&&near(t,.5);
    return {velocity,gate:staccato?.5:.9,staccato};
   };
@@ -85,7 +85,7 @@ document.getElementById('checks').onclick=function(){
     const dynamic=expr.StartingContinuousDynamic;if(dynamic)hairpins.push({staff,type:dynamic.DynamicType,start:dynamic.StartMultiExpression?.AbsoluteTimestamp?.RealValue,end:dynamic.EndMultiExpression?.AbsoluteTimestamp?.RealValue});
    }
    // The bundled OSMD attaches a stop following a note to that note's onset, not its end.
-   // Assert actual source boundaries rather than substituting MusicXML cursor calculations.
+   // Raw engraving metadata stays unchanged; playback now uses separately read MusicXML boundaries.
    const expectedSpans=[[0,0,1],[1,1,2],[0,2,2.5],[1,3,3.5],[0,4,5.5]];
    check(hairpins.length===5,'Actual OSMD parses all five bounded hairpins');
    for(const [type,start,end] of expectedSpans)check(hairpins.some(h=>h.staff===0&&h.type===type&&near(h.start,start)&&near(h.end,end)),'Parsed hairpin type '+type+' source span '+start+'→'+end+'; metadata '+JSON.stringify(hairpins));
@@ -162,7 +162,46 @@ document.getElementById('checks').onclick=function(){
    }
    await loadScoreIntoApp(xml,{fileName:'hairpin-expression.musicxml',fileType:'musicxml',title:'Hairpin expression regression'});
    const reloaded=seek(2,2.25).CurrentVoiceEntries.flatMap(e=>e.Notes).find(n=>n.halfTone+12>=60);
-   check(ScoreExpression.resolve(reloaded,osmd.Sheet).velocity===64,'Reload creates fresh sheet cache and restores default target');
+   check(ScoreExpression.resolve(reloaded,osmd.Sheet).velocity===61,'Reload creates fresh sheet cache and restores default target');
+   // Recover four spans collapsed by OSMD while preserving the source-note and feedback pipeline.
+   const shortResponse=await fetch('docs/diagnostics/fixtures/source-hairpins.musicxml');if(!shortResponse.ok)throw Error('Short fixture HTTP '+shortResponse.status);const shortXml=await shortResponse.text();
+   await loadScoreIntoApp(shortXml,{fileName:'source-hairpins.musicxml',fileType:'musicxml',title:'Short source hairpins regression'});
+   const shortPaths=paths(),sourceMap=ScoreExpressionSource.read(osmd.Sheet,shortXml);
+   const sourceSpans=[...sourceMap.entries()].flatMap(([staff,spans])=>spans.map(span=>({staff,...span})));
+   const intended=[[0,.25,-1],[1,1.25,1],[2.0625,2.3125,-1],[3.125,3.5,1]];
+   check(sourceSpans.length===4,'Source reader recovers four short spans');
+   for(const [start,end,direction] of intended)check(sourceSpans.some(s=>s.staff===0&&near(s.timestamp,start)&&near(s.endTimestamp,end)&&s.direction===direction),'Recovered exact source span '+start+'→'+end);
+   let collapsed=0;for(const measure of osmd.Sheet.SourceMeasures)for(const expressions of measure.StaffLinkedExpressions||[])for(const expr of expressions||[]){const span=expr.StartingContinuousDynamic;if(span&&near(span.StartMultiExpression?.AbsoluteTimestamp?.RealValue,span.EndMultiExpression?.AbsoluteTimestamp?.RealValue+(span.EndMultiExpression?.EndOffsetFraction?.RealValue||0)))collapsed++;}
+   check(collapsed>=3,'Fixture reproduces collapsed OSMD spans without rewriting engraving');
+   const sourceNotes=[];osmd.cursor.reset();let shortSteps=0;
+   while(!osmd.cursor.Iterator.EndReached&&shortSteps++<200){for(const entry of osmd.cursor.Iterator.CurrentVoiceEntries||[])for(const note of entry.Notes||[])if(!sourceNotes.includes(note))sourceNotes.push(note);osmd.cursor.Iterator.moveToNext();}
+   for(const m of osmd.Sheet.SourceMeasures)for(const container of m.VerticalSourceStaffEntryContainers||[])for(const staffEntry of container.StaffEntries||[])for(const entry of staffEntry?.VoiceEntries||[])for(const note of entry.Notes||[])if(!sourceNotes.includes(note))sourceNotes.push(note);
+   const noteShape=()=>JSON.stringify(sourceNotes.map(n=>({midi:n.halfTone+12,length:n.Length.RealValue,grace:n.ParentVoiceEntry.IsGrace,cue:n.IsCueNote,print:n.PrintObject,tie:!!n.NoteTie})));
+   const beforeShape=noteShape();
+   check(sourceNotes.some(n=>n.ParentVoiceEntry.IsGrace),'Fixture exposes actual grace notes');
+   check(sourceNotes.some(n=>n.PrintObject===false||n.IsCueNote),'Fixture exposes a hidden cue note');
+   const shortLevel=t=>t<1?56-16*Math.min(1,t/.25):t<2?56+16*Math.min(1,(t-1)/.25):t<3?72-16*Math.max(0,Math.min(1,(t-2.0625)/.25)):56+16*Math.max(0,Math.min(1,(t-3.125)/.375));
+   const shortEvent=(mode,enabled,t)=>{
+    AppState.isPlaying=false;resetPlaybackForLoadedScore();const it=seek(Math.floor(t),t);
+    AppState.mode=mode;AppState.expressivePlaybackEnabled=enabled;AppState.practice={left:true,right:true};AppState.playback={left:true,right:true};AppState.audioEnabled.hands=true;AppState.midiOutEnabled.hands=true;AppState.speedPercent=.75;AppState.pendingAudio=[];
+    AppState.isPlaying=true;AppState.anchorTime=Tone.now();scheduled=[];waits=[];metronomes=[];playbackLoop();AppState.isPlaying=false;
+    const result={next:[osmd.cursor.Iterator.CurrentMeasureIndex,osmd.cursor.Iterator.currentTimeStamp.RealValue],expected:AppState.expectedNotes.map(anchorData),visuals:AppState.visualNotesToStart.map(n=>({midi:n.midi,durationMs:n.durationMs,endTimestamp:n.endTimestamp})),wait:mode==='follow'?AppState.followAdvanceInfo?.waitSeconds:metronomes[0]?.[3],beats:mode==='follow'?AppState.followAdvanceInfo?.beatsToWait:metronomes[0]?.[4],outputs:scheduled.map(n=>({midi:n.midi,durationMs:n.durationMs,staccato:!!n.options.staccato}))};
+    check(!AppState.expectedNotes.some(n=>n.midi===84),mode+' '+enabled+' t'+t+': hidden cue never becomes a required note');
+    for(const output of scheduled){const accent=near(t,1)&&output.midi===72?24:0;check(output.velocity===(enabled?Math.round(shortLevel(t))+accent:100),mode+' '+enabled+' t'+t+' MIDI '+output.midi+': recovered source velocity reaches playback');}
+    return result;
+   };
+   for(const mode of ['realtime','wait','follow'])for(const t of [.125,.25,.5,1,1.125,1.25,2.125,2.25,2.375,2.5,3.125,3.25,3.375,3.5]){
+    const off=shortEvent(mode,false,t),on=shortEvent(mode,true,t);
+    check(JSON.stringify(off)===JSON.stringify(on),mode+' t'+t+': source hairpin changes only velocity, preserving attacks, cursor, feedback and rhythmic waits');
+   }
+   const target=sourceNotes.find(n=>near(n.ParentStaffEntry.AbsoluteTimestamp.RealValue,.125)&&n.halfTone+12===55);
+   check(!!target&&ScoreExpression.resolve(target,osmd.Sheet).velocity===48,'Recovered short diminuendo changes an intermediate LH attack');
+   ScoreExpression.bindSource(osmd.Sheet,null);
+   check(ScoreExpression.resolve(target,osmd.Sheet).velocity===56,'Without source binding the collapsed diminuendo has no effect');
+   ScoreExpression.bindSource(osmd.Sheet,shortXml);
+   check(ScoreExpression.resolve(target,osmd.Sheet).velocity===48,'Rebinding source invalidates the cache and restores recovery');
+   check(noteShape()===beforeShape,'Binding and playback preserve note lengths, grace/cue flags, visibility and ties');
+   check(paths()===shortPaths,'Source boundary recovery leaves rendered engraving paths unchanged');
    check(testErrors.length===0,'No uncaught browser errors');
    out.textContent='Completed '+count+' checks. Native scores/settings untouched. Captured output; no listening, continuous timer or hardware acceptance.\n'+out.textContent;
   }catch(e){out.textContent+='\nFAIL: '+e.stack;}finally{
@@ -181,7 +220,10 @@ document.getElementById('owner').onclick=()=>runInApp(async function(){
  try{
   document.getElementById('btn-help-close').click();const score=await readScoreFile(file);
   await loadScoreIntoApp(score.rawData,score);document.getElementById('check-looper').checked=false;
-  const hairpins=[],accents=[],measureTen=[],seen=new Set(),firstSpanNotes=[];let steps=0;
+  const sourceXml=typeof score.rawData==='string'?score.rawData:await extractMusicXmlFromMxl(score.rawData);
+  const sourceMap=ScoreExpressionSource.read(osmd.Sheet,sourceXml);
+  const sourceHairpins=sourceMap?[...sourceMap.entries()].flatMap(([staff,spans])=>spans.map(s=>({staff:staff+1,type:s.direction===1?0:1,start:s.timestamp,end:s.endTimestamp}))):[];
+  const hairpins=[],accents=[],measureTen=[],seen=new Set(),firstSpanNotes=[],recoveredNotes=[];let steps=0;
   const noteSummary={uniquePitchedNotes:0,attackNotes:0,minVelocity:Infinity,maxVelocity:-Infinity,invalidExpressionCount:0,staccatoCount:0};
   for(const [measureIndex,measure] of osmd.Sheet.SourceMeasures.entries())for(const [staff,expressions] of (measure.StaffLinkedExpressions||[]).entries())for(const expr of expressions||[]){
    const dynamic=expr.StartingContinuousDynamic;
@@ -191,7 +233,9 @@ document.getElementById('owner').onclick=()=>runInApp(async function(){
      start:dynamic.StartMultiExpression?.AbsoluteTimestamp?.RealValue,endBase,endOffset,end:endBase+endOffset});
    }
   }
-  const firstSpan=hairpins.filter(h=>h.wedge&&(h.type===0||h.type===1)&&Number.isFinite(h.start)&&Number.isFinite(h.end)&&h.end>h.start).sort((a,b)=>a.start-b.start)[0];
+  const collapsedHairpins=hairpins.filter(h=>h.wedge&&Number.isFinite(h.start)&&Number.isFinite(h.end)&&h.end<=h.start);
+  const recoveredHairpins=collapsedHairpins.map(h=>({appMeasure:h.appMeasure,staff:h.staff,type:h.type,start:h.start,parsedEnd:h.end,sourceEnd:sourceHairpins.find(s=>s.staff===h.staff&&s.type===h.type&&Math.abs(s.start-h.start)<1e-6)?.end}));
+  const firstSpan=sourceHairpins.slice().sort((a,b)=>a.start-b.start)[0]||hairpins.filter(h=>h.wedge&&(h.type===0||h.type===1)&&Number.isFinite(h.start)&&Number.isFinite(h.end)&&h.end>h.start).sort((a,b)=>a.start-b.start)[0];
   osmd.cursor.reset();
   while(!osmd.cursor.Iterator.EndReached&&steps++<10000){
    const it=osmd.cursor.Iterator,m=it.CurrentMeasureIndex,time=it.currentTimeStamp.RealValue;
@@ -205,24 +249,36 @@ document.getElementById('owner').onclick=()=>runInApp(async function(){
     if(!Number.isInteger(row.expression.velocity)||row.expression.velocity<1||row.expression.velocity>127||![.5,.9].includes(row.expression.gate))noteSummary.invalidExpressionCount++;
     if(row.expression.staccato)noteSummary.staccatoCount++;
     if(firstSpan&&row.sourceTime>=firstSpan.start-1e-9&&row.sourceTime<=firstSpan.end+1e-9)firstSpanNotes.push({appMeasure:row.appMeasure,time:row.time,sourceTime:row.sourceTime,midi,staff,velocity:row.expression.velocity,gate:row.expression.gate});
+    if(recoveredHairpins.some(h=>row.sourceTime>=h.start-1e-9&&row.sourceTime<=h.sourceEnd+1e-9))recoveredNotes.push({note,row});
     if(row.articulations?.some(a=>a.name==='accent'))accents.push(row);
     if(m===9)measureTen.push(row);
    }
    it.moveToNext();
   }
+  const noteIdentity=()=>JSON.stringify([...seen].map(n=>({midi:n.halfTone+12,time:n.ParentStaffEntry?.AbsoluteTimestamp?.RealValue,length:n.Length.RealValue,grace:n.ParentVoiceEntry.IsGrace,cue:n.IsCueNote,print:n.PrintObject,tie:!!n.NoteTie})));
+  const engraving=()=>[...document.querySelectorAll('[id^="osmdSvgPage"] path')].filter(p=>!p.closest('#pt-feedback-group,#pt-debug-group,#pt-looper-group')).map(p=>p.getAttribute('d')).join('|');
+  const identityBefore=noteIdentity(),engravingBefore=engraving();
+  ScoreExpression.bindSource(osmd.Sheet,null);
+  const recoveredComparisons=recoveredNotes.map(({note,row})=>({...row,withoutSourceVelocity:ScoreExpression.resolve(note,osmd.Sheet).velocity}));
+  ScoreExpression.bindSource(osmd.Sheet,sourceXml);
+  const bindingPreservesNotesAndEngraving=identityBefore===noteIdentity()&&engravingBefore===engraving();
+  const recoverySummary={sourceSpanCount:sourceHairpins.length,collapsedParsedCount:collapsedHairpins.length,recoveredCount:recoveredHairpins.filter(h=>h.sourceEnd>h.start).length,
+   affectedNotes:recoveredComparisons.filter(n=>n.withoutSourceVelocity!==n.expression.velocity).length,
+   spans:recoveredHairpins.map(h=>({...h,velocities:[...new Set(recoveredComparisons.filter(n=>n.sourceTime>=h.start-1e-9&&n.sourceTime<=h.sourceEnd+1e-9).map(n=>n.expression.velocity))]}))};
   const captured=[];schedulePlaybackForDestinations=(midi,durationMs,velocity,options)=>captured.push({midi,durationMs,velocity,options});
   schedulePlaybackTimeout=()=>0;schedulePlaybackFrame=()=>0;scheduleMetronomeForPlaybackWindow=()=>{};startVisualSustains=()=>{};
-  const renderedEvents=[],firstSpanOutput=[],capturePoints=new Map();
-  for(const row of [...measureTen,...firstSpanNotes])capturePoints.set(row.appMeasure+'/'+row.time,{measure:row.appMeasure-1,time:row.time});
+  const renderedEvents=[],firstSpanOutput=[],recoveredOutput=[],capturePoints=new Map();
+  for(const row of [...measureTen,...firstSpanNotes,...recoveredNotes.map(n=>n.row)])capturePoints.set(row.appMeasure+'/'+row.time,{measure:row.appMeasure-1,time:row.time});
   for(const {measure,time} of capturePoints.values()){
    AppState.isPlaying=false;resetPlaybackForLoadedScore();osmd.cursor.reset();let search=0;
    while(!osmd.cursor.Iterator.EndReached&&search++<10000){const it=osmd.cursor.Iterator;if(it.CurrentMeasureIndex===measure&&Math.abs(it.currentTimeStamp.RealValue-time)<1e-6)break;it.moveToNext();}
    osmd.cursor.update();AppState.mode='realtime';AppState.practice={left:false,right:false};AppState.playback={left:true,right:true};AppState.audioEnabled.hands=true;AppState.midiOutEnabled.hands=true;AppState.expressivePlaybackEnabled=true;AppState.speedPercent=1;AppState.pendingAudio=[];captured.length=0;
    AppState.isPlaying=true;AppState.anchorTime=Tone.now();playbackLoop();AppState.isPlaying=false;
    if(measure===9)renderedEvents.push({time,output:captured.slice()});
+   if(recoveredNotes.some(n=>n.row.appMeasure===measure+1&&n.row.time===time))recoveredOutput.push({appMeasure:measure+1,time,output:captured.map(n=>({midi:n.midi,velocity:n.velocity,durationMs:n.durationMs}))});
    if(firstSpanNotes.some(n=>n.appMeasure===measure+1&&n.time===time))firstSpanOutput.push({appMeasure:measure+1,time,output:captured.map(n=>({midi:n.midi,velocity:n.velocity,durationMs:n.durationMs}))});
   }
-  out.textContent=JSON.stringify({file:score.fileName,originalRenderSourceRetained:AppState.currentScoreData===score.rawData,noteSummary,hairpins,firstHairpin:{span:firstSpan,notes:firstSpanNotes,captured:firstSpanOutput},accents,appMeasure10:measureTen,capturedAppMeasure10:renderedEvents,errors:testErrors,limits:'Unique source-note summary, metadata and captured output only; no listening or hardware test.'},null,2);
+  out.textContent=JSON.stringify({file:score.fileName,originalRenderSourceRetained:AppState.currentScoreData===score.rawData,bindingPreservesNotesAndEngraving,noteSummary,recoverySummary,sourceHairpins,recoveredHairpins,recoveredComparisons,recoveredOutput,hairpins,firstHairpin:{span:firstSpan,notes:firstSpanNotes,captured:firstSpanOutput},accents,appMeasure10:measureTen,capturedAppMeasure10:renderedEvents,errors:testErrors,limits:'Unique source-note summary, metadata and captured output only; no listening or hardware test.'},null,2);
  }catch(e){out.textContent='FAIL: '+e.stack;}finally{
   AppState.isPlaying=false;schedulePlaybackForDestinations=original.output;schedulePlaybackTimeout=original.timeout;schedulePlaybackFrame=original.frame;scheduleMetronomeForPlaybackWindow=original.metro;startVisualSustains=original.visual;resetPlaybackForLoadedScore();
  }

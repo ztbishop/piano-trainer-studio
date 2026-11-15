@@ -8,7 +8,7 @@ Use the [developer index](README.md) to route a task to focused subsystem docs. 
 
 The frontend is static HTML/CSS/JavaScript with ordered classic scripts and shared globals, principally `AppState`. There is no frontend build step, framework, account service, or required application backend. OSMD uses VexFlow for engraving; Tone.js provides audio and metronome scheduling. Core libraries, Salamander piano samples, and webmscore/WASM conversion assets are bundled locally.
 
-`index.html` reads `version.json` during bootstrap and applies version query strings to app assets. It loads Tone.js and OSMD first, then storage adapters, state, transpose engine/UI, toolbar, library/UI, LEDs, MIDI, import conversion, feedback/debug, timing, hand assignment, and finally the trainer core. Preserve dependency order: earlier modules can define callbacks that are invoked only after core initialization.
+`index.html` reads `version.json` during bootstrap and applies version query strings to app assets. It loads Tone.js and OSMD first, then storage adapters, state, transpose engine/UI, toolbar, library/UI, LEDs, MIDI, import conversion, feedback/debug, timing, hand assignment, expression source/resolver modules, and finally the trainer core. Preserve dependency order: earlier modules can define callbacks that are invoked only after core initialization.
 
 ## Current structure
 
@@ -24,7 +24,8 @@ The frontend is static HTML/CSS/JavaScript with ordered classic scripts and shar
 - `js/storage.js` = guarded preference/session storage, session fallback and settings batch rollback; loads before state. IndexedDB scores never fall back to memory.
 - `js/trainer-state.js` = shared state and persisted preference helpers
 - `js/trainer-timing.js` = shared timing math for traversal waits, measure remainder checks, and playback scheduling inputs
-- `js/score-expression.js` = read-only fixed-dynamic, crescendo/diminuendo and articulation lookup for optional score-output velocity and gate; evaluates cached expressions by source position, with no cursor, grading or geometry ownership. See [expression rules](MIDI_AUDIO_LED.md#optional-expressive-score-playback).
+- `js/score-expression-source.js` = read-only MusicXML wedge boundaries mapped to the loaded OSMD measure/staff identities; supplies expression metadata only, without editing XML, notes or engraving.
+- `js/score-expression.js` = fixed-dynamic, crescendo/diminuendo and articulation lookup for optional score-output velocity and gate; binds source wedge metadata per sheet and evaluates cached expressions by source position, with no cursor, grading or geometry ownership. See [expression rules](MIDI_AUDIO_LED.md#optional-expressive-score-playback).
 - `js/toolbar-ui.js` = toolbar/menu shell
 - `js/appearance.js` = persisted Light/Soft Light/Dark selection; CSS paint changes only, without rerendering notation.
 - `js/numeric-controls.js` = presentation-only coarse numeric buttons; existing modules retain setting application. See [Menu controls](UI_CONTROLS.md).
@@ -75,8 +76,8 @@ The core intentionally still spans several responsibilities. Use function names 
 ## Data and event flow
 
 1. A direct file or library entry supplies score data; converter formats become MusicXML through `MidiImport`.
-2. `loadScoreIntoApp()` resets playback, keeps the original source, loads OSMD, refreshes rendered geometry, and initializes hand assignment.
-3. Ordinary MXL rendering uses the original compressed source. Separate extracted XML supports assignment/transposition; converter fallback for that XML must not replace the ordinary render payload.
+2. `loadScoreIntoApp()` resets playback, keeps the original source, prepares current-source expression XML, loads OSMD, binds expression metadata synchronously to the new sheet, refreshes rendered geometry, and initializes hand assignment.
+3. Ordinary MXL rendering uses the original compressed source. Separate XML supports assignment/transposition and expression metadata. Expression boundaries use the current XML or direct extraction from the current MXL, never converter-normalized or pre-transpose original XML; see [source identities](SCORES_AND_STORAGE.md#import-paths-and-source-identity). No extracted XML replaces the ordinary MXL render payload.
 4. The OSMD cursor iterator supplies note events. Hand assignment resolves performance roles; feedback builds expected-note groups and rendered-note anchors.
 5. MIDI and virtual-key input pass through `triggerVirtualKey()` into matching, scoring, audio routing, and visual/LED state.
 6. The trainer core advances the cursor according to practice mode, uses `PTTiming` for waits, and schedules audio/metronome/output cleanup.

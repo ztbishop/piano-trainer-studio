@@ -95,14 +95,14 @@
             // Compare identical pitches in separate buffers so sample timbre and overlapping
             // release tails cannot conceal a small velocity change. Score ramp selection is
             // covered by the expression tests; these checks establish actual sampler gain.
-            const accented = await render([false], 71);
+            const accented = await render([false], 80);
             const middle = await render([false], 64);
             const peak = await render([false], 72);
             const onsetQuiet = rms(quiet, 0.06, 0.20), onsetLoud = rms(loud, 0.06, 0.20);
             check(onsetQuiet > 1e-6, 'Rendered attack contains audio');
             check(Math.abs(onsetLoud / onsetQuiet - 2) < 0.002, 'Doubling velocity doubles attack RMS (' + (onsetLoud / onsetQuiet).toFixed(6) + '×)');
             const accentRatio = rms(accented, 0.06, 0.20) / onsetQuiet;
-            check(Math.abs(accentRatio - 71 / 56) < 0.002, 'Same-pitch accent 56 → 71 increases attack RMS by 71/56 (' + accentRatio.toFixed(6) + '×)');
+            check(Math.abs(accentRatio - 80 / 56) < 0.002, 'Same-pitch accent 56 → 80 increases attack RMS by 80/56 (' + accentRatio.toFixed(6) + '×)');
             const onsetMiddle = rms(middle, 0.06, 0.20), onsetPeak = rms(peak, 0.06, 0.20);
             check(Math.abs(onsetMiddle / onsetQuiet - 64 / 56) < 0.002, 'Modest crescendo step 56 → 64 increases same-pitch attack RMS proportionally');
             check(Math.abs(onsetMiddle / onsetPeak - 64 / 72) < 0.002, 'Modest diminuendo step 72 → 64 decreases same-pitch attack RMS proportionally');

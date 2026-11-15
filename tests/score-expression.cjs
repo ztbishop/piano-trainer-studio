@@ -63,15 +63,15 @@ for (const [enumValue, velocity] of [[3, 28], [4, 40], [5, 56], [6, 72], [7, 88]
     const score = fixture(1);
     dynamic(score, 0, 0, 0, enumValue);
     expect(note(score, 0, 0), score, velocity);
-    expect(note(score, 0, 0, 0, ['accent']), score, Math.min(127, velocity + 15));
+    expect(note(score, 0, 0, 0, ['accent']), score, Math.min(127, velocity + 24));
 }
-expect(note(sheet, 0, 0.5, 0, ['accent', 'accent']), sheet, 71); // A duplicated marking is one accent.
+expect(note(sheet, 0, 0.5, 0, ['accent', 'accent']), sheet, 80); // A duplicated marking is one accent.
 expect(note(sheet, 0, 0.5, 0, ['staccato']), sheet, 56, 0.5, true);
-expect(note(sheet, 0, 0.5, 0, ['staccato', 'accent']), sheet, 71, 0.5, true);
+expect(note(sheet, 0, 0.5, 0, ['staccato', 'accent']), sheet, 80, 0.5, true);
 expect(note(sheet, 0, 0.5, 0, ['fermata', 'tenuto', 'staccatissimo']), sheet, 56);
 const tiedStart = note(sheet, 0, 0.5, 0, ['staccato', 'accent']);
 tiedStart.NoteTie = { StartNote: tiedStart };
-expect(tiedStart, sheet, 71);
+expect(tiedStart, sheet, 80);
 const tiedContinuation = note(sheet, 1, 0, 0, ['staccato']);
 tiedContinuation.NoteTie = tiedStart.NoteTie;
 expect(tiedContinuation, sheet, 104); // The existing playback loop excludes this attack; the resolver never shortens it.
@@ -80,7 +80,7 @@ expect(tiedContinuation, sheet, 104); // The existing playback loop excludes thi
 const unmarked = fixture();
 expect(note(unmarked, 0, 0), unmarked, 100);
 expect(note(unmarked, 0, 0), sheet, 100);
-expect(note(unmarked, 0, 0, 0, ['accent']), unmarked, 115);
+expect(note(unmarked, 0, 0, 0, ['accent']), unmarked, 124);
 expect(null, null, 100);
 expect({}, sheet, 100);
 expect({ ParentStaffEntry: { ParentStaff: sheet.Staves[0], AbsoluteTimestamp: { RealValue: NaN } } }, sheet, 100);

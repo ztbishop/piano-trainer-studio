@@ -120,12 +120,12 @@ for (const [enumValue, type, mid, end] of [[3, 1, 28, 28], [10, 0, 124, 124], [9
     hairpin(score, 0, 2, type);
     expect(score, 1, mid);
     expect(score, 2, end);
-    expect(score, 3, Math.min(127, end + 15), 0, ['accent']);
+    expect(score, 3, Math.min(127, end + 24), 0, ['accent']);
 }
-expect(fallback, 1, 79, 0, ['accent']);
+expect(fallback, 1, 88, 0, ['accent']);
 expect(fallback, 1, 64, 0, ['staccato']);
-expect(fallback, 1, 79, 0, ['accent', 'staccato']);
-expect(fallback, 1, 79, 0, ['accent', 'staccato'], true);
+expect(fallback, 1, 88, 0, ['accent', 'staccato']);
+expect(fallback, 1, 88, 0, ['accent', 'staccato'], true);
 expect(fallback, 1, 64, 0, ['tenuto', 'staccatissimo']);
 
 // Fixed marks are processed before same-onset hairpins, independent of source collection order.
@@ -204,7 +204,7 @@ function freeze(value, seen = new WeakSet()) {
 }
 freeze(frozen);
 freeze(target);
-equal(resolve(target, frozen).velocity, 79, 'frozen metadata resolves the ramp and accent');
+equal(resolve(target, frozen).velocity, 88, 'frozen metadata resolves the ramp and accent');
 equal(frozen.SourceMeasures[0].StaffLinkedExpressions[0][0], shared, 'source collection order is preserved');
 equal(shared.StartingContinuousDynamic.EndMultiExpression.AbsoluteTimestamp.RealValue, 2, 'span endpoint is not rewritten');
 expect(frozen, 3, 72);

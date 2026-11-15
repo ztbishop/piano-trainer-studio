@@ -57,9 +57,9 @@ document.getElementById('checks').onclick=function(){
  const anchorData=n=>({midi:n.midi,staffId:n.staffId,role:n.handRole,anchor:n.anchor?{x:n.anchor.x,y:n.anchor.y}:null,anchors:(n.anchors||[]).map(a=>({x:a.x,y:a.y}))});
  const expectedExpression=(m,t,midi)=>{
   const rh=midi>=60;
-  // OSMD anchors this fixture's end-of-measure wedge stop to the last note onset (2.75).
-  let velocity=rh?(m===0?(t<.5?56:104):m===1?116:m===2?Math.round(56+16*(t-2)/.75):88):(m===0?40:56);
-  if(rh&&((m===0&&near(t,.25))||(m===3&&near(t,3))))velocity=Math.min(127,velocity+15);
+  // Source timing restores the wedge's barline end and the mf target at 3.
+  let velocity=rh?(m===0?(t<.5?56:104):m===1?116:m===2?Math.round(56+32*(t-2)):88):(m===0?40:56);
+  if(rh&&((m===0&&near(t,.25))||(m===3&&near(t,3))))velocity=Math.min(127,velocity+24);
   const staccato=rh&&((m===0&&near(t,0))||(m===3&&near(t,3)));
   return{velocity,gate:staccato?.5:.9,staccato};
  };
@@ -199,7 +199,7 @@ document.getElementById('checks').onclick=function(){
      AppState.isPlaying=true;AppState.anchorTime=Tone.now();playbackLoop();AppState.isPlaying=false;
      const output=scheduled.filter(n=>n.midi===72),group=AppState.expectedNotes.find(n=>n.midi===72);
      check(output.length===(enabled?1:2)&&output.every(n=>n.options.toLocalAudio&&n.options.toMidiOut),mode+' '+enabled+' '+allStaccato+': unison emits correct attack count per destination');
-     const duration=enabled&&allStaccato?250:450,velocity=enabled?71:100;
+     const duration=enabled&&allStaccato?250:450,velocity=enabled?80:100;
      check(output.every(n=>near(n.durationMs,duration)&&n.velocity===velocity&&!!n.options.staccato===(enabled&&allStaccato)),mode+' '+enabled+' '+allStaccato+': unison uses longest gate, strongest accent, and shared release');
      check(!!group&&group.sourceNotes.length===2&&group.anchors.length>0,mode+' '+enabled+': unison feedback keeps both XML sources and rendered anchors');
      snapshots.push({expected:AppState.expectedNotes.map(anchorData),sourceCount:group.sourceNotes.length,next:[osmd.cursor.Iterator.CurrentMeasureIndex,osmd.cursor.Iterator.currentTimeStamp.RealValue]});

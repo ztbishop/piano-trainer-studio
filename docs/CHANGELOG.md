@@ -1,5 +1,12 @@
 # Change history and future update records
 
+## 2026-11-15 — Recover source hairpin boundaries and strengthen accents (no application release)
+
+- Added read-only source-expression metadata from current XML or directly extracted MXL XML. MusicXML stream timing recovers short/shortened wedge boundaries; original MXL still goes directly to OSMD. Source mapping uses actual OSMD measure starts and part/staff identities, with grace/chord notes excluded from cursor advancement. Invalid/ambiguous parts retain parsed-expression fallback. No scheduler, feedback, grace-note matching, engraving, sample, storage or version change.
+- Recovered all four reported collapsed Chopin hairpins. The app-measure-19 crescendo now reaches the written forte at measure 20 through 72→83→93→104. The default ramp change remains ±16. After the owner reported subtle expression and requested a modest accent increase, raised ordinary accents from +15 to +24 velocity; G5 is now 80 versus nearby 56 (approximately 3.10 dB with the sampler). These strengths are documented app choices, not notation standards.
+- Validation: 82 source-parser and 77 loader checks, existing 197/520/81 expression checks, and hand-assignment-identity/playback-lifecycle/loop-gate/multi-segment-ties/settings-backup/midi-output-init/resize-geometry/unison-feedback/clef-feedback regressions passed. Browser: 812 hairpin/source checks plus 427 basic checks, and 20 real-Tone/Salamander offline checks. Actual supplied MXL capture confirms 17 source spans, all four recoveries, unchanged note/grace/cue data and engraving, and valid output for 1,253 pitched source notes. Changed-script/inline syntax and diff checks passed. [Detailed evidence](DEVELOPMENT.md#source-hairpin-boundary-checks).
+- New listening, physical MIDI/VST/LED, measured continuous timing and broader ambiguous-source acceptance remain pending. The supplied score was inspected in memory and is not included in the repository. Native browser storage was not accessed or cleared.
+
 ## 2026-11-15 — Crescendos and diminuendos (no application release)
 
 - Extended the existing default-off expressive-playback checkbox with per-note gradual dynamics for App Audio and MIDI Out. A compatible fixed mark within the span supplies the target; otherwise the change is a modest ±16 velocity units, bounded to 28–124. Levels follow source position through seeks/repeats and retain the endpoint until another expression. [Exact rules and parsed-boundary limits](MIDI_AUDIO_LED.md#optional-expressive-score-playback).

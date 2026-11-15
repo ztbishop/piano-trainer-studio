@@ -1246,8 +1246,15 @@ async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType
             fileType: resolvedOriginalFileType
         });
 
+        // Read expression timing from the current source, never converter-normalized/original pre-transpose XML.
+        let expressionMusicXml = typeof osmdSourceRawData === 'string' ? osmdSourceRawData : null;
+        if (!expressionMusicXml && String(fileType).toLowerCase() === 'mxl') {
+            try { expressionMusicXml = await extractMusicXmlFromMxl(osmdSourceRawData); }
+            catch (_) { /* Parsed OSMD expression metadata remains the fallback. */ }
+        }
         const osmdLoadPayload = getOsmdLoadPayload(osmdSourceRawData, fileType, fileName);
         await osmd.load(osmdLoadPayload);
+        window.ScoreExpression?.bindSource?.(osmd.Sheet, expressionMusicXml);
         renderScoreAndRefreshGeometry();
         HandAssignment.deactivate();
         initSongUI();

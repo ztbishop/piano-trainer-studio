@@ -4,8 +4,25 @@
     // The bundled OSMD does not export DynamicEnum. Its fixed levels are ppp=3 through fff=10.
     const dynamicNames = Object.freeze({ 3: 'ppp', 4: 'pp', 5: 'p', 6: 'mp', 7: 'mf', 8: 'f', 9: 'ff', 10: 'fff' });
     const sheetCaches = new WeakMap();
+    const sourceHairpins = new WeakMap();
     const epsilon = 1e-9;
     const defaultDynamicChange = 16;
+    const accentBoost = 24;
+
+    function bindSource(sheet, xml) {
+        if (!sheet || typeof sheet !== 'object') return false;
+        sheetCaches.delete(sheet);
+        sourceHairpins.delete(sheet);
+        try {
+            const spans = window.ScoreExpressionSource?.read(sheet, xml);
+            if (!(spans instanceof Map)) return false;
+            sourceHairpins.set(sheet, spans);
+            return true;
+        } catch (_) {
+            // Expression metadata must never prevent loading/rendering the original score.
+            return false;
+        }
+    }
 
     function dynamicVelocity(dynamic) {
         const name = dynamicNames[dynamic?.DynEnum];
@@ -32,6 +49,8 @@
                     const span = expression.StartingContinuousDynamic;
                     if (!span || seenSpans.has(span)) continue;
                     seenSpans.add(span);
+                    // Source XML recovers wedge timing; retain OSMD's separate text cresc./dim. expressions.
+                    if (sourceHairpins.get(sheet)?.has(staffIndex) && !span.Label) continue;
                     const start = span.StartMultiExpression?.AbsoluteTimestamp?.RealValue;
                     const endBase = span.EndMultiExpression?.AbsoluteTimestamp?.RealValue;
                     // OSMD stores a wedge stop's MusicXML offset separately from its source timestamp.
@@ -45,6 +64,9 @@
                     }
                 }
             });
+        }
+        for (const [staffIndex, spans] of sourceHairpins.get(sheet) || []) {
+            for (const span of spans) sourceEvents.push({ ...span, staffIndex });
         }
         for (const staffEvents of fixedEvents) {
             staffEvents?.sort((a, b) => a.timestamp - b.timestamp);
@@ -134,7 +156,7 @@
         const has = name => enums?.[name] != null && articulations.some(item => item?.articulationEnum === enums[name]);
         // A tied attack retains the existing combined sustain, even if its first segment has a dot.
         const staccato = !note?.NoteTie && has('staccato');
-        const velocity = Math.min(127, velocityAt(note, sheet) + (has('accent') ? 15 : 0));
+        const velocity = Math.min(127, velocityAt(note, sheet) + (has('accent') ? accentBoost : 0));
         return { velocity, gate: staccato ? 0.5 : 0.9, staccato };
     }
 
@@ -174,5 +196,5 @@
         return [...outputs.values()];
     }
 
-    window.ScoreExpression = Object.freeze({ resolve, mergeOutputs });
+    window.ScoreExpression = Object.freeze({ resolve, mergeOutputs, bindSource });
 })();
