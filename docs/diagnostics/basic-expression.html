@@ -37,7 +37,7 @@ document.getElementById('inspect').onclick=()=>runInApp(async function(){
  await loadScoreIntoApp(xml,{fileName:'basic-expression.musicxml',fileType:'musicxml',title:'Basic expression regression'});
  osmd.cursor.reset();const notes=[];let steps=0;
  while(!osmd.cursor.Iterator.EndReached&&steps++<100){const it=osmd.cursor.Iterator;for(const e of it.CurrentVoiceEntries||[])for(const n of e.Notes||[])notes.push({measure:it.CurrentMeasureIndex,time:it.currentTimeStamp.RealValue,midi:n.halfTone+12,staff:osmd.Sheet.Staves.indexOf(n.ParentStaffEntry?.ParentStaff),voiceKeys:Object.keys(e),articulations:e.Articulations?.map(a=>({keys:Object.keys(a),enum:a.articulationEnum,ArticulationEnum:a.ArticulationEnum})),resolved:typeof ScoreExpression==='undefined'?null:ScoreExpression.resolve(n,osmd.Sheet)});it.moveToNext();}
- const expressions=osmd.Sheet.SourceMeasures.map((m,i)=>({measure:i,absolute:m.AbsoluteTimestamp?.RealValue,staffs:m.StaffLinkedExpressions?.map((items,staff)=>({staff,items:items.map(x=>({keys:Object.keys(x),absolute:x.AbsoluteTimestamp?.RealValue,timestamp:x.Timestamp?.RealValue,dynamic:x.InstantaneousDynamic?{keys:Object.keys(x.InstantaneousDynamic),enum:x.InstantaneousDynamic.DynEnum,staff:x.InstantaneousDynamic.StaffNumber}:null}))}))}));
+ const expressions=osmd.Sheet.SourceMeasures.map((m,i)=>({measure:i,absolute:m.AbsoluteTimestamp?.RealValue,staffs:m.StaffLinkedExpressions?.map((items,staff)=>({staff,items:items.map(x=>({keys:Object.keys(x),absolute:x.AbsoluteTimestamp?.RealValue,timestamp:x.Timestamp?.RealValue,span:x.StartingContinuousDynamic?{type:x.StartingContinuousDynamic.DynamicType,start:x.StartingContinuousDynamic.StartMultiExpression?.AbsoluteTimestamp?.RealValue,end:x.StartingContinuousDynamic.EndMultiExpression?.AbsoluteTimestamp?.RealValue,offset:x.StartingContinuousDynamic.EndMultiExpression?.EndOffsetFraction?.RealValue}:null,dynamic:x.InstantaneousDynamic?{keys:Object.keys(x.InstantaneousDynamic),enum:x.InstantaneousDynamic.DynEnum,staff:x.InstantaneousDynamic.StaffNumber}:null}))}))}));
  osmd.cursor.reset();osmd.cursor.update();out.textContent=JSON.stringify({staves:osmd.Sheet.Staves.length,expressions,notes,errors:testErrors},null,2);
  }catch(e){out.textContent='FAIL '+e.stack;}
 });
@@ -57,7 +57,8 @@ document.getElementById('checks').onclick=function(){
  const anchorData=n=>({midi:n.midi,staffId:n.staffId,role:n.handRole,anchor:n.anchor?{x:n.anchor.x,y:n.anchor.y}:null,anchors:(n.anchors||[]).map(a=>({x:a.x,y:a.y}))});
  const expectedExpression=(m,t,midi)=>{
   const rh=midi>=60;
-  let velocity=rh?(m===0?(t<.5?56:104):m===1?116:m===2?56:88):(m===0?40:56);
+  // OSMD anchors this fixture's end-of-measure wedge stop to the last note onset (2.75).
+  let velocity=rh?(m===0?(t<.5?56:104):m===1?116:m===2?Math.round(56+16*(t-2)/.75):88):(m===0?40:56);
   if(rh&&((m===0&&near(t,.25))||(m===3&&near(t,3))))velocity=Math.min(127,velocity+15);
   const staccato=rh&&((m===0&&near(t,0))||(m===3&&near(t,3)));
   return{velocity,gate:staccato?.5:.9,staccato};

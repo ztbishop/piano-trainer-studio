@@ -128,7 +128,7 @@ separateParts.Staves[1] = new OSMD.Staff({ Visible: true }, 1);
 dynamic(separateParts, 0, 0, 0, 5);
 expect(note(separateParts, 0, 0, 1), separateParts, 100);
 
-// Hairpins and compound attacks (sfz/fp/etc.) cannot become accidental persistent fixed dynamics.
+// Incomplete hairpins and compound attacks (sfz/fp/etc.) cannot become accidental persistent fixed dynamics.
 const unsupported = fixture(1);
 dynamic(unsupported, 0, 0, 0, 5);
 dynamic(unsupported, 1, 0, 0, 21); // sfz

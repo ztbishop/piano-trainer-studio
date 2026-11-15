@@ -1,0 +1,230 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Isolated hairpin expression checks</title>
+<style>body{font:15px system-ui;margin:16px}button,input{margin:0 6px 8px 0;padding:6px 10px}pre{white-space:pre-wrap;max-height:340px;overflow:auto}iframe{box-sizing:border-box;display:block;max-width:100%;height:800px;border:1px solid #777}</style>
+<h1>Hairpin expression: isolated browser checks</h1>
+<p>Memory-only preferences; score storage and MIDI hardware blocked. Output requests are captured without playback. The original CC0 fixture covers explicit and default targets, cross-bar spans, repeats, articulations and staff inheritance.</p>
+<button id="load">Load isolated app</button><button id="checks" disabled>Run hairpin checks</button>
+<button id="audio" disabled>Open audio controls</button><button id="wide">Desktop width</button><button id="narrow">Phone width</button>
+<p>Optional local score inspection: <input id="owner-file" type="file" accept=".mxl,.xml,.musicxml"><button id="owner" disabled>Inspect local score</button></p>
+<pre id="results">Ready.</pre><iframe id="app" style="width:1100px" allow="autoplay"></iframe>
+<script>
+const report=document.getElementById('results'),frame=document.getElementById('app');
+function runInApp(fn){const script=frame.contentDocument.createElement('script');script.textContent='('+fn.toString()+')()';frame.contentDocument.body.appendChild(script);}
+document.getElementById('load').onclick=async function(){
+ this.disabled=true;
+ let html=await(await fetch('../../index.html')).text();
+ const root=new URL('../../',location.href).href;
+ const block='<base href="'+root+'"><script>'+
+ 'window.testErrors=[];addEventListener("error",e=>testErrors.push(e.message));addEventListener("unhandledrejection",e=>testErrors.push(String(e.reason)));'+
+ 'window.expressionTestData={};const memoryStore=data=>new Proxy(data,{get(target,key){if(key==="getItem")return k=>target[k]??null;if(key==="setItem")return(k,v)=>{target[k]=String(v);};if(key==="removeItem")return k=>{delete target[k];};if(key==="key")return i=>Object.keys(target)[i]??null;if(key==="length")return Object.keys(target).length;return target[key];}});'+
+ 'Object.defineProperty(window,"localStorage",{value:memoryStore(expressionTestData)});Object.defineProperty(window,"sessionStorage",{value:memoryStore({})});'+
+ 'Object.defineProperty(window,"indexedDB",{get(){throw Error("Score storage blocked in hairpin test");}});'+
+ 'Object.defineProperty(navigator,"requestMIDIAccess",{value:()=>Promise.reject(Error("Hardware disabled for hairpin test"))});<\/script>';
+ html=html.replace('<head>','<head>'+block).replace(/<script[^>]+src="https:[\s\S]*?<\/script>/g,'');
+ frame.onload=()=>{for(const id of ['checks','audio','owner'])document.getElementById(id).disabled=false;report.textContent='Loaded isolated app. Native settings and scores untouched.';};
+ frame.srcdoc=html;
+};
+document.getElementById('wide').onclick=()=>{frame.style.width='1100px';};
+document.getElementById('narrow').onclick=()=>{frame.style.width='390px';};
+document.getElementById('audio').onclick=()=>runInApp(function(){document.getElementById('btn-help-close').click();document.getElementById('btn-more-audio').click();});
+document.getElementById('checks').onclick=function(){
+ this.disabled=true;
+ runInApp(async function(){
+  const out=parent.document.getElementById('results');let count=0;
+  out.textContent='Running isolated hairpin checks.';
+  const check=(ok,label)=>{if(!ok)throw Error(label);count++;out.textContent+='\nPASS: '+label;};
+  const near=(a,b)=>Math.abs(a-b)<1e-6;
+  const original={output:schedulePlaybackForDestinations,timeout:schedulePlaybackTimeout,frame:schedulePlaybackFrame,metro:scheduleMetronomeForPlaybackWindow,visual:startVisualSustains,
+   advance:checkWaitModeAdvance,localRoute:shouldRouteLiveSourceToLocalAudio,midiRoute:shouldRouteLiveSourceToMidiOut,early:tryReserveSingleHandEarlyGrace,upcoming:tryReserveRealtimeUpcomingHeldNote,
+   local:playScheduledPlaybackNote,on:sendMidiOutNoteOn,off:sendMidiOutNoteOff};
+  let scheduled=[],waits=[],metronomes=[];
+  const paths=()=>[...document.querySelectorAll('[id^="osmdSvgPage"] path')].filter(p=>!p.closest('#pt-feedback-group,#pt-debug-group,#pt-looper-group')).map(p=>p.getAttribute('d')).join('|');
+  const seek=(measure,time)=>{osmd.cursor.reset();let steps=0;while(!osmd.cursor.Iterator.EndReached&&steps++<10000){const it=osmd.cursor.Iterator;if(it.CurrentMeasureIndex===measure&&near(it.currentTimeStamp.RealValue,time)){osmd.cursor.update();return it;}it.moveToNext();}throw Error('Cannot seek '+measure+' '+time);};
+  const anchorData=n=>({midi:n.midi,staffId:n.staffId,role:n.handRole,anchor:n.anchor?{x:n.anchor.x,y:n.anchor.y}:null,anchors:(n.anchors||[]).map(a=>({x:a.x,y:a.y}))});
+  const expectedExpression=(m,t,midi)=>{
+   const rh=midi>=60;
+   let velocity=t<1?56+48*t:t<2?104-48*(t-1):t<3?56+16*Math.min(1,(t-2)/.5):t<4?72-16*Math.min(1,(t-3)/.5):56+48*Math.min(1,(t-4)/1.5);
+   velocity=Math.round(velocity);
+   if(!rh&&t>=1)velocity=40;
+   if(rh&&m===0&&near(t,.25))velocity+=15;
+   const staccato=rh&&m===0&&near(t,.5);
+   return {velocity,gate:staccato?.5:.9,staccato};
+  };
+  const runEvent=(mode,enabled,m,t)=>{
+   AppState.isPlaying=false;resetPlaybackForLoadedScore();const it=seek(m,t);
+   AppState.mode=mode;AppState.expressivePlaybackEnabled=enabled;AppState.practice={left:true,right:true};AppState.playback={left:true,right:true};
+   AppState.audioEnabled.hands=true;AppState.midiOutEnabled.hands=true;AppState.speedPercent=.75;AppState.pendingAudio=[];
+   AppState.isPlaying=true;AppState.anchorTime=Tone.now();scheduled=[];waits=[];metronomes=[];
+   const source=(it.CurrentVoiceEntries||[]).flatMap(e=>e.Notes).filter(n=>!n.isRest()&&(!n.NoteTie||n.NoteTie.StartNote===n));
+   playbackLoop();AppState.isPlaying=false;
+   const result={next:[osmd.cursor.Iterator.CurrentMeasureIndex,osmd.cursor.Iterator.currentTimeStamp.RealValue],expected:AppState.expectedNotes.map(anchorData),
+    visuals:AppState.visualNotesToStart.map(n=>({midi:n.midi,durationMs:n.durationMs,endTimestamp:n.endTimestamp})),
+    wait:mode==='follow'?AppState.followAdvanceInfo?.waitSeconds:metronomes[0]?.[3],beats:mode==='follow'?AppState.followAdvanceInfo?.beatsToWait:metronomes[0]?.[4]};
+   check(scheduled.length===source.length,mode+' '+enabled+' t'+t+': correct attack count including tie continuation');
+   for(const note of source){
+    const midi=note.halfTone+12,item=scheduled.find(n=>n.midi===midi),expr=enabled?expectedExpression(m,t,midi):{velocity:100,gate:.9,staccato:false};
+    const length=note.NoteTie?getCombinedTieLength(note):note.Length.RealValue;
+    const duration=length*4*60/(AppState.baseBpm*AppState.speedPercent)*1000*expr.gate;
+    check(!!item&&item.velocity===expr.velocity&&near(item.durationMs,duration)&&!!item.options.staccato===expr.staccato&&item.options.toLocalAudio&&item.options.toMidiOut,
+     mode+' '+enabled+' t'+t+' MIDI '+midi+': expected velocity/gate reach both outputs');
+   }
+   return result;
+  };
+  try{
+   document.getElementById('btn-help-close').click();
+   const toggle=document.getElementById('check-expressive-playback');
+   check(!!toggle&&!toggle.checked&&!AppState.expressivePlaybackEnabled,'Existing checkbox still defaults off');
+   toggle.click();check(toggle.checked&&AppState.expressivePlaybackEnabled&&expressionTestData.pt_expressivePlaybackEnabled==='true','Existing checkbox enables and persists expression');
+   toggle.click();
+   const response=await fetch('docs/diagnostics/fixtures/hairpin-expression.musicxml');if(!response.ok)throw Error('Fixture HTTP '+response.status);const xml=await response.text();
+   await loadScoreIntoApp(xml,{fileName:'hairpin-expression.musicxml',fileType:'musicxml',title:'Hairpin expression regression'});
+   document.getElementById('check-looper').checked=false;
+   const beforePaths=paths(),events=[],hairpins=[];let steps=0;
+   for(const measure of osmd.Sheet.SourceMeasures)for(const [staff,expressions] of (measure.StaffLinkedExpressions||[]).entries())for(const expr of expressions||[]){
+    const dynamic=expr.StartingContinuousDynamic;if(dynamic)hairpins.push({staff,type:dynamic.DynamicType,start:dynamic.StartMultiExpression?.AbsoluteTimestamp?.RealValue,end:dynamic.EndMultiExpression?.AbsoluteTimestamp?.RealValue});
+   }
+   // The bundled OSMD attaches a stop following a note to that note's onset, not its end.
+   // Assert actual source boundaries rather than substituting MusicXML cursor calculations.
+   const expectedSpans=[[0,0,1],[1,1,2],[0,2,2.5],[1,3,3.5],[0,4,5.5]];
+   check(hairpins.length===5,'Actual OSMD parses all five bounded hairpins');
+   for(const [type,start,end] of expectedSpans)check(hairpins.some(h=>h.staff===0&&h.type===type&&near(h.start,start)&&near(h.end,end)),'Parsed hairpin type '+type+' source span '+start+'→'+end+'; metadata '+JSON.stringify(hairpins));
+   osmd.cursor.reset();
+   while(!osmd.cursor.Iterator.EndReached&&steps++<100){
+    const it=osmd.cursor.Iterator;events.push({measure:it.CurrentMeasureIndex,time:it.currentTimeStamp.RealValue,notes:(it.CurrentVoiceEntries||[]).flatMap(e=>e.Notes).filter(n=>!n.isRest())});it.moveToNext();
+   }
+   check(events.length>=48,'Fixture visits six measures and repeats them');
+   check(events.some((e,i)=>i>0&&e.time<events[i-1].time),'Actual iterator traverses backward repeat');
+   for(const event of events)for(const note of event.notes){
+    const actual=ScoreExpression.resolve(note,osmd.Sheet),expected=expectedExpression(event.measure,event.time,note.halfTone+12);
+    check(actual.velocity===expected.velocity&&actual.gate===expected.gate&&actual.staccato===expected.staccato,
+     'Parsed ramp t'+event.time+' MIDI '+(note.halfTone+12)+' expected '+expected.velocity+' got '+actual.velocity);
+   }
+   for(const t of [5.75,0,3.75,1.5,2.75,.5,5.5,2,0]){
+    const event=events.find(e=>near(e.time,t));
+    for(const note of event.notes)check(ScoreExpression.resolve(note,osmd.Sheet).velocity===expectedExpression(event.measure,t,note.halfTone+12).velocity,'Out-of-order source query t'+t+' restores independent ramp value');
+   }
+   schedulePlaybackForDestinations=(midi,durationMs,velocity,options={})=>scheduled.push({midi,durationMs,velocity,options});
+   schedulePlaybackTimeout=(fn,delay)=>{waits.push({fn,delay});return 0;};schedulePlaybackFrame=()=>0;
+   scheduleMetronomeForPlaybackWindow=(...args)=>metronomes.push(args);startVisualSustains=()=>{};
+   for(const mode of ['realtime','wait','follow'])for(const t of [0,.25,.5,.75,1.25,1.5,2.25,2.75,3.25,3.75,4.75,5.5,5.75]){
+    const off=runEvent(mode,false,Math.floor(t),t),on=runEvent(mode,true,Math.floor(t),t);
+    check(JSON.stringify(off.next)===JSON.stringify(on.next),mode+' t'+t+': cursor destination unchanged');
+    check(JSON.stringify(off.expected)===JSON.stringify(on.expected),mode+' t'+t+': expected notes and original feedback anchors unchanged');
+    check(JSON.stringify(off.visuals)===JSON.stringify(on.visuals),mode+' t'+t+': visual sustain unchanged');
+    check(Number.isFinite(off.wait)&&Number.isFinite(on.wait)&&near(off.wait,on.wait)&&near(off.beats,on.beats),mode+' t'+t+': rhythmic/metronome wait unchanged');
+   }
+   // Normal one-hand Follow: inherited ramp travels through deferred accompaniment.
+   for(const enabled of [false,true]){
+    AppState.isPlaying=false;resetPlaybackForLoadedScore();seek(0,.5);AppState.mode='follow';AppState.practice={left:false,right:true};AppState.playback={left:true,right:false};
+    AppState.expressivePlaybackEnabled=enabled;AppState.isPlaying=true;AppState.anchorTime=Tone.now();scheduled=[];waits=[];AppState.pendingAudio=[];
+    playbackLoop();
+    check(scheduled.length===0&&AppState.pendingAudio.length===1,'Follow '+enabled+': opposite hand waits for practiced input');
+    check(AppState.pendingAudio[0].velocity===(enabled?80:100),'Follow '+enabled+': pending accompaniment retains inherited ramp velocity');
+    AppState.expectedNotes.forEach(n=>{n.hit=true;});original.advance();
+    check(scheduled.length===1&&scheduled[0].velocity===(enabled?80:100)&&AppState.pendingAudio.length===0,'Follow '+enabled+': satisfied hand releases correct accompaniment velocity');
+    AppState.isPlaying=false;
+   }
+   resetPlaybackForLoadedScore();seek(4,4.75);document.getElementById('check-looper').checked=true;document.getElementById('val-loop-min').value='1';document.getElementById('val-loop-max').value='5';
+   AppState.mode='follow';AppState.practice={left:false,right:true};AppState.playback={left:true,right:false};AppState.expressivePlaybackEnabled=true;AppState.isPlaying=true;AppState.anchorTime=Tone.now();
+   playbackLoop();check(!!AppState.pendingLoopRestart&&AppState.expectedNotes.some(n=>!n.hit),'Active hairpin retains unsatisfied final-note loop gate');
+   original.advance();check(!!AppState.pendingLoopRestart,'Unsatisfied hairpin note cannot restart loop');
+   AppState.isPlaying=false;document.getElementById('check-looper').checked=false;resetPlaybackForLoadedScore();
+   shouldRouteLiveSourceToLocalAudio=()=>false;shouldRouteLiveSourceToMidiOut=()=>false;checkWaitModeAdvance=()=>{};
+   tryReserveSingleHandEarlyGrace=()=>null;tryReserveRealtimeUpcomingHeldNote=()=>null;
+   for(const mode of ['realtime','wait','follow'])for(const enabled of [false,true]){
+    resetPlaybackForLoadedScore();const it=seek(0,.5);AppState.mode=mode;AppState.expressivePlaybackEnabled=enabled;AppState.practice={left:true,right:true};
+    AppState.feedbackEnabled=true;AppState.currentExpectedContext={measureIndex:0,timestamp:.5};buildExpectedNotesFromEntries(it.CurrentVoiceEntries,0,.5);
+    const target=AppState.expectedNotes.find(n=>n.midi===76),credit=AppState.score.correct,penalty=AppState.score.wrong;
+    AppState.isPlaying=true;triggerVirtualKey(76,true,'midi',37);AppState.isPlaying=false;triggerVirtualKey(76,false,'midi',0);
+    check(AppState.score.correct===credit+1&&AppState.correctFeedbackHistory.some(n=>n.midi===76&&n.anchor.x===target.anchor.x&&n.anchor.y===target.anchor.y),mode+' '+enabled+': input retains credit and rendered anchor inside ramp');
+    AppState.isPlaying=true;triggerVirtualKey(77,true,'midi',110);AppState.isPlaying=false;triggerVirtualKey(77,false,'midi',0);
+    check(AppState.score.wrong===penalty+1,mode+' '+enabled+': wrong input retains penalty inside ramp');
+   }
+   check(paths()===beforePaths,'Ramps, repeats and feedback leave original engraving paths unchanged');
+   const local=[],midi=[],offs=[];playScheduledPlaybackNote=(...args)=>local.push(args);sendMidiOutNoteOn=(...args)=>{midi.push(args);return true;};sendMidiOutNoteOff=n=>offs.push(n);
+   for(const velocity of [56,80,104]){
+    waits=[];original.output(72,450,velocity,{toLocalAudio:true,toMidiOut:true});
+    check(local.at(-1)[1]===velocity&&midi.at(-1)[1]===velocity,'Real destination router forwards ramp velocity '+velocity+' equally to audio/MIDI');
+    check(waits.length===1&&waits[0].delay===450,'Ramp velocity '+velocity+' leaves MIDI note-off duration unchanged');
+   }
+   playScheduledPlaybackNote=original.local;sendMidiOutNoteOn=original.on;sendMidiOutNoteOff=original.off;
+   // Insert an explicit target halfway through an existing span; it takes effect at its own source position.
+   const modified=new DOMParser().parseFromString(xml,'application/xml'),measure=modified.querySelectorAll('part > measure')[2];
+   const explicit=modified.createElement('direction');explicit.innerHTML='<direction-type><dynamics><f/></dynamics></direction-type><staff>1</staff>';
+   const thirdNote=[...measure.children].filter(el=>el.tagName==='note')[2];measure.insertBefore(explicit,thirdNote);
+   // Extend this variant's parsed stop to 2.75 so the explicit mark at 2.5 lies inside the span.
+   measure.insertBefore(measure.querySelector('wedge[type="stop"]').closest('direction'),measure.querySelector('backup'));
+   await loadScoreIntoApp(new XMLSerializer().serializeToString(modified),{fileName:'hairpin-explicit-interruption.musicxml',fileType:'musicxml',title:'Explicit mark inside hairpin'});
+   for(const [time,velocity] of [[2,56],[2.25,80],[2.5,104],[2.75,104]]){
+    const it=seek(2,time),rh=it.CurrentVoiceEntries.flatMap(e=>e.Notes).find(n=>n.halfTone+12>=60);
+    check(ScoreExpression.resolve(rh,osmd.Sheet).velocity===velocity,'Mid-span explicit dynamic governs ramp t'+time+' velocity '+velocity);
+   }
+   await loadScoreIntoApp(xml,{fileName:'hairpin-expression.musicxml',fileType:'musicxml',title:'Hairpin expression regression'});
+   const reloaded=seek(2,2.25).CurrentVoiceEntries.flatMap(e=>e.Notes).find(n=>n.halfTone+12>=60);
+   check(ScoreExpression.resolve(reloaded,osmd.Sheet).velocity===64,'Reload creates fresh sheet cache and restores default target');
+   check(testErrors.length===0,'No uncaught browser errors');
+   out.textContent='Completed '+count+' checks. Native scores/settings untouched. Captured output; no listening, continuous timer or hardware acceptance.\n'+out.textContent;
+  }catch(e){out.textContent+='\nFAIL: '+e.stack;}finally{
+   AppState.isPlaying=false;schedulePlaybackForDestinations=original.output;schedulePlaybackTimeout=original.timeout;schedulePlaybackFrame=original.frame;scheduleMetronomeForPlaybackWindow=original.metro;startVisualSustains=original.visual;
+   checkWaitModeAdvance=original.advance;shouldRouteLiveSourceToLocalAudio=original.localRoute;shouldRouteLiveSourceToMidiOut=original.midiRoute;tryReserveSingleHandEarlyGrace=original.early;tryReserveRealtimeUpcomingHeldNote=original.upcoming;
+   playScheduledPlaybackNote=original.local;sendMidiOutNoteOn=original.on;sendMidiOutNoteOff=original.off;
+   resetPlaybackForLoadedScore();AppState.mode='realtime';AppState.expressivePlaybackEnabled=false;applyModeSettings();
+  }
+ });
+};
+document.getElementById('owner').onclick=()=>runInApp(async function(){
+ const out=parent.document.getElementById('results'),file=parent.document.getElementById('owner-file').files[0];
+ if(!file){out.textContent='Choose a local MXL/XML file first.';return;}
+ out.textContent='Inspecting local score in memory only.';
+ const original={output:schedulePlaybackForDestinations,timeout:schedulePlaybackTimeout,frame:schedulePlaybackFrame,metro:scheduleMetronomeForPlaybackWindow,visual:startVisualSustains};
+ try{
+  document.getElementById('btn-help-close').click();const score=await readScoreFile(file);
+  await loadScoreIntoApp(score.rawData,score);document.getElementById('check-looper').checked=false;
+  const hairpins=[],accents=[],measureTen=[],seen=new Set(),firstSpanNotes=[];let steps=0;
+  const noteSummary={uniquePitchedNotes:0,attackNotes:0,minVelocity:Infinity,maxVelocity:-Infinity,invalidExpressionCount:0,staccatoCount:0};
+  for(const [measureIndex,measure] of osmd.Sheet.SourceMeasures.entries())for(const [staff,expressions] of (measure.StaffLinkedExpressions||[]).entries())for(const expr of expressions||[]){
+   const dynamic=expr.StartingContinuousDynamic;
+   if(dynamic){
+    const endBase=dynamic.EndMultiExpression?.AbsoluteTimestamp?.RealValue,endOffset=dynamic.EndMultiExpression?.EndOffsetFraction?.RealValue??0;
+    hairpins.push({appMeasure:measureIndex+1,staff:staff+1,type:dynamic.DynamicType,label:dynamic.Label,wedge:typeof dynamic.isWedge==='function'?dynamic.isWedge():!dynamic.Label,
+     start:dynamic.StartMultiExpression?.AbsoluteTimestamp?.RealValue,endBase,endOffset,end:endBase+endOffset});
+   }
+  }
+  const firstSpan=hairpins.filter(h=>h.wedge&&(h.type===0||h.type===1)&&Number.isFinite(h.start)&&Number.isFinite(h.end)&&h.end>h.start).sort((a,b)=>a.start-b.start)[0];
+  osmd.cursor.reset();
+  while(!osmd.cursor.Iterator.EndReached&&steps++<10000){
+   const it=osmd.cursor.Iterator,m=it.CurrentMeasureIndex,time=it.currentTimeStamp.RealValue;
+   for(const entry of it.CurrentVoiceEntries||[])for(const note of entry.Notes||[]){
+    if(note.isRest())continue;
+    const midi=note.halfTone+12,staff=osmd.Sheet.Staves.indexOf(note.ParentStaffEntry?.ParentStaff)+1;
+    if(seen.has(note))continue;seen.add(note);
+    const row={appMeasure:m+1,time,sourceTime:note.ParentStaffEntry?.AbsoluteTimestamp?.RealValue,midi,staff,articulations:entry.Articulations?.map(a=>({enum:a.articulationEnum,name:opensheetmusicdisplay.ArticulationEnum[a.articulationEnum]})),expression:ScoreExpression.resolve(note,osmd.Sheet)};
+    noteSummary.uniquePitchedNotes++;if(!note.NoteTie||note.NoteTie.StartNote===note)noteSummary.attackNotes++;
+    noteSummary.minVelocity=Math.min(noteSummary.minVelocity,row.expression.velocity);noteSummary.maxVelocity=Math.max(noteSummary.maxVelocity,row.expression.velocity);
+    if(!Number.isInteger(row.expression.velocity)||row.expression.velocity<1||row.expression.velocity>127||![.5,.9].includes(row.expression.gate))noteSummary.invalidExpressionCount++;
+    if(row.expression.staccato)noteSummary.staccatoCount++;
+    if(firstSpan&&row.sourceTime>=firstSpan.start-1e-9&&row.sourceTime<=firstSpan.end+1e-9)firstSpanNotes.push({appMeasure:row.appMeasure,time:row.time,sourceTime:row.sourceTime,midi,staff,velocity:row.expression.velocity,gate:row.expression.gate});
+    if(row.articulations?.some(a=>a.name==='accent'))accents.push(row);
+    if(m===9)measureTen.push(row);
+   }
+   it.moveToNext();
+  }
+  const captured=[];schedulePlaybackForDestinations=(midi,durationMs,velocity,options)=>captured.push({midi,durationMs,velocity,options});
+  schedulePlaybackTimeout=()=>0;schedulePlaybackFrame=()=>0;scheduleMetronomeForPlaybackWindow=()=>{};startVisualSustains=()=>{};
+  const renderedEvents=[],firstSpanOutput=[],capturePoints=new Map();
+  for(const row of [...measureTen,...firstSpanNotes])capturePoints.set(row.appMeasure+'/'+row.time,{measure:row.appMeasure-1,time:row.time});
+  for(const {measure,time} of capturePoints.values()){
+   AppState.isPlaying=false;resetPlaybackForLoadedScore();osmd.cursor.reset();let search=0;
+   while(!osmd.cursor.Iterator.EndReached&&search++<10000){const it=osmd.cursor.Iterator;if(it.CurrentMeasureIndex===measure&&Math.abs(it.currentTimeStamp.RealValue-time)<1e-6)break;it.moveToNext();}
+   osmd.cursor.update();AppState.mode='realtime';AppState.practice={left:false,right:false};AppState.playback={left:true,right:true};AppState.audioEnabled.hands=true;AppState.midiOutEnabled.hands=true;AppState.expressivePlaybackEnabled=true;AppState.speedPercent=1;AppState.pendingAudio=[];captured.length=0;
+   AppState.isPlaying=true;AppState.anchorTime=Tone.now();playbackLoop();AppState.isPlaying=false;
+   if(measure===9)renderedEvents.push({time,output:captured.slice()});
+   if(firstSpanNotes.some(n=>n.appMeasure===measure+1&&n.time===time))firstSpanOutput.push({appMeasure:measure+1,time,output:captured.map(n=>({midi:n.midi,velocity:n.velocity,durationMs:n.durationMs}))});
+  }
+  out.textContent=JSON.stringify({file:score.fileName,originalRenderSourceRetained:AppState.currentScoreData===score.rawData,noteSummary,hairpins,firstHairpin:{span:firstSpan,notes:firstSpanNotes,captured:firstSpanOutput},accents,appMeasure10:measureTen,capturedAppMeasure10:renderedEvents,errors:testErrors,limits:'Unique source-note summary, metadata and captured output only; no listening or hardware test.'},null,2);
+ }catch(e){out.textContent='FAIL: '+e.stack;}finally{
+  AppState.isPlaying=false;schedulePlaybackForDestinations=original.output;schedulePlaybackTimeout=original.timeout;schedulePlaybackFrame=original.frame;scheduleMetronomeForPlaybackWindow=original.metro;startVisualSustains=original.visual;resetPlaybackForLoadedScore();
+ }
+});
+</script>

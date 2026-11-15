@@ -1,5 +1,12 @@
 # Change history and future update records
 
+## 2026-11-15 — Crescendos and diminuendos (no application release)
+
+- Extended the existing default-off expressive-playback checkbox with per-note gradual dynamics for App Audio and MIDI Out. A compatible fixed mark within the span supplies the target; otherwise the change is a modest ±16 velocity units, bounded to 28–124. Levels follow source position through seeks/repeats and retain the endpoint until another expression. [Exact rules and parsed-boundary limits](MIDI_AUDIO_LED.md#optional-expressive-score-playback).
+- Runtime changes are limited to the expression resolver and checkbox description. No scheduler, timing, feedback, engraving, sample, vendor, dependency, version or persistence change. Accents retain +15; the owner's reported subtle G5 was confirmed in captured Chopin playback at velocity 71 versus nearby 56 and in the real-sample gain check.
+- Validation: 520 new hairpin assertions plus the 197 basic resolver and 81 integration checks passed, as did playback-lifecycle, loop-gate, multi-segment-ties, settings-backup, midi-output-init, resize-geometry, unison-feedback and clef-feedback. Browser: 541 new hairpin checks and 427 existing expression checks passed; 20 real-Tone/Salamander offline audio checks passed. Updated option inspected at 1100/390-pixel widths. Changed JavaScript/inline syntax and diff checks passed. [Detailed evidence and limitations](DEVELOPMENT.md#hairpin-expression-checks).
+- The supplied original Chopin MXL remained the render source; its first ramp produced 56→61→67→72 and all 1,253 pitched source notes returned valid parameters. The file was inspected in memory and is not committed. Four short wedges collapse to zero-length OSMD spans and are skipped; this interpretation limitation is tracked in TODO. New-ramp listening, physical devices, measured continuous timing and broader score scope remain pending; captured/offline checks do not establish those results.
+
 ## 2026-11-15 — Optional basic expressive playback (no application release)
 
 - Added **More → Audio / Routing → Expressive score playback**, off by default and included in existing settings backup/import/reset. Toggling during playback/count-in uses the existing pause/cleanup path; mode changes retain the preference.

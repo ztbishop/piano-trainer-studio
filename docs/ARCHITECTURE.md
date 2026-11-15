@@ -24,7 +24,7 @@ The frontend is static HTML/CSS/JavaScript with ordered classic scripts and shar
 - `js/storage.js` = guarded preference/session storage, session fallback and settings batch rollback; loads before state. IndexedDB scores never fall back to memory.
 - `js/trainer-state.js` = shared state and persisted preference helpers
 - `js/trainer-timing.js` = shared timing math for traversal waits, measure remainder checks, and playback scheduling inputs
-- `js/score-expression.js` = read-only fixed-dynamic/articulation lookup for optional score-output velocity and gate; no cursor, grading or geometry ownership
+- `js/score-expression.js` = read-only fixed-dynamic, crescendo/diminuendo and articulation lookup for optional score-output velocity and gate; evaluates cached expressions by source position, with no cursor, grading or geometry ownership. See [expression rules](MIDI_AUDIO_LED.md#optional-expressive-score-playback).
 - `js/toolbar-ui.js` = toolbar/menu shell
 - `js/appearance.js` = persisted Light/Soft Light/Dark selection; CSS paint changes only, without rerendering notation.
 - `js/numeric-controls.js` = presentation-only coarse numeric buttons; existing modules retain setting application. See [Menu controls](UI_CONTROLS.md).
