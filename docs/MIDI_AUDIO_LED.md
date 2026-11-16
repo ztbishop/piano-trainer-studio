@@ -108,6 +108,14 @@ The core computes desired key states; `LedEngine` maps them to an RGB framebuffe
 
 MIDI light output sends supported expected-hand states through its configured device/channel; it does not reproduce the full WLED RGB palette. Low-velocity mode uses velocity 1 instead of 100. The LED test controller retains a selected test output and active-note set for stop cleanup.
 
+### Optional black-key colors
+
+**Settings → LED Setup → Colors → Use distinct colors for black keys** is WLED-only and off by default. It saves `pt_ledBlackKeyColors` in localStorage and participates in Settings backup/import/reset. Older backups without the preference restore off. Enabling it immediately refreshes the existing shared LED framebuffer; switching output modes preserves the preference.
+
+For expected and future notes, physical black keys (MIDI pitch classes 1, 3, 6, 8 and 10) use LH violet RGB `(96, 0, 255)` / `#6000FF` and RH teal RGB `(0, 255, 128)` / `#00FF80`. White keys retain blue/green. Pitch spelling is irrelevant, including enharmonic spellings of white keys. Master/future brightness still applies afterward; at very low brightness, integer RGB rounding can remove the smaller tint channel, so a future note may appear blue/green. Compare at a higher Future brightness when evaluating the tint.
+
+Wrong red, correct/active gold, calibration white, virtual-keyboard/staff colors and MIDI LED output retain their existing behavior. The fixed trial palette lives in `LedEngine.blackKeyColors`; there are no color pickers or extra brightness controls. Custom colors remain a possible follow-up after physical-strip acceptance, not an implemented feature. See [checks and limits](DEVELOPMENT.md#black-key-led-color-checks).
+
 `WLEDController` deduplicates frame signatures, keeps the newest queued frame, schedules flushes by animation frame, handles HTTP/helper timeouts, clears/reconnects the strip, and maintains status. Local `LedEngine.renderOutputs()` is also called continuously by the core's animation-frame loop. Frame deduplication limits network sends; animation-frame invocation does not mean every frame was sent to hardware.
 
 ## Transport contract

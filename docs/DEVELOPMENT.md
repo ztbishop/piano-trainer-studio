@@ -180,6 +180,14 @@ Historical score examples in `DEV_NOTES.md` include Mozart Fantasy in D minor K.
 - GitHub commits, pushes, tags, and releases remain the user's responsibility unless explicitly delegated.
 - Historical version instructions in `DEV_NOTES.md` are superseded by this section.
 
+## Black-key LED color checks
+
+Run `node tests/led-colors.cjs` with settings-backup, storage-unavailable, keyboard-range and numeric-controls. The isolated LED suite executes the actual palette/frame/preference functions across all 88 pitches, output modes and on/off states, preserving non-guidance colors, brightness multiplication, desired-state identity and backup/legacy/reset behavior. No native browser storage or hardware is used.
+
+Open `docs/diagnostics/led-colors.html` on the existing server, load the isolated app and run color checks. It installs memory-only preferences, blocks IndexedDB/MIDI and external fetches, omits analytics and suppresses WLED queue output. Bundled Moonlight Sonata supplies actual OSMD targets; stationary Realtime/Wait/Follow comparisons check identical targets, cursor, score, virtual-key styles and engraving paths while palette behavior changes. Backup restore, old-backup defaults and in-session Reset All Settings are exercised. Use Desktop/Phone width and the real Settings checkbox to inspect layout and interaction; Inspect preference displays only the isolated setting.
+
+On November 15, 2026, 6,369 Node LED checks and 212 browser assertions passed, alongside settings-backup (46 cases), storage-unavailable, keyboard-range, numeric-controls, playback-lifecycle and loop-gate. The actual checkbox, saved value and wrapping were inspected at iframe widths 1100 and 390; Space activation and WLED→MIDI→WLED preference retention also passed. Changed JavaScript and inline scripts parsed, and diff whitespace checks passed. These are captured colors and stationary mode comparisons, not continuous practice/input/timing, physical MIDI or HTTP/DDP/LED acceptance. Native library/settings were untouched. Physical-strip hue/visibility, especially very dim future colors, remain [pending](TODO.md#acceptance-of-implemented-changes).
+
 ## Basic expression checks
 
 Run `node tests/score-expression.cjs` and `node tests/expressive-playback.cjs`, plus playback-lifecycle, loop-gate, multi-segment-ties, settings-backup, midi-output-init, resize-geometry, unison-feedback and clef-feedback. The expression suites currently pass 197 resolver/output assertions and 81 integration checks. They cover fixed levels, own-staff precedence/same-instrument fallback, unambiguous sibling marks, backwards queries, separate sheets/parts, unsupported markings, ties, default-off persistence and backup/reset compatibility, deferred output, MIDI note-off cancellation, attack-time release restoration and checkbox pause behavior. Resolver tests use bundled OSMD classes with synthetic expression metadata; integration tests use isolated adapters and memory stores.

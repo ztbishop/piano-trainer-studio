@@ -569,6 +569,15 @@ function normalizeLedOutputMode(value) {
     return ['none', 'midi', 'wled'].includes(value) ? value : 'none';
 }
 
+function setLedBlackKeyColors(value, { save = true, rerender = true } = {}) {
+    AppState.ledBlackKeyColors = !!value;
+    if (save) setStoredBool(LED_BLACK_KEY_COLORS_STORAGE_KEY, AppState.ledBlackKeyColors);
+    const checkbox = document.getElementById('check-led-black-key-colors');
+    if (checkbox) checkbox.checked = AppState.ledBlackKeyColors;
+    WLEDController.clearLastSignature();
+    if (rerender) renderVirtualKeyboard();
+}
+
 function normalizeWledTransport(value) {
     return ['http-json', 'ddp'].includes(value) ? value : 'http-json';
 }
@@ -816,6 +825,7 @@ function syncLedOutputModeControls() {
     const wledSettings = document.getElementById('wled-settings');
     const ledCountRow = document.getElementById('led-count-row');
     const brightnessSettings = document.getElementById('led-brightness-settings');
+    const colorSettings = document.getElementById('led-color-settings');
     const calibrationSettings = document.getElementById('led-calibration-settings');
     const ipInput = document.getElementById('input-wled-ip');
     const reverseCheckbox = document.getElementById('check-led-reverse');
@@ -831,6 +841,7 @@ function syncLedOutputModeControls() {
     if (wledSettings) wledSettings.classList.toggle('hidden', !showWledSettings);
     if (ledCountRow) ledCountRow.classList.toggle('hidden', !showWledSettings);
     if (brightnessSettings) brightnessSettings.classList.toggle('hidden', !showWledSettings);
+    if (colorSettings) colorSettings.classList.toggle('hidden', !showWledSettings);
     if (calibrationSettings) calibrationSettings.classList.toggle('hidden', !showWledSettings);
     if (!showWledSettings) clearWledPermissionHelp();
 
@@ -954,11 +965,13 @@ function initLedOutputControls() {
     AppState.wledHelperAvailable = false;
     AppState.wledHelperStatus = 'Helper: Not detected.';
     AppState.wledDdpDebugEnabled = getStoredBool(WLED_DDP_DEBUG_STORAGE_KEY, false);
+    setLedBlackKeyColors(getStoredBool(LED_BLACK_KEY_COLORS_STORAGE_KEY, false), { save: false, rerender: false });
 
     const modeSelect = document.getElementById('led-output-mode');
     const ipInput = document.getElementById('input-wled-ip');
     const transportSelect = document.getElementById('wled-transport');
     const reverseCheckbox = document.getElementById('check-led-reverse');
+    const blackKeyColorsCheckbox = document.getElementById('check-led-black-key-colors');
     const ddpDebugCheckbox = document.getElementById('check-wled-ddp-debug');
     const testBtn = document.getElementById('btn-test-wled');
     const resendBtn = document.getElementById('btn-resend-wled');
@@ -991,6 +1004,11 @@ function initLedOutputControls() {
         });
     }
 
+
+    if (blackKeyColorsCheckbox && !blackKeyColorsCheckbox.dataset.boundLedBlackKeyColors) {
+        blackKeyColorsCheckbox.dataset.boundLedBlackKeyColors = 'true';
+        blackKeyColorsCheckbox.addEventListener('change', (e) => setLedBlackKeyColors(e.target.checked));
+    }
 
     if (ddpDebugCheckbox && !ddpDebugCheckbox.dataset.boundWledDdpDebug) {
         ddpDebugCheckbox.dataset.boundWledDdpDebug = 'true';
@@ -1269,7 +1287,15 @@ const LedEngine = {
     return Math.max(1, Math.min(127, Math.round(127 * multiplier)));
   },
 
-  getColorForState(state) {
+  // Physical pitch classes, independent of the score's sharp/flat spelling.
+  blackKeyColors: { left: [96, 0, 255], right: [0, 255, 128] },
+
+  getColorForState(state, midiNote) {
+    if (AppState.ledOutputMode === 'wled' && AppState.ledBlackKeyColors &&
+        Number.isInteger(midiNote) && [1, 3, 6, 8, 10].includes(midiNote % 12)) {
+      if (state === 'expected-l' || state === 'future1-l' || state === 'future2-l') return this.blackKeyColors.left;
+      if (state === 'expected-r' || state === 'future1-r' || state === 'future2-r') return this.blackKeyColors.right;
+    }
     switch (state) {
       case 'expected-l':
         return [0, 0, 255];
@@ -1317,7 +1343,7 @@ const LedEngine = {
       const ledIndex = this.keyToLed.get(midiNote);
       if (ledIndex === undefined) return;
 
-      const baseColor = this.getColorForState(state);
+      const baseColor = this.getColorForState(state, midiNote);
       const [r, g, b] = this.applyBrightnessToColor(baseColor, state);
       this.setLed(ledIndex, r, g, b);
 

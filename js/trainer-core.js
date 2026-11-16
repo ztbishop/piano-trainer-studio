@@ -339,6 +339,7 @@ function restoreDefaultPreferences({ reloadDevices = true } = {}) {
     setLedMasterBrightness(25);
     setLedFuture1BrightnessPct(1);
     setLedFuture2BrightnessPct(1);
+    setLedBlackKeyColors(false);
     resetAllLedCalibration();
 
     setWledIp('');

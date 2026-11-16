@@ -77,6 +77,7 @@ const AppState = {
     midiLightsChannel: 1,
     midiLedLowVelocity: false,
     ledReverse: false,
+    ledBlackKeyColors: false,
     wledIp: '',
     wledTransport: 'http-json',
     wledActiveTransport: 'http-json',
@@ -134,6 +135,7 @@ const MIDI_LIGHTS_NAME_STORAGE_KEY = 'pt_savedMidiLightsName';
 const LED_COUNT_STORAGE_KEY = 'pt_ledCount';
 const LED_OUTPUT_MODE_STORAGE_KEY = 'pt_ledOutputMode';
 const LED_REVERSE_STORAGE_KEY = 'pt_ledReverse';
+const LED_BLACK_KEY_COLORS_STORAGE_KEY = 'pt_ledBlackKeyColors';
 const WLED_IP_STORAGE_KEY = 'pt_wledIp';
 const WLED_TRANSPORT_STORAGE_KEY = 'pt_wledTransport';
 const WLED_TRANSPORT_WARNING_ACCEPTED_STORAGE_KEY = 'pt_wledTransportWarningAccepted';
@@ -249,6 +251,7 @@ const RESETTABLE_PREFERENCE_KEYS = [
     LED_COUNT_STORAGE_KEY,
     LED_OUTPUT_MODE_STORAGE_KEY,
     LED_REVERSE_STORAGE_KEY,
+    LED_BLACK_KEY_COLORS_STORAGE_KEY,
     WLED_IP_STORAGE_KEY,
     WLED_TRANSPORT_STORAGE_KEY,
     WLED_TRANSPORT_WARNING_ACCEPTED_STORAGE_KEY,
@@ -411,7 +414,7 @@ function validateSettingsBackupPayload(payload) {
     const strings = ['pt_savedMidiInName', 'pt_savedMidiOutName', 'pt_savedMidiLightsName',
         'pt_savedMidiIn', 'pt_savedMidiOut', 'pt_savedMidiLights', 'pt_wledIp'];
     const booleans = [
-        'pt_midiLedLowVelocity', 'pt_ledReverse', 'pt_wledDdpDebugEnabled', 'pt_feedbackEnabled',
+        'pt_midiLedLowVelocity', 'pt_ledReverse', 'pt_ledBlackKeyColors', 'pt_wledDdpDebugEnabled', 'pt_feedbackEnabled',
         'pt_futurePreviewEnabled', 'pt_correctHighlightEnabled', 'pt_practiceLeft', 'pt_practiceRight',
         'pt_audioLeft', 'pt_audioRight', 'pt_audioHands', 'pt_audioOther', 'pt_audioInstrument', 'pt_audioVirtualKeyboard',
         'pt_midiOutHands', 'pt_midiOutOther', 'pt_midiOutInstrument', 'pt_midiOutVirtualKeyboard',

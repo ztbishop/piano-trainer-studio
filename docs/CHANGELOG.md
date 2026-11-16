@@ -1,5 +1,11 @@
 # Change history and future update records
 
+## 2026-11-15 — Optional black-key WLED colors (no application release)
+
+- Added a default-off Colors toggle between LED Setup Brightness and Calibration, visible only for WLED. Expected/future physical black keys use fixed LH violet `(96, 0, 255)` and RH teal `(0, 255, 128)` through the existing shared framebuffer and brightness pipeline. Wrong/correct/calibration colors, virtual keys, MIDI LEDs, matching, scheduling and engraving retain their existing behavior. [Palette and limitations](MIDI_AUDIO_LED.md#optional-black-key-colors).
+- Saved `pt_ledBlackKeyColors` uses the existing preference adapter and settings backup/import/reset; older backups default off. Color pickers remain a possible follow-up after strip acceptance. No version/vendor/dependency or backup-format change.
+- Validation: 6,369 isolated LED assertions, 212 browser assertions using real Moonlight Sonata OSMD targets in stationary comparisons across all three modes, settings-backup (46), storage-unavailable, keyboard-range and numeric-controls passed. Actual checkbox/storage and desktop/phone wrapping inspected; native storage and hardware output were isolated. [Evidence](DEVELOPMENT.md#black-key-led-color-checks). Physical strip shade/brightness, HTTP/DDP hardware and continuous practice acceptance remain unverified.
+
 ## 2026-11-15 — Observational feedback comparison and expression grading checks (no application release)
 
 - Extended the existing Debug toggle with orange current-anchor rings, cyan indexed-notehead diamonds and magenta difference connectors. Bounded source-specific comparison snapshots and console traces report unavailable mappings explicitly. All new paint stays in the debug layer; normal red/green feedback, production anchors/cache, scoring, rendering and playback remain controlled by the existing code. No vendor, dependency, version or storage-schema change.

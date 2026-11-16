@@ -1,0 +1,71 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Isolated LED color checks</title>
+<style>pre{white-space:pre-wrap;max-height:160px;overflow:auto}iframe{box-sizing:border-box;width:1100px;height:850px;border:1px solid}</style>
+<h1>Black-key LED colors</h1>
+<p>Memory-only settings; score storage, MIDI and external network output blocked. No physical strip output.</p>
+<button id="load">Load isolated app</button><button id="checks" disabled>Run color checks</button>
+<button id="settings" disabled>Open LED setup</button><button id="inspect" disabled>Inspect preference</button>
+<button id="wide">Desktop width</button><button id="phone">Phone width</button>
+<pre id="results"></pre><iframe id="app" allow="autoplay"></iframe>
+<script>
+const frame=document.getElementById('app'),report=document.getElementById('results');
+function runInApp(fn){const script=frame.contentDocument.createElement('script');script.textContent='('+fn.toString()+')()';frame.contentDocument.body.appendChild(script);}
+document.getElementById('load').onclick=async function(){
+ this.disabled=true;
+ const root=new URL('../../',location.href).href;
+ let html=await(await fetch('../../index.html')).text();
+ const block=`<base href="${root}"><script>
+ window.testErrors=[];addEventListener('error',e=>testErrors.push(e.message));addEventListener('unhandledrejection',e=>testErrors.push(String(e.reason)));
+ window.ledTestData={};
+ const store=data=>new Proxy(data,{get(t,k){if(k==='getItem')return key=>t[key]??null;if(k==='setItem')return(key,v)=>{t[key]=String(v);};if(k==='removeItem')return key=>{delete t[key];};if(k==='length')return Object.keys(t).length;if(k==='key')return i=>Object.keys(t)[i]??null;return t[k];}});
+ Object.defineProperty(window,'localStorage',{value:store(ledTestData)});Object.defineProperty(window,'sessionStorage',{value:store({})});
+ Object.defineProperty(window,'indexedDB',{get(){throw Error('Score storage blocked in LED test');}});
+ Object.defineProperty(navigator,'requestMIDIAccess',{value:()=>Promise.reject(Error('Hardware disabled in LED test'))});
+ const realFetch=window.fetch.bind(window);window.fetch=(url,...args)=>new URL(url,document.baseURI).origin===new URL(document.baseURI).origin?realFetch(url,...args):Promise.reject(Error('External output blocked in LED test'));
+ <\/script>`;
+ html=html.replace('<head>','<head>'+block).replace(/<script[^>]+src="https:[\s\S]*?<\/script>/g,'');
+ frame.onload=()=>{for(const id of ['checks','settings','inspect'])document.getElementById(id).disabled=false;report.textContent='Isolated app loaded.';};frame.srcdoc=html;
+};
+document.getElementById('wide').onclick=()=>{frame.style.width='1100px';};
+document.getElementById('phone').onclick=()=>{frame.style.width='390px';};
+document.getElementById('settings').onclick=()=>runInApp(function(){document.getElementById('btn-help-close').click();if(document.getElementById('btn-options').getAttribute('aria-expanded')!=='true')document.getElementById('btn-options').click();document.getElementById('fs-led-setup').scrollIntoView();});
+document.getElementById('inspect').onclick=()=>runInApp(function(){parent.document.getElementById('results').textContent=JSON.stringify({enabled:AppState.ledBlackKeyColors,saved:appLocalStorage.getItem(LED_BLACK_KEY_COLORS_STORAGE_KEY),checked:document.getElementById('check-led-black-key-colors').checked,mode:AppState.ledOutputMode,errors:testErrors},null,2);});
+document.getElementById('checks').onclick=()=>runInApp(async function(){
+ const out=parent.document.getElementById('results');let count=0;
+ const check=(ok,label)=>{if(!ok)throw Error(label);count++;};
+ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+ const toggle=value=>{const el=document.getElementById('check-led-black-key-colors');el.checked=value;el.dispatchEvent(new Event('change',{bubbles:true}));};
+ const paths=()=>[...document.querySelectorAll('#osmdSvgPage1 path')].filter(p=>!p.closest('#pt-feedback-group,#pt-debug-group,#pt-looper-group')).map(p=>p.getAttribute('d')).join('|');
+ try{
+ document.getElementById('btn-help-close').click();
+ check(!AppState.ledBlackKeyColors&&!document.getElementById('check-led-black-key-colors').checked,'Default off');
+ for(const mode of ['none','midi','wled']){AppState.ledOutputMode=mode;syncLedOutputModeControls();check(document.getElementById('led-color-settings').classList.contains('hidden')===(mode!=='wled'),'WLED-only visibility');}
+ WLEDController.queueFrame=()=>{}; // Capture framebuffer only; no helper/strip output.
+ AppState.ledOutputMode='wled';setLedMasterBrightness(100);setLedFuture1BrightnessPct(10);
+ const demos=await ScoreLibrary.getDemoScores(),score=demos.find(s=>s.title==='Moonlight Sonata 1st Movement');
+ await loadScoreIntoApp(score.rawData,{fileName:score.fileName,fileType:score.fileType,title:score.title});
+ const it=osmd.cursor.Iterator;
+ for(const mode of ['realtime','wait','follow']){
+ AppState.mode=mode;buildExpectedNotesFromEntries(it.CurrentVoiceEntries,it.CurrentMeasureIndex,it.currentTimeStamp.RealValue);
+ toggle(false);renderVirtualKeyboard(it.CurrentVoiceEntries,it.CurrentMeasureIndex,it.currentTimeStamp.RealValue);
+ const expected=AppState.expectedNotes.slice(),scoreBefore=JSON.stringify(AppState.score),engraved=paths(),cursor=it.currentTimeStamp.RealValue;
+ const keys=[...document.querySelectorAll('.key')].map(k=>[k.className,k.style.cssText]);
+ toggle(true);
+ check(AppState.ledBlackKeyColors&&appLocalStorage.getItem(LED_BLACK_KEY_COLORS_STORAGE_KEY)==='true','Toggle persistence');
+ check(expected.every((n,i)=>n===AppState.expectedNotes[i])&&scoreBefore===JSON.stringify(AppState.score)&&it.currentTimeStamp.RealValue===cursor,'Targets, score and cursor unchanged');
+ check(engraved===paths(),'Engraving unchanged');
+ check(same(keys,[...document.querySelectorAll('.key')].map(k=>[k.className,k.style.cssText])),'Virtual keyboard unchanged');
+ for(const state of ['expected-l','expected-r','future1-l','future1-r','wrong','pressed-l','active','calibration'])for(const midi of [60,61,63,64,66,68,70,71]){
+ const base=LedEngine.getColorForState(state,midi),black=[1,3,6,8,10].includes(midi%12),guidance=/^(expected|future1)-/.test(state);
+ const want=guidance?(black?(state.endsWith('-l')?[96,0,255]:[0,255,128]):(state.endsWith('-l')?[0,0,255]:[0,255,0])):state==='wrong'?[255,0,0]:state==='calibration'?[255,255,255]:[185,130,25];
+ check(same(base,want),mode+' palette '+state+' '+midi);
+ }
+ }
+ const backup=buildSettingsBackupPayload();toggle(false);importSettingsBackupPayload(backup);initLedOutputControls();check(AppState.ledBlackKeyColors,'Backup restores enabled');
+ importSettingsBackupPayload({settings:{pt_ledCount:88}});initLedOutputControls();check(!AppState.ledBlackKeyColors,'Old backup defaults off');
+ toggle(true);restoreDefaultPreferences({reloadDevices:false});check(!AppState.ledBlackKeyColors&&!document.getElementById('check-led-black-key-colors').checked,'In-session Reset All Settings turns off');
+ AppState.ledOutputMode='wled';syncLedOutputModeControls();
+ check(testErrors.length===0,'No uncaught errors');out.textContent='PASS: '+count+' browser checks. Captured colors only; physical strip acceptance pending.';
+ }catch(e){out.textContent='FAIL '+e.stack;}
+});
+</script>
