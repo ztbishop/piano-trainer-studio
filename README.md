@@ -259,10 +259,10 @@ If browser storage is unavailable, the app warns you and keeps preference change
 ## 📂 Library & Scores
 
 - **Current score** identifies the loaded song and whether it is saved, a demo, or temporary.
-- **Save to Library** saves new/changed content without overwriting an existing song. Identical content is identified as saved; choose **Save a copy** to intentionally create another entry.
+- **Save to Library** stores the current score and any attached companion PDF. For an already-saved score it can add or replace the PDF on that entry. Subsequent box and repeat-mapping edits save automatically. Choose **Save a copy** for a separate entry.
 - **Add File(s)** uses the selected folder (Unfiled from All Scores or Demo Scores), shows progress, skips exact saved duplicates, and reports individual failures while continuing the batch.
 - **Import Library (Merge)** previews what will be added or recognized. Repeat imports skip known identical entries; intentional copies and changed versions are preserved. Possible duplicates from older backups stay separate by default, unless you choose **Use existing entry**. Cancel makes no changes.
-- Backup and import saved libraries
+- Library and folder backups include attached PDFs and their score-specific markings.
 - Bulk import songs into your library
 - Organize songs into folders
 - Rename and manage songs from the library

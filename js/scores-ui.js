@@ -240,13 +240,15 @@ async function updateScoresActionButtonsState(scores = null) {
         const match = current || (rawData == null ? null : await ScoreLibrary.findMatchingScore(rawData, savedScores));
         const demo = rawData == null || match ? null : (await ScoreLibrary.getDemoScores().catch(() => [])).find(item => ScoreLibrary.sameScoreData(item.rawData, rawData));
         if (generation !== currentScoreStatusGeneration || rawData !== AppState.currentScoreData) return;
+        const updatePdf = match && window.CompanionPDF?.needsLibrarySave(match.id);
         if (copy) copy.hidden = !match;
         if (title && match) title.textContent = match.title;
-        save.hidden = !!match;
+        save.hidden = !!match && !updatePdf;
         save.textContent = 'Save to Library';
-        save.disabled = scoreLibraryBusy || rawData == null || !!match;
-        save.title = match ? 'This exact score is already saved. Use Save a copy for another entry.' : 'Save the current score without replacing an existing entry.';
-        if (status) status.textContent = rawData == null ? 'Open a file or choose a demo to begin.' : match ? `Saved as ${match.title}` : demo ? 'Demo · not saved to library' : 'Not saved to library';
+        save.disabled = scoreLibraryBusy || rawData == null || save.hidden;
+        save.title = updatePdf ? 'Save the attached PDF and markings with this library score.' :
+            match ? 'This exact score is already saved. Use Save a copy for another entry.' : 'Save the current score to the library.';
+        if (status) status.textContent = rawData == null ? 'Open a file or choose a demo to begin.' : match ? `Saved as ${match.title}${updatePdf ? ' · PDF changes to save' : ''}` : demo ? 'Demo · not saved to library' : 'Not saved to library';
     } catch (error) {
         if (generation !== currentScoreStatusGeneration) return;
         save.hidden = false; save.disabled = true;
@@ -869,6 +871,7 @@ function createScoreRow(score, { compact = false, manageMode = false } = {}) {
                 fileName: fullScore.fileName,
                 fileType: fullScore.fileType,
                 libraryScoreId: score.isDemo ? null : fullScore.id,
+                libraryPdf: fullScore.pdf,
                 title: fullScore.title
             });
             closeScoresDrawer();
@@ -1181,30 +1184,34 @@ async function saveCurrentScoreToLibrary({ copy = false } = {}) {
     if (AppState.currentScoreData == null) return;
     // Capture the source before awaiting dialogs; a later score load must not change what is saved.
     const source = { rawData: AppState.currentScoreData, fileName: AppState.currentScoreFileName,
-        fileType: AppState.currentScoreFileType, title: AppState.currentScoreTitle };
+        fileType: AppState.currentScoreFileType, title: AppState.currentScoreTitle,
+        preferredId:AppState.currentScoreLibraryId, attachment:window.CompanionPDF?.attachment() };
     await runLibraryOperation(async () => {
-        const match = await ScoreLibrary.findMatchingScore(source.rawData);
-        if (match && !copy) { setLibraryStatus(`Already saved as ${match.title}. Use Save a copy for another entry.`); return; }
+        const scores = await ScoreLibrary.getAllScores();
+        const match = scores.find(s => s.id === source.preferredId && ScoreLibrary.sameScoreData(source.rawData,s.rawData)) ||
+            await ScoreLibrary.findMatchingScore(source.rawData, scores);
+        if (match && !copy && !source.attachment) { setLibraryStatus(`Already saved as ${match.title}. Use Save a copy for another entry.`); return; }
         const defaultTitle = match?.title || source.title || getScoreDisplayTitle(source.fileName || 'Untitled Score');
-        const title = await requestLibraryTitle(copy ? `${defaultTitle} (copy)` : defaultTitle, copy);
+        const updating = match && !copy;
+        const title = updating ? match.title : await requestLibraryTitle(copy ? `${defaultTitle} (copy)` : defaultTitle, copy);
         if (title == null) return;
-        const folders = await ScoreLibrary.getAllFolders();
-        const selectedFolderId = await promptForLibraryFolderChoice({ title: 'Save into which folder?', folders });
+        const selectedFolderId = updating ? match.folderId : await promptForLibraryFolderChoice({ title: 'Save into which folder?', folders:await ScoreLibrary.getAllFolders() });
         if (selectedFolderId === '__cancel__') return;
         const saved = await ScoreLibrary.saveScore({ title, folderId: selectedFolderId,
             fileName: source.fileName || `${title}.xml`,
             fileType: source.fileType || getScoreFileTypeFromName(source.fileName || ''),
-            rawData: source.rawData, lastOpenedAt: Date.now() });
-        if (AppState.currentScoreData === source.rawData) {
+            rawData: source.rawData, lastOpenedAt: Date.now(), attachment:source.attachment, reuseMatching:!copy, preferredId:match?.id });
+        if (AppState.currentScoreData === source.rawData && AppState.currentScoreLibraryId === source.preferredId) {
             AppState.currentScoreLibraryId = saved.id;
             AppState.currentScoreTitle = saved.title;
+            if (source.attachment) window.CompanionPDF?.bindSaved(saved.id, source.attachment);
         }
         setScoreLibraryManageMode(false);
         setFolderLibraryManageMode(false);
         AppState.scoreLibrarySelectedFolderId = selectedFolderId ?? '__unfiled__';
         AppState.scoreLibraryView = 'scores';
         await refreshScoresDrawer();
-        setLibraryStatus(`Saved ${saved.title}.`);
+        setLibraryStatus(source.attachment ? `Saved ${source.attachment.pdf.fileName} with ${saved.title}.` : `Saved ${saved.title}.`);
     });
 }
 
@@ -1253,7 +1260,7 @@ function previewLibraryMerge(prepared) {
         dialog.setAttribute('aria-labelledby', 'scores-merge-heading');
         const heading = document.createElement('h3'); heading.id = 'scores-merge-heading'; heading.textContent = 'Import library backup';
         const note = document.createElement('p');
-        note.textContent = 'Existing scores stay unchanged. Possible duplicates are kept separate unless you choose an existing entry.';
+        note.textContent = 'Matched scores can receive a missing PDF. Existing attachments are kept. Possible duplicates stay separate unless you choose an existing entry.';
         const summary = document.createElement('p'); summary.setAttribute('role', 'status');
         const rows = document.createElement('div'); rows.className = 'scores-merge-rows';
         const footer = document.createElement('div'); footer.className = 'scores-merge-footer';
@@ -1277,6 +1284,7 @@ function previewLibraryMerge(prepared) {
             catch (error) { summary.textContent = error.message; confirm.disabled = true; return; }
             confirm.disabled = false;
             summary.textContent = `Scores to add: ${plan.added} · Already represented: ${plan.skipped} · Possible duplicates: ${plan.uncertain}. Folders reused: ${plan.foldersReused} · New folders: ${plan.foldersAdded}.`;
+            if (plan.pdfsAdded) summary.textContent += ` PDF attachments to restore: ${plan.pdfsAdded}.`;
             rows.replaceChildren();
             for (const row of plan.folderRows) {
                 if (row.suggestion) addChoice(`merge-folder-${row.incoming.id}`, `Folder: ${row.incoming.name}`, [['reuse', `Use existing folder: ${row.suggestion.name}`], ['separate', 'Keep as a separate folder']], choices.folders[row.incoming.id] || 'reuse', value => { choices.folders[row.incoming.id] = value; choices.scores = Object.create(null); });

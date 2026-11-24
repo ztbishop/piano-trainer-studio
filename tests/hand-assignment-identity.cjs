@@ -1,13 +1,14 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 let source=fs.readFileSync('js/hand-assignment.js','utf8');
 // Expose pure identity helpers only in this isolated test context.
-source=source.replace('return { deactivate:', 'return { fingerprint, assignmentStorageKey, deactivate:');
+source=source.replace('return { deactivate:', 'return { fingerprint: scoreContentFingerprint, assignmentStorageKey, deactivate:');
 const stored=new Map(),reads=[];let writes=0;
 const context=vm.createContext({window:{},ArrayBuffer,Uint8Array,Blob,console,
  DOMParser:class{parseFromString(xml){return {documentElement:{localName:xml.includes('<score-partwise')?'score-partwise':'parsererror'},querySelector:s=>s==='parsererror'&&!xml.includes('<score-partwise')?{}:null,querySelectorAll:()=>[]};}},
  document:{getElementById:()=>null,addEventListener(){}},AppState:{hands:{},pendingAudio:[]},osmd:{Sheet:{Instruments:[{Staves:[{},{}]}]},cursor:{reset(){},Iterator:{EndReached:true}}},
  appLocalStorage:{getItem:k=>{reads.push(k);return stored.get(k)??null;},setItem:(k,v)=>{writes++;stored.set(k,v);}},
  clearVisuals(){},getResolvedStaffAssignmentIdFromNote:()=>1,refreshCurrentExpectedNotes(){},renderVirtualKeyboard(){},updateUpcomingNotes(){}});
+vm.runInContext(fs.readFileSync('js/content-fingerprint.js','utf8'),context);
 vm.runInContext(source,context);const api=context.window.HandAssignment;
 (async()=>{
 const xml='<score-partwise/>',a=new Uint8Array([1,2,3]),b=new Uint8Array([1,2,4]);

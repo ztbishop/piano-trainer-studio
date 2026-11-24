@@ -90,7 +90,7 @@ Display staff and clef remain owned by OSMD. `HandAssignment` resolves left/righ
 
 ## Persistence and external services
 
-- IndexedDB `pianoTrainerLibrary` stores score records and folders. Raw score data is retained for reopening and library backups.
+- IndexedDB `pianoTrainerLibrary` stores scores, folders and shared PDF bytes. Each score owns its attachment name, boxes and visit mapping. [Storage and backup formats](SCORES_AND_STORAGE.md)
 - localStorage stores preferences, calibration, and content-fingerprinted hand assignments (legacy updater/starter keys remain unused). Settings backups include assignment entries.
 - Storage is browser-origin-specific; changing hostname/port or browser creates a separate library/settings context. There is no automatic cloud sync.
 - `led.js` sends HTTP JSON to WLED directly or uses the localhost helper for DDP. The helper owns transport, not practice decisions. LAN app hosting does not expose the helper.

@@ -130,6 +130,8 @@ Run expressive-playback, score-expression and hairpin-expression alongside the t
 
 ## Companion PDF checks
 
+Run `node tests/library-pdf-browser.cjs` with the same local server and Chrome setup as the companion reader test below. It saves a two-page PDF with a MIDI arrangement, removes, redraws and adjusts page-two boxes, reopens the library entry, and verifies the corrected box during Realtime playback. A second MIDI arrangement uses independent mappings for the same PDF. The test downloads a backup, compares the PDF bytes to the fixture, then imports it in an empty browser context. It also covers replacing an edition, shared-file deletion, a folder export, a version-1 database upgrade, and merging into scores with missing or existing attachments.
+
 The browser regression covers both first-attachment choices. It scans a new MIDI/PDF pair on request, pairs the same PDF with a different MusicXML score, draws a box from scratch, and reloads the partial map in reading view.
 
 Run `node tests/companion-pdf-browser.cjs` against the local app server with Playwright available to Node and Chrome installed. Use `PT_TEST_ORIGIN` for a different loopback origin. The check creates a disposable browser context, blocks external requests and uses injected virtual-key input. The app itself needs no Playwright installation.

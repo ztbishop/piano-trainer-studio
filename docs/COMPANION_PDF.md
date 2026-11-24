@@ -25,7 +25,11 @@ A rescan keeps hand-drawn boxes, adjusted dividers and boxes from older saved ma
 
 To change a saved rectangle directly, select its measure and drag around the grand staff. A blue divider adjusts two neighbors together and supports the arrow keys. **Find on this page** limits detection to the current page. Select **Replace saved boxes on this page** when you want its proposals to replace existing marks. Choose **Done marking** to practice.
 
-Edits to boxes and assignments are kept in this browser for the digital score identity and PDF fingerprint. Reattach the PDF after reopening the score. Keep the PDF file separately. Current library and settings backups do not include the PDF or its mapping. Poor scans, unconnected staves or unusual page layouts can need manual correction.
+## Save and reopen a marked PDF
+
+With the PDF attached, choose **Scores → Save to Library**. Opening that library score restores the PDF, its measure boxes and its repeat assignments, even if the original file has moved. Later box and repeat edits save automatically. To change editions, attach the replacement PDF and choose **Save to Library** again. **Save a copy** creates a separate library score with its own markings.
+
+Two arrangements can share the same PDF file while keeping different boxes and repeat assignments. **Library tools → Backup Library** and folder exports include the PDF once per backup. Importing into a matching score fills a missing attachment and keeps an existing attachment with its local edits. For a score opened directly from disk, you can still reattach the PDF to recover the browser's local markings.
 
 ## Implementation and credits
 
@@ -34,3 +38,5 @@ The page reader, editable box and divider tools, raster detector and editor layo
 The original CC0 two-page study and its MuseScore Studio 4.7.6 PDF and MIDI exports are checked in with the regression fixtures. [MusicXML](../tests/fixtures/grand-staff-repeat.musicxml) · [PDF](../tests/fixtures/grand-staff-repeat.pdf) · [MIDI](../tests/fixtures/grand-staff-repeat.mid)
 
 The whole-score scan and numbering checks were ported from Guitar Trainer Studio under the same license. Piano Trainer uses OSMD's written measures for numbering and stages page corrections until the review is saved. [Guitar Trainer commit 85803aa](https://github.com/ztbishop/guitar-trainer-studio/commit/85803aa)
+
+Library attachment storage, reference cleanup and portable backups were adapted from Guitar Trainer Studio under the project AGPL. [Guitar Trainer commit 3a7752b](https://github.com/ztbishop/guitar-trainer-studio/commit/3a7752b)

@@ -15,6 +15,7 @@ const section=(start,end)=>ui.slice(ui.indexOf(start),ui.indexOf(end,ui.indexOf(
  const bytes=new Uint8Array([0,255,17,128]).buffer,folders=[{id:'a',name:'One'},{id:'b',name:'Two'},{id:'empty',name:'Empty'}];
  const scores=[{id:'1',title:'One',folderId:'a',fileName:'one.mxl',fileType:'mxl',rawData:bytes},{id:'2',folderId:'b',rawData:'<score/>'},{id:'3',folderId:null,rawData:'unfiled'}];
  lib.getAllFolders=async()=>folders;lib.getAllScores=async()=>scores;
+ lib.readMergeSnapshot=async()=>({folders,scores});
  const backup=await lib.exportBackup('a');assert.equal(backup.version,1);assert.equal(backup.folders.length,1);assert.equal(backup.scores.length,1);
  assert.deepEqual(Array.from(backup.scores[0].rawData.bytes),[0,255,17,128]);assert.equal((await lib.exportBackup('empty')).scores.length,0);
  assert.equal((await lib.exportBackup()).scores.length,3);assert.equal((await lib.exportBackup()).folders.length,3);

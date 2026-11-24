@@ -13,13 +13,6 @@ export function measureBox(page, a, b) {
 }
 
 const assets = new URL('../assets/vendor/pdfjs/', import.meta.url);
-function validSavedBoxes(boxes, pageCount) {
-  if (!boxes || typeof boxes !== 'object' || Array.isArray(boxes)) return false;
-  return Object.entries(boxes).every(([number, box]) =>
-    /^[1-9]\d{0,4}$/.test(number) && Number.isInteger(box?.page) && box.page >= 1 && box.page <= pageCount &&
-    [box.x, box.y, box.w, box.h].every(Number.isFinite) && box.x >= 0 && box.y >= 0 &&
-    box.w > 0 && box.h > 0 && box.x + box.w <= 1.000001 && box.y + box.h <= 1.000001);
-}
 
 function initPdfCompanion() {
   const byId = id => document.getElementById('pdf-' + id);
@@ -32,6 +25,7 @@ function initPdfCompanion() {
   let drag, current, visits = [], mapping = [], currentVisit = 0, savedScroll = 0;
   let proposals=null, scanVersion=0, loopMeasures=null, loopKey;
   let scoreReview = null;
+  let attachedFile, attachedHash, boundScoreId, editRevision = 0, needsRetry = false;
   const find=byId('find'), action=byId('action'), replace=byId('replace');
   const findPage = byId('find-page'), useScore = byId('use-score');
   const pagesRoot=byId('pages');
@@ -51,7 +45,29 @@ function initPdfCompanion() {
     attachStatus.hidden = !text;
   }
   function saveBoxes() {
+    editRevision++;
     if (key) appLocalStorage.setItem(key, JSON.stringify({boxes, mapping}));
+    if (boundScoreId && AppState.currentScoreLibraryId === boundScoreId) {
+      const version = generation, revision = editRevision;
+      ScoreLibrary.updatePdfMapping(boundScoreId, attachedHash, structuredClone(boxes), mapping.slice()).then(updated => {
+        if (!updated) throw new Error('The saved attachment changed.');
+      }).catch(error => {
+        if (generation !== version || revision !== editRevision) return;
+        needsRetry = true;
+        message('Could not update the library PDF markings. Use Save to Library to retry. ' + error.message);
+        window.ScoresUI?.updateScoresActionButtonsState();
+      });
+    }
+  }
+  function attachment() {
+    if (!attachedFile) return null;
+    return {file:attachedFile, revision:editRevision, pdf:{hash:attachedHash, fileName:attachedFile.name,
+      pageCount:pdf.numPages, boxes:structuredClone(boxes), mapping:mapping.slice()}};
+  }
+  function bindSaved(id, snapshot) {
+    if (snapshot?.file !== attachedFile || !attachedFile) return;
+    boundScoreId = id; needsRetry = false;
+    if (editRevision !== snapshot.revision) saveBoxes();
   }
   function boxElement(box, active, interactive=false) {
     const el = document.createElement(interactive?'button':'div');
@@ -349,6 +365,7 @@ function initPdfCompanion() {
   }
   function reset() {
     generation++;
+    attachedFile = attachedHash = boundScoreId = null; needsRetry = false;
     reader.clear();
     documentTask?.destroy(); documentTask = null;
     pdf = null; key = null; boxes = {}; visits = []; mapping = []; visible = false;
@@ -356,7 +373,7 @@ function initPdfCompanion() {
     file.value = ''; attach.disabled = true; byId('order').open = false;
     setEditing(false); updateAttachStatus(''); sync();
   }
-  async function open(selected) {
+  async function open(selected, libraryPdf = null, libraryId = null) {
     if (!osmd.Sheet || attach.disabled) return;
     const score = osmd.Sheet, version = ++generation;
     if (pdf) { endReview(); paintBoxes(); }
@@ -365,6 +382,9 @@ function initPdfCompanion() {
       updateAttachStatus('Opening PDF…');
       const [lib, bytes] = await Promise.all([import('../assets/vendor/pdfjs/build/pdf.min.mjs'), selected.arrayBuffer()]);
       if (version !== generation) return;
+      const hash = libraryPdf?.hash || LibraryPDF.hash(bytes);
+      // PDF.js transfers its input buffer. Keep the exact opened contents for a later library save.
+      const libraryFile = libraryPdf ? selected : new File([bytes], selected.name, {type:'application/pdf'});
       const traversal = scoreVisits(score, osmd.cursor.Iterator.SkipInvisibleNotes);
       if (!traversal.length) throw new Error('The digital score contains no measures.');
       lib.GlobalWorkerOptions.workerSrc = new URL('build/pdf.worker.min.mjs', assets).href;
@@ -374,8 +394,14 @@ function initPdfCompanion() {
       const identity = HandAssignment.scoreIdentity();
       const storageKey = identity && 'pt_companionPDF_v1_' + identity + '_' + loaded.fingerprints[0];
       let saved;
-      try { saved = storageKey && JSON.parse(appLocalStorage.getItem(storageKey)); } catch { /* Open for manual marking. */ }
-      if (!validSavedBoxes(saved?.boxes, loaded.numPages)) saved = null;
+      if (libraryPdf) saved = libraryPdf;
+      else if (boundScoreId && attachedHash === hash && AppState.currentScoreLibraryId === boundScoreId) {
+        saved = {boxes, mapping};
+        if (selected.name === attachedFile.name && !needsRetry) libraryId = boundScoreId;
+      } else {
+        try { saved = storageKey && JSON.parse(appLocalStorage.getItem(storageKey)); } catch { /* Open for manual marking. */ }
+      }
+      if (!LibraryPDF.validBoxes(saved?.boxes, loaded.numPages)) saved = null;
       const pages = [];
       for (let i = 1; i <= loaded.numPages; i++) {
         if (version !== generation) return;
@@ -387,6 +413,7 @@ function initPdfCompanion() {
       const oldTask = documentTask;
       documentTask = task; task = null; oldTask?.destroy();
       pdf = loaded; key = storageKey; boxes = saved?.boxes || {};
+      attachedFile = libraryFile; attachedHash = hash; boundScoreId = libraryId; needsRetry = false;
       visits = traversal;
       const limit = Math.max(score.SourceMeasures.length, ...Object.keys(boxes).map(Number));
       mapping = Array.isArray(saved?.mapping) && saved.mapping.length === visits.length &&
@@ -406,9 +433,21 @@ function initPdfCompanion() {
       setEditing(!Object.keys(boxes).length);
       currentVisit = visitIndex(visits, osmd.cursor.Iterator.CurrentEnrolledTimestamp.RealValue);
       sync();
+      window.ScoresUI?.updateScoresActionButtonsState();
     } catch (error) {
       if (version === generation) updateAttachStatus('Could not open this PDF. ' + error.message);
     } finally { if (task) await task.destroy(); }
+  }
+  async function restoreLibrary(id, saved) {
+    const version = generation;
+    try {
+      const asset = await ScoreLibrary.getPdf(saved.hash);
+      if (version !== generation || AppState.currentScoreLibraryId !== id) return;
+      if (!asset) throw new Error('PDF data is missing.');
+      await open(new File([asset.bytes], saved.fileName, {type:'application/pdf'}), saved, id);
+    } catch (error) {
+      if (generation === version) updateAttachStatus('Could not restore the library PDF. ' + error.message);
+    }
   }
   function point(event) {
     const rect = sheet.getBoundingClientRect();
@@ -466,7 +505,9 @@ function initPdfCompanion() {
   attach.onclick = () => file.click();
   file.onchange = () => { const selected = file.files[0]; file.value = ''; if (selected) open(selected); };
   new ResizeObserver(renderPage).observe(scroll);
-  return {position, reset, loopChanged: sync, resize: renderPage, scoreReady: () => { attach.disabled = false; }};
+  return {position, reset, attachment, bindSaved, restoreLibrary,
+    needsLibrarySave: id => !!attachedFile && (id !== boundScoreId || needsRetry),
+    loopChanged: sync, resize: renderPage, scoreReady: () => { attach.disabled = false; }};
 }
 
 

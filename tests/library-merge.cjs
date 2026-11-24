@@ -32,7 +32,9 @@ const score = (id, text = '<same/>', folderId = 'folder') => ({ id, title: 'Song
 const backup = (scores = [score('one'), score('copy')], folders = [{ id: 'folder', name: 'Practice' }]) => ({ version: 1, folders, scores });
 (async () => {
     const { lib, db } = harness();
-    assert.equal(lib.validateBackup(JSON.parse(fs.readFileSync(path.join(__dirname, '../assets/Starter_Scores.json'), 'utf8'))).scores.length, 16, 'Bundled older version-1 backup remains compatible');
+    const starter = JSON.parse(fs.readFileSync(path.join(__dirname, '../assets/Starter_Scores.json'), 'utf8'));
+    assert.equal(starter.version, 1);
+    assert.equal(lib.validateBackup(starter).scores.length, starter.scores.length, 'All scores in the bundled version-1 backup remain importable');
     const original = backup();
     assert.equal((await lib.importBackup(original)).added, 2);
     assert.equal(db.scores.length, 2, 'Identical intentional copies both restored');

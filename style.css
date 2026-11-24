@@ -389,6 +389,11 @@ fieldset label {
     gap: 8px;
 }
 .scores-tools { position: relative; }
+@media (min-width: 561px) {
+    .scores-action-toolbar:has(#btn-scores-save-current:not([hidden])):has(#btn-scores-save-copy:not([hidden])) {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
 .scores-tools summary {
     display: flex;
     align-items: center;
@@ -2198,6 +2203,9 @@ body.app-fullscreen-active .score-overlay-controls {
 
 @media (max-width: 560px) {
     .scores-action-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .scores-action-toolbar:has(#btn-scores-save-current:not([hidden])) #btn-scores-save-copy:not([hidden]) {
+        grid-column: 1 / -1;
+    }
     .scores-tools:first-of-type .scores-tools-list { inset-inline: 0 auto; }
 }
 

@@ -1,5 +1,9 @@
 # Change history and future update records
 
+## 2026-11-24 — Save companion PDFs with library scores
+
+Saving a score can now store its companion PDF, filename, boxes and repeat assignments. Later corrections save to that score, and opening the library entry restores its PDF. Full and folder backups carry each shared file once. Import fills missing attachments on matching scores and preserves existing markings. [User guide and credits](COMPANION_PDF.md#save-and-reopen-a-marked-pdf) · [Browser checks](DEVELOPMENT.md#companion-pdf-checks)
+
 ## 2026-11-24 — Start new companion PDFs in Mark measures
 
 New score/PDF pairs open on page one with an empty map. Draw the first measure or choose **Find boxes in score**. Reattaching a pair with saved boxes opens reading view, including partially marked scores. [Companion PDF guide](COMPANION_PDF.md)

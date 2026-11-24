@@ -7,7 +7,7 @@
 // Keep IndexedDB/library changes behavior-preserving unless intentionally changing library UX.
 
 const SCORE_LIBRARY_DB_NAME = 'pianoTrainerLibrary';
-const SCORE_LIBRARY_DB_VERSION = 1;
+const SCORE_LIBRARY_DB_VERSION = 2;
 const SCORE_LIBRARY_FOLDER_STORE = 'folders';
 const SCORE_LIBRARY_SCORE_STORE = 'scores';
 const STARTER_LIBRARY_ASSET_PATH = new URL('assets/Starter_Scores.json', document.baseURI).toString();
@@ -65,6 +65,8 @@ const ScoreLibrary = {
         if (!this.dbPromise) {
             this.dbPromise = new Promise((resolve, reject) => {
                 const request = window.indexedDB.open(SCORE_LIBRARY_DB_NAME, SCORE_LIBRARY_DB_VERSION);
+                let blocked = false;
+                request.onblocked = () => { blocked = true; reject(new Error('Close other Piano Trainer tabs and retry the library upgrade.')); };
                 request.onerror = () => reject(request.error || new Error('Could not open the score library database.'));
                 request.onupgradeneeded = () => {
                     const db = request.result;
@@ -80,8 +82,16 @@ const ScoreLibrary = {
                         scoreStore.createIndex('by_lastOpenedAt', 'lastOpenedAt', { unique: false });
                         scoreStore.createIndex('by_title', 'title', { unique: false });
                     }
+                    if (!db.objectStoreNames.contains('pdfs')) db.createObjectStore('pdfs', {keyPath:'hash'});
+                    const scores = request.transaction.objectStore('scores');
+                    if (!scores.indexNames.contains('pdfHash')) scores.createIndex('pdfHash', 'pdf.hash');
                 };
-                request.onsuccess = () => resolve(request.result);
+                request.onsuccess = () => {
+                    const db = request.result;
+                    if (blocked) { db.close(); return; }
+                    db.onversionchange = () => { db.close(); this.dbPromise = null; };
+                    resolve(db);
+                };
             }).catch(error => { this.dbPromise = null; throw error; });
         }
 
@@ -105,7 +115,10 @@ const ScoreLibrary = {
                 result = executor(stores, tx);
                 // Read helpers can reject before the transaction abort event arrives.
                 // Observe that promise immediately; the transaction still owns completion.
-                if (result && typeof result.catch === 'function') result.catch(() => {});
+                if (result && typeof result.catch === 'function') result.catch(error => {
+                    failure ||= error;
+                    try { tx.abort(); } catch { /* A failed IDB request may already be aborting. */ }
+                });
             } catch (err) {
                 failure = err;
                 try { tx.abort(); } catch (e) { reject(err); }
@@ -203,13 +216,15 @@ const ScoreLibrary = {
         const ids = Array.from(new Set((folderIds || []).filter(Boolean)));
         if (!ids.length) return 0;
 
-        await this.transaction([SCORE_LIBRARY_FOLDER_STORE, SCORE_LIBRARY_SCORE_STORE], 'readwrite', ({ [SCORE_LIBRARY_FOLDER_STORE]: folderStore, [SCORE_LIBRARY_SCORE_STORE]: scoreStore }) => {
+        await this.transaction(['folders', 'scores', 'pdfs'], 'readwrite', stores => {
+            const {folders:folderStore, scores:scoreStore} = stores;
             const getAllScoresRequest = scoreStore.getAll();
             getAllScoresRequest.onsuccess = () => {
                 const allScores = Array.isArray(getAllScoresRequest.result) ? getAllScoresRequest.result : [];
                 allScores.forEach((score) => {
                     if (ids.includes(score.folderId)) {
                         scoreStore.delete(score.id);
+                        if (score.pdf) LibraryPDF.release(stores, score.pdf.hash);
                     }
                 });
                 ids.forEach((folderId) => folderStore.delete(folderId));
@@ -219,7 +234,7 @@ const ScoreLibrary = {
         return ids.length;
     },
 
-    async saveScore({ title, folderId = null, fileName, fileType, rawData, lastOpenedAt = null }) {
+    async saveScore({ title, folderId = null, fileName, fileType, rawData, lastOpenedAt = null, attachment, reuseMatching = false, preferredId }) {
         const now = Date.now();
         const score = {
             id: makeLibraryId(),
@@ -233,11 +248,39 @@ const ScoreLibrary = {
             lastOpenedAt
         };
 
-        await this.transaction([SCORE_LIBRARY_SCORE_STORE], 'readwrite', ({ [SCORE_LIBRARY_SCORE_STORE]: store }) => {
-            store.put(score);
+        const bytes = attachment && await attachment.file.arrayBuffer();
+        return this.transaction(attachment ? ['scores','pdfs'] : ['scores'], 'readwrite', async stores => {
+            let target = score;
+            if (reuseMatching) {
+                const rows = await this.requestToPromise(stores.scores.getAll());
+                const preferred = rows.find(row => row.id === preferredId && this.sameScoreData(row.rawData, rawData));
+                target = preferred || await this.findMatchingScore(rawData, rows) || score;
+            }
+            const previous = target.pdf?.hash;
+            if (attachment) {
+                await LibraryPDF.store(stores.pdfs, attachment.pdf.hash, bytes);
+                target.pdf = attachment.pdf;
+                target.updatedAt = now;
+            }
+            if (target === score || attachment) stores.scores.put(target);
+            if (previous && attachment && previous !== attachment.pdf.hash) LibraryPDF.release(stores, previous);
+            return target;
         });
+    },
 
-        return score;
+    getPdf(hash) {
+        return this.transaction(['pdfs'], 'readonly', ({pdfs}) => this.requestToPromise(pdfs.get(hash)));
+    },
+
+    updatePdfMapping(id, hash, boxes, mapping) {
+        return this.transaction(['scores'], 'readwrite', async ({scores}) => {
+            const score = await this.requestToPromise(scores.get(id));
+            if (score?.pdf?.hash !== hash) return false;
+            Object.assign(score.pdf, {boxes, mapping});
+            score.updatedAt = Date.now();
+            scores.put(score);
+            return true;
+        });
     },
 
     async getScoreById(scoreId) {
@@ -252,30 +295,23 @@ const ScoreLibrary = {
         if (!scoreId) throw new Error('Score not found.');
         if (!trimmed) throw new Error('Score name is required.');
 
-        const score = await this.getScoreById(scoreId);
+        const score = await this.updateScoreMetadata(scoreId, {title:trimmed});
         if (!score) throw new Error('Score not found.');
-
-        score.title = trimmed;
-        score.updatedAt = Date.now();
-
-        await this.transaction([SCORE_LIBRARY_SCORE_STORE], 'readwrite', ({ [SCORE_LIBRARY_SCORE_STORE]: store }) => {
-            store.put(score);
-        });
-
         return score;
     },
 
     async markScoreOpened(scoreId) {
-        const score = await this.getScoreById(scoreId);
-        if (!score) return null;
-        score.lastOpenedAt = Date.now();
-        score.updatedAt = Date.now();
+        return this.updateScoreMetadata(scoreId, {lastOpenedAt:Date.now()});
+    },
 
-        await this.transaction([SCORE_LIBRARY_SCORE_STORE], 'readwrite', ({ [SCORE_LIBRARY_SCORE_STORE]: store }) => {
-            store.put(score);
+    updateScoreMetadata(id, changes) {
+        return this.transaction(['scores'], 'readwrite', async ({scores}) => {
+            const score = await this.requestToPromise(scores.get(id));
+            if (!score) return null;
+            Object.assign(score, changes, {updatedAt:Date.now()});
+            scores.put(score);
+            return score;
         });
-
-        return score;
     },
 
     async moveScoresToFolder(scoreIds, folderId = null) {
@@ -302,18 +338,23 @@ const ScoreLibrary = {
         const ids = Array.from(new Set((scoreIds || []).filter(Boolean)));
         if (!ids.length) return 0;
 
-        await this.transaction([SCORE_LIBRARY_SCORE_STORE], 'readwrite', ({ [SCORE_LIBRARY_SCORE_STORE]: store }) => {
-            ids.forEach((scoreId) => store.delete(scoreId));
+        await this.transaction(['scores','pdfs'], 'readwrite', stores => {
+            for (const id of ids) stores.scores.get(id).onsuccess = event => {
+                stores.scores.delete(id);
+                if (event.target.result?.pdf) LibraryPDF.release(stores, event.target.result.pdf.hash);
+            };
         });
 
         return ids.length;
     },
 
     async exportBackup(folderId = null) {
-        const folders = await this.getAllFolders();
-        const scores = await this.getAllScores();
+        const {folders, scores, pdfs = []} = await this.readMergeSnapshot(true, folderId);
+        folders.sort((a,b) => String(a.name || '').localeCompare(String(b.name || '')));
+        scores.sort((a,b) => String(a.title || '').localeCompare(String(b.title || '')));
         return {
-            version: 1,
+            version: pdfs.length ? 2 : 1,
+            ...(pdfs.length ? {pdfs:pdfs.map(({hash, bytes}) => ({hash, data:LibraryPDF.encode(bytes)}))} : {}),
             exportedAt: new Date().toISOString(),
             folders: folders.filter(folder => !folderId || folder.id === folderId).map(folder => ({ ...folder })),
             scores: scores.filter(score => !folderId || score.folderId === folderId).map(score => ({
@@ -325,9 +366,10 @@ const ScoreLibrary = {
 
     validateBackup(payload) {
         const fail = message => { throw new Error(`Invalid library backup: ${message}`); };
-        if (!payload || payload.version !== 1 || !Array.isArray(payload.folders) || !Array.isArray(payload.scores)) {
-            fail('choose a Piano Trainer version-1 library or folder backup.');
+        if (!payload || ![1,2].includes(payload.version) || !Array.isArray(payload.folders) || !Array.isArray(payload.scores)) {
+            fail('choose a supported Piano Trainer library or folder backup.');
         }
+        const pdfs = payload.version === 2 ? LibraryPDF.decodeAssets(payload.pdfs) : new Map();
         const ids = items => {
             const seen = new Set();
             for (const item of items) {
@@ -354,18 +396,27 @@ const ScoreLibrary = {
             if (data.kind === 'text' && (typeof data.text !== 'string' || !data.text.length)) fail('empty or invalid score text.');
             if (data.kind === 'arraybuffer' && (!Array.isArray(data.bytes) || !data.bytes.length || data.bytes.some(byte => !Number.isInteger(byte) || byte < 0 || byte > 255))) fail('invalid binary score bytes.');
             return { id: score.id, title: text(score.title, 'score title'), fileName: text(score.fileName, 'filename'),
+                ...(score.pdf != null ? {pdf:LibraryPDF.validateAttachment(score.pdf, pdfs)} : {}),
                 fileType: typeof score.fileType === 'string' && score.fileType ? score.fileType : getScoreFileTypeFromName(score.fileName),
                 folderId: score.folderId ?? null, rawData: deserializeScoreRawData(data), mergeIds: aliases(score),
                 createdAt: Number(score.createdAt) || Date.now(), updatedAt: Number(score.updatedAt) || Date.now(), lastOpenedAt: Number(score.lastOpenedAt) || null };
         });
-        return { folders, scores };
+        return { folders, scores, pdfs };
     },
 
     // Snapshot both stores together. Commit rechecks this snapshot inside its write transaction.
-    async readMergeSnapshot() {
+    async readMergeSnapshot(withPdfs = false, folderId = null) {
         const snapshot = { folders: [], scores: [] };
-        await this.transaction(['folders', 'scores'], 'readonly', stores => {
-            for (const key of ['folders', 'scores']) stores[key].getAll().onsuccess = event => { snapshot[key] = event.target.result; };
+        await this.transaction(withPdfs ? ['folders','scores','pdfs'] : ['folders','scores'], 'readonly', async stores => {
+            [snapshot.folders,snapshot.scores] = await Promise.all([
+                this.requestToPromise(stores.folders.getAll()), this.requestToPromise(stores.scores.getAll())
+            ]);
+            if (withPdfs) {
+                const selected = snapshot.scores.filter(s => s.pdf && (!folderId || s.folderId === folderId));
+                const hashes = new Set(selected.map(s => s.pdf.hash));
+                snapshot.pdfs = await Promise.all([...hashes].map(hash => this.requestToPromise(stores.pdfs.get(hash))));
+                if (snapshot.pdfs.some(asset => !asset)) throw new Error('The library is missing PDF data for a selected score.');
+            }
         });
         return snapshot;
     },
@@ -445,6 +496,7 @@ const ScoreLibrary = {
             scoreRows.push({ incoming: score, target, candidates, changed: knownDifferent });
         }
         return { folderRows, scoreRows,
+            pdfsAdded: scoreRows.filter(row => row.incoming.pdf && !row.target?.pdf).length,
             added: scoreRows.filter(row => !row.target).length, skipped: scoreRows.filter(row => row.target).length,
             uncertain: scoreRows.filter(row => row.candidates.length).length,
             foldersAdded: folderRows.filter(row => !row.target).length, foldersReused: folderRows.filter(row => row.target).length };
@@ -454,7 +506,7 @@ const ScoreLibrary = {
         const plan = this.planBackupMerge(prepared, choices);
         let failure;
         try {
-            await this.transaction(['folders', 'scores'], 'readwrite', (stores, tx) => {
+            await this.transaction(['folders', 'scores', 'pdfs'], 'readwrite', (stores, tx) => {
                 const current = {}; let reads = 0;
                 const commit = () => {
                     if (++reads !== 2) return;
@@ -463,9 +515,10 @@ const ScoreLibrary = {
                         const folderIds = new Set(current.folders.map(item => item.id));
                         const scoreIds = new Set(current.scores.map(item => item.id));
                         const allocate = (wanted, used) => { let id = wanted; while (used.has(id)) id = makeLibraryId(); used.add(id); return id; };
-                        const remember = (target, source, store) => {
+                        const remember = (target, source, store, pdf) => {
                             const mergeIds = [...new Set([...(target.mergeIds || []), source.id, ...(source.mergeIds || [])])];
-                            if (JSON.stringify(mergeIds) !== JSON.stringify(target.mergeIds || [])) store.put({ ...target, mergeIds });
+                            if (pdf || JSON.stringify(mergeIds) !== JSON.stringify(target.mergeIds || []))
+                                store.put({ ...target, mergeIds, ...(pdf ? {pdf} : {}) });
                         };
                         const folderMap = new Map();
                         for (const row of plan.folderRows) {
@@ -478,10 +531,17 @@ const ScoreLibrary = {
                                 stores.folders.add({ ...row.incoming, id });
                             }
                         }
+                        const needed = new Set();
                         for (const row of plan.scoreRows) {
-                            if (row.target) remember(row.target, row.incoming, stores.scores);
+                            const pdf = !row.target?.pdf && row.incoming.pdf;
+                            if (pdf) needed.add(pdf.hash);
+                            if (row.target) remember(row.target, row.incoming, stores.scores, pdf);
                             else stores.scores.add({ ...row.incoming, id: allocate(row.incoming.id, scoreIds), folderId: folderMap.get(row.incoming.folderId) || null });
                         }
+                        for (const hash of needed) LibraryPDF.store(stores.pdfs, hash, prepared.incoming.pdfs.get(hash)).catch(error => {
+                            failure = error;
+                            try { tx.abort(); } catch { /* Request already aborted. */ }
+                        });
                     } catch (error) { failure = error; tx.abort(); }
                 };
                 for (const key of ['folders', 'scores']) stores[key].getAll().onsuccess = event => { current[key] = event.target.result; commit(); };

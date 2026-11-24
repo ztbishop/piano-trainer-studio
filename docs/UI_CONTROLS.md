@@ -25,7 +25,7 @@ Follow [Development](DEVELOPMENT.md) for browser/hardware checks. Verify native 
 
 ## Menu organization and status
 
-The Scores drawer groups its actions into Open File, Save to Library (or Save a copy), PDF, and Library tools. PDF contains attachment and view commands. Library tools contains backup and merge import. The four actions fit one desktop row and wrap to two rows on phones.
+The Scores drawer groups its actions into Open File, Save to Library (or Save a copy), PDF, and Library tools. PDF contains attachment and view commands. Library tools contains backup and merge import. When a saved score has a new PDF to save, both save actions are available. They fit the desktop row and wrap on phones.
 
 Practice retains modes, hand selection/playback and visual feedback, with Hand assignment in an expandable disclosure. A status line at the top of the Practice popup summarizes mode, practiced hands and an enabled loop range by reading the existing controls. The toolbar button remains a single line matching neighboring buttons; it does not write settings or orchestrate playback. The experimental simple synth switch is in More → Audio / Routing, using its original ID and handler. Routing labels are Assigned hands and Accompaniment (performance roles, not engraving staves).
 

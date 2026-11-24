@@ -13,34 +13,15 @@ window.HandAssignment = (() => {
     const validRole = role => roles.includes(role);
     const voiceKey = (part, voice) => JSON.stringify([part, voice]);
 
-    // Deterministic content fingerprint also works on HTTP LAN/iPad connections,
-    // where SubtleCrypto is unavailable. This is an identity key, not a security hash.
-    function fingerprint(text, domain = '') {
-        let a = 1779033703, b = 3144134277, c = 1013904242, d = 2773480762;
-        for (let i = 0; i < domain.length + text.length; i++) {
-            const offset = i - domain.length;
-            const k = offset < 0 ? domain.charCodeAt(i) : typeof text === 'string' ? text.charCodeAt(offset) : text[offset];
-            a = b ^ Math.imul(a ^ k, 597399067);
-            b = c ^ Math.imul(b ^ k, 2869860233);
-            c = d ^ Math.imul(c ^ k, 951274213);
-            d = a ^ Math.imul(d ^ k, 2716044179);
-        }
-        a = Math.imul(c ^ (a >>> 18), 597399067);
-        b = Math.imul(d ^ (b >>> 22), 2869860233);
-        c = Math.imul(a ^ (c >>> 17), 951274213);
-        d = Math.imul(b ^ (d >>> 19), 2716044179);
-        return [a ^ b ^ c ^ d, b ^ a, c ^ a, d ^ a].map(n => (n >>> 0).toString(16).padStart(8, '0')).join('');
-    }
-
     async function assignmentStorageKey(xml, rawSource) {
         // Keep all existing canonical-XML keys byte-for-byte compatible.
-        if (typeof xml === 'string' && xml.trim()) return 'pt_handAssignment_v1_' + fingerprint(xml);
+        if (typeof xml === 'string' && xml.trim()) return 'pt_handAssignment_v1_' + scoreContentFingerprint(xml);
         let source = rawSource;
         if (typeof Blob !== 'undefined' && source instanceof Blob) source = await source.arrayBuffer();
-        if (typeof source === 'string' && source.trim()) return 'pt_handAssignment_v1_' + fingerprint(source, 'raw-text-v1\0');
+        if (typeof source === 'string' && source.trim()) return 'pt_handAssignment_v1_' + scoreContentFingerprint(source, 'raw-text-v1\0');
         const bytes = source instanceof ArrayBuffer ? new Uint8Array(source)
             : ArrayBuffer.isView(source) ? new Uint8Array(source.buffer, source.byteOffset, source.byteLength) : null;
-        if (bytes?.length) return 'pt_handAssignment_v1_' + fingerprint(bytes, 'raw-bytes-v1\0');
+        if (bytes?.length) return 'pt_handAssignment_v1_' + scoreContentFingerprint(bytes, 'raw-bytes-v1\0');
         return null;
     }
 

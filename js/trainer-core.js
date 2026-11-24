@@ -1227,7 +1227,7 @@ function getOsmdLoadPayload(rawData, fileType = 'xml', fileName = 'Untitled Scor
 
 
 
-async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType = 'xml', libraryScoreId = null, title = null, originalRawData = undefined, originalFileName = undefined, originalFileType = undefined, skipTransposeReset = false } = {}) {
+async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType = 'xml', libraryScoreId = null, libraryPdf = null, title = null, originalRawData = undefined, originalFileName = undefined, originalFileType = undefined, skipTransposeReset = false } = {}) {
     try {
         resetPlaybackForLoadedScore();
         window.CompanionPDF?.reset();
@@ -1283,6 +1283,7 @@ async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType
         AppState.currentScoreLibraryId = libraryScoreId ?? null;
         AppState.currentScoreTitle = title || getScoreDisplayTitle(fileName || '');
         window.CompanionPDF?.scoreReady();
+        if (libraryScoreId && libraryPdf) await window.CompanionPDF?.restoreLibrary(libraryScoreId, libraryPdf);
 
         if (libraryScoreId && window.ScoreLibrary) {
             try { await ScoreLibrary.markScoreOpened(libraryScoreId); }

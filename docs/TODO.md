@@ -18,7 +18,6 @@ The previously reproduced runtime defects FIX-001–FIX-007 have implementations
 - [ ] **Standalone PDF + recording.** Track separately as an optional tap-timed, ungraded Realtime workflow without a digital score.
 - [ ] **Score-based Auto-sync.** Evaluate separately on actual piano recordings after manual recording mapping works.
 - [ ] **Looper speed trainer.** Port the Guitar Trainer option for gradually increasing the tempo on successive passage loops.
-- [ ] **Existing library merge regression.** The starter library has 17 scores and the version-1 import assertion still expects 16. Confirm the historical compatibility fixture separately. [Failing assertion](../tests/library-merge.cjs)
 
 Reproduce the relevant case before deciding on a fix. The [October 20 review](CODE_REVIEW_2026-10-20.md#conditional-risks-and-design-questions) records the original hypotheses; the [development checklist](DEVELOPMENT.md#manual-regression-checklist) defines protected behavior.
 
@@ -61,6 +60,8 @@ These are maintenance or product recommendations, not confirmed runtime failures
 Maintenance evidence: [review recommendations](CODE_REVIEW_2026-10-20.md#maintenance-recommendations). Longer-term scales, triads, arpeggios, chord progressions and bundled desktop runtimes remain [unapproved product ideas](PROJECT_CONTEXT.md#future-ideas-not-implementation-requests).
 
 ## Completed or superseded work
+
+- Library PDF storage and backups now retain score-specific boxes and repeat mappings. The version-1 backup regression checks all bundled entries without assuming a fixed demo count. [Library PDF checks](DEVELOPMENT.md#companion-pdf-checks)
 
 - Matched Guitar Trainer's companion attachment flow. A new pair starts in Mark measures for drawing or optional detection. A pair with saved boxes returns to reading view. [Practice guide](COMPANION_PDF.md)
 
