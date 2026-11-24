@@ -1,5 +1,9 @@
 # Change history and future update records
 
+## 2026-11-24 — Companion PDF practice
+
+Added local PDF attachment, editable grand-staff boxes, page following and visit-to-print mapping. A written-out repeat can reuse a printed range, an ending can be corrected individually and an unmatched passage can be left blank. MuseScore PDF/MIDI and MusicXML acceptance ran in isolated Chrome. The existing library merge test still expects the prior starter-score count. [Workflow and credits](COMPANION_PDF.md) · [Validation](DEVELOPMENT.md#companion-pdf-checks)
+
 ## 2026-11-15 — Optional black-key WLED colors (no application release)
 
 - Added a default-off Colors toggle between LED Setup Brightness and Calibration, visible only for WLED. Expected/future physical black keys use fixed LH violet `(96, 0, 255)` and RH teal `(0, 255, 128)` through the existing shared framebuffer and brightness pipeline. Wrong/correct/calibration colors, virtual keys, MIDI LEDs, matching, scheduling and engraving retain their existing behavior. [Palette and limitations](MIDI_AUDIO_LED.md#optional-black-key-colors).

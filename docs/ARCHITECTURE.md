@@ -21,6 +21,8 @@ The frontend is static HTML/CSS/JavaScript with ordered classic scripts and shar
 
 ## Current modules
 
+- `js/pdf-companion.js` owns PDF attachment, editing and box highlights. `js/pdf-visits.js` walks a separate OSMD iterator to index visits. Deliberate seeks step the live cursor through the trainer core. PDF.js loads on attachment. [Reader, mapping and upstream sources](COMPANION_PDF.md)
+
 - `js/storage.js` = guarded preference/session storage, session fallback and settings batch rollback; loads before state. IndexedDB scores never fall back to memory.
 - `js/trainer-state.js` = shared state and persisted preference helpers
 - `js/trainer-timing.js` = shared timing math for traversal waits, measure remainder checks, and playback scheduling inputs

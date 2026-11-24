@@ -16,6 +16,8 @@ The [developer index](README.md) links subsystem guides. The [October 20 review]
 
 ## Implemented capabilities
 
+- A digital score can drive a local companion PDF with editable measure boxes, pass-specific mappings and page following. [Practice with a companion PDF](COMPANION_PDF.md)
+
 - MusicXML/XML/MXL loading through OSMD; local browser conversion of MIDI, MuseScore, and Guitar Pro formats using bundled webmscore/WASM. Converted files vary in compatibility; MusicXML is preferred.
 - Realtime mode advances at tempo. Wait for Me advances when required notes are satisfied. Follow Me practices one hand with adaptive timing and opposite-hand playback.
 - Correct/wrong/missed-note feedback, accuracy display, virtual keyboard input, hand colors, and future-note preview.

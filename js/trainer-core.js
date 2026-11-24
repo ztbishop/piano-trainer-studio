@@ -1230,6 +1230,7 @@ function getOsmdLoadPayload(rawData, fileType = 'xml', fileName = 'Untitled Scor
 async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType = 'xml', libraryScoreId = null, title = null, originalRawData = undefined, originalFileName = undefined, originalFileType = undefined, skipTransposeReset = false } = {}) {
     try {
         resetPlaybackForLoadedScore();
+        window.CompanionPDF?.reset();
 
         if (!skipTransposeReset && typeof updateTempo === 'function') {
             updateTempo('percent', 100);
@@ -1281,6 +1282,7 @@ async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType
         AppState.currentScoreOriginalFileType = resolvedOriginalFileType;
         AppState.currentScoreLibraryId = libraryScoreId ?? null;
         AppState.currentScoreTitle = title || getScoreDisplayTitle(fileName || '');
+        window.CompanionPDF?.scoreReady();
 
         if (libraryScoreId && window.ScoreLibrary) {
             try { await ScoreLibrary.markScoreOpened(libraryScoreId); }
@@ -1811,7 +1813,7 @@ function buildLedPreviewTimelineEvent(entries, measureIndex, timestamp) {
 // WARNING:
 // Cursor restoration is shared by LED preview traversal and score-navigation work.
 // Preserve current iterator stepping assumptions until repeat/jump handling is stabilized.
-function restoreCursorToMeasureAndTimestamp(targetMeasureIndex, targetTimestamp) {
+function restoreCursorToMeasureAndTimestamp(targetMeasureIndex, targetTimestamp, enrolledTime) {
     if (!osmd?.cursor) return;
 
     osmd.cursor.reset();
@@ -1821,7 +1823,8 @@ function restoreCursorToMeasureAndTimestamp(targetMeasureIndex, targetTimestamp)
     while (!osmd.cursor.Iterator.EndReached && safety < safetyMax) {
         const measureIndex = osmd.cursor.Iterator.CurrentMeasureIndex;
         const timestamp = osmd.cursor.Iterator.currentTimeStamp?.RealValue ?? null;
-        if (measureIndex === targetMeasureIndex && timestamp === targetTimestamp) {
+        if (measureIndex === targetMeasureIndex && timestamp === targetTimestamp &&
+            (enrolledTime == null || osmd.cursor.Iterator.CurrentEnrolledTimestamp?.RealValue === enrolledTime)) {
             break;
         }
         osmd.cursor.Iterator.moveToNext();
@@ -1847,6 +1850,7 @@ function ensureLedPreviewTimelineBuilt() {
 
     const timeline = [];
     const safetyMax = 100000;
+    const savedEnrolledTime = cursor.Iterator.CurrentEnrolledTimestamp?.RealValue;
     let safety = 0;
 
     cursor.reset();
@@ -1865,7 +1869,7 @@ function ensureLedPreviewTimelineBuilt() {
         safety += 1;
     }
 
-    restoreCursorToMeasureAndTimestamp(savedMeasureIndex, savedTimestamp);
+    restoreCursorToMeasureAndTimestamp(savedMeasureIndex, savedTimestamp, savedEnrolledTime);
 
     AppState.ledPreviewTimeline = timeline;
     AppState.ledPreviewTimelineDirty = false;
@@ -3010,6 +3014,18 @@ document.querySelectorAll('input[name="practice-mode"]').forEach((radio) => {
 
 // ===== Playback navigation + metronome scheduling =====
 
+// Replaying iterator steps restores OSMD's own repeat/ending state.
+function seekCompanionVisit(step) {
+    pausePlaybackFromToolbar();
+    osmd.cursor.reset();
+    for (let i = 0; i < step && !osmd.cursor.Iterator.EndReached; i++) {
+        osmd.cursor.Iterator.moveToNext();
+    }
+    osmd.cursor.update();
+    clearVisuals();
+    handleAutoScroll();
+}
+
 
 // WARNING:
 // Count-in and metronome startup are timing-sensitive.
@@ -3465,6 +3481,7 @@ function applyZoom(val, { save = true } = {}) {
     zoomSlider.value = normalized;
     zoomInput.value = normalized;
     AppState.zoom = normalized / 100;
+    globalThis.CompanionPDF?.resize();
     if (save) {
         appLocalStorage.setItem(TRAINER_ZOOM_STORAGE_KEY, String(normalized));
     }
@@ -4022,6 +4039,7 @@ function playbackLoop() {
     const currentMeasureIdx = osmd.cursor.Iterator.CurrentMeasureIndex;
     
     const currentMeasure = osmd.Sheet.SourceMeasures[currentMeasureIdx];
+    window.CompanionPDF?.position(osmd.cursor.Iterator);
     if (currentMeasure && currentMeasure.TempoInBPM && currentMeasure.TempoInBPM !== AppState.baseBpm) {
         AppState.baseBpm = currentMeasure.TempoInBPM;
         updateTempo('percent', AppState.speedPercent * 100); 

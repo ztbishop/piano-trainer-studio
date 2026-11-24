@@ -621,6 +621,7 @@ const GeometryEngine = {
 
 function renderLooper() {
     GeometryEngine.renderLooper();
+    window.CompanionPDF?.loopChanged();
 }
 
 function enforceLooperBounds() {
@@ -645,6 +646,7 @@ function enforceLooperBounds() {
 // VISUAL FEEDBACK & AUTO-SCROLL
 // ==========================================
 function handleAutoScroll() {
+    if (window.CompanionPDF?.position(osmd.cursor?.Iterator)) return;
     const autoScrollCheckbox = document.getElementById('check-autoscroll');
     if (autoScrollCheckbox && !autoScrollCheckbox.checked) return;
     if (!osmd.cursor || !osmd.cursor.cursorElement) return;

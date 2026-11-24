@@ -269,6 +269,7 @@ window.HandAssignment = (() => {
         render();
     });
     return { deactivate: () => { state = null; }, initialize, roleForStaff, roleForNote, setCompact, ready: () => !!state,
+        scoreIdentity: () => storageKey,
         playAccompaniment: () => state?.playAccompaniment !== false,
         snapshot: () => JSON.parse(JSON.stringify({ state, voices, staffInfo })) };
 })();

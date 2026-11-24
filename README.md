@@ -61,6 +61,7 @@ Settings shows the running version and **Download latest release**. There is no 
 ## ✨ Features
 
 - 🎼 Load and play **MusicXML / MXL** piano scores
+- Read a local **companion PDF** with grand-staff highlighting, clickable measures and editable repeat mappings. [Companion PDF guide](docs/COMPANION_PDF.md)
 - 🔄 Import **MIDI, MuseScore 3.x, and Guitar Pro files 5.x** (auto-converted to MusicXML)
 - 🎹 Real-time **MIDI keyboard feedback**
 - 💡 Optional **LED visualization (WLED or MIDI LED devices)**

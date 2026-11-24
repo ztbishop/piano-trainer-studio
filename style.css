@@ -5268,3 +5268,44 @@ body > .toolbar-popup, #practice-popup, #options-overlay {
 .scores-merge-rows label { margin: 12px 0; }
 .scores-merge-rows select { display: block; width: 100%; min-width: 0; margin-top: 6px; white-space: normal; }
 .scores-merge-footer { margin-top: 16px; }
+
+/* Companion page and normalized box overlays, adapted from Guitar Trainer Studio. */
+#music-area.reading-pdf { overflow: clip; min-height: 0; flex: 1 1 0; }
+.reading-pdf #canvas-wrapper { visibility: hidden; }
+#pdf-view:not([hidden]) {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    background: var(--score-paper, white); color: inherit;
+}
+#pdf-view [hidden], #pdf-show[hidden] { display: none !important; }
+.pdf-tools, .pdf-range { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .75rem; padding: .4rem .7rem; }
+.pdf-tools { padding-right: 4rem; }
+.pdf-tools :is(button, select), .pdf-range :is(button, select, input) { border: 1px solid #a3b1bf; }
+.pdf-tools label, .pdf-range label { display: inline-flex; align-items: center; gap: .3rem; }
+#pdf-view :is(select, button, input) { max-width: 100%; }
+#pdf-order { padding: .25rem .7rem; max-height: 50%; overflow: auto; border-bottom: 1px solid #a3b1bf; }
+#pdf-order summary { cursor: pointer; }
+#pdf-order p, #pdf-status { margin: .25rem .7rem; }
+#pdf-first { width: 4rem; }
+#pdf-scroll { overflow: auto; flex: 1; min-height: 0; scrollbar-gutter: stable; background: #cbd1d6; }
+#pdf-pages { margin-inline: auto; }
+.pdf-reading-page { position: relative; background: white; margin-bottom: 12px; }
+.pdf-reading-page canvas { display: block; width: 100%; height: 100%; }
+#pdf-sheet, #pdf-boxes, .pdf-boxes { position: absolute; inset: 0; }
+#pdf-boxes, .pdf-boxes { pointer-events: none; }
+#pdf-pages.marking .pdf-boxes { display: none; }
+#pdf-sheet.mapping { cursor: crosshair; touch-action: none; user-select: none; }
+.pdf-box { position: absolute; box-sizing: border-box; border: 2px dashed #2563a8; color: #123653; font: bold .8rem sans-serif; }
+.pdf-box.current { border: 2px solid #1474bb; background: rgb(61 164 226 / 23%); }
+#pdf-pages .pdf-boxes button.pdf-box {
+    pointer-events: auto; border: 0; border-radius: 0; padding: 0; min-width: 0; min-height: 0;
+    box-shadow: none; background: transparent !important;
+}
+#pdf-pages .pdf-boxes button.outside-loop { background: rgb(65 71 79 / 22%) !important; }
+#pdf-pages .pdf-boxes button.current { border: 2px solid #1474bb; background: rgb(61 164 226 / 23%) !important; }
+.pdf-boxes button:hover, .pdf-boxes button:focus-visible { outline: 2px solid #2563a8; outline-offset: -2px; }
+#pdf-boxes .pdf-barline {
+    position: absolute; pointer-events: auto; touch-action: none; cursor: ew-resize;
+    transform: translate(-50%, -50%); width: 20px; height: 26px; padding: 0; min-width: 0; min-height: 0;
+    background: #2563a8; color: white; border: 1px solid white; border-radius: 5px;
+}
+#pdf-boxes .pdf-barline::after { content: '↔'; }

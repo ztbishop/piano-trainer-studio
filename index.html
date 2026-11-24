@@ -111,14 +111,18 @@
                     <div class="scores-action-toolbar">
                         <div class="scores-action-group scores-action-group-current">
                             <button type="button" id="btn-scores-open-file">Open File</button>
+                            <button type="button" id="pdf-attach" disabled>Attach PDF</button>
+                            <button type="button" id="pdf-show" hidden>Show PDF</button>
                             <button type="button" id="btn-scores-save-current" disabled>Save to Library</button>
                             <button type="button" id="btn-scores-save-copy" disabled hidden>Save a copy</button>
                         </div>
+                        <input type="file" id="pdf-file" accept=".pdf,application/pdf" hidden>
                         <div class="scores-action-group scores-action-group-library">
                             <button type="button" id="btn-scores-export-library">Backup Library</button>
                             <button type="button" id="btn-scores-import-library">Import Library (Merge)</button>
                         </div>
                     </div>
+                    <span id="pdf-attach-status" role="status" hidden></span>
                 </div>
 
                 <div class="scores-section scores-library">
@@ -740,8 +744,10 @@
             <div id="feedback-layer"></div>
             <div id="osmd-container"></div>
         </div>
+        <section id="pdf-view" aria-label="Companion PDF" hidden></section>
     </div>
 
+    <script type="module" src="js/pdf-companion.js"></script>
     <div id="trainer-bottom-stack">
         <div id="virtual-keyboard-container" class="hidden">
             <div id="virtual-keyboard"></div>

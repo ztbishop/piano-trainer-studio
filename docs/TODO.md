@@ -10,6 +10,16 @@ The previously reproduced runtime defects FIX-001–FIX-007 have implementations
 
 ## Things still to test or investigate
 
+### Companion scores and practice workflows
+
+- [x] **Companion PDF with digital score.** Local MuseScore PDF/MIDI and MusicXML regression covers paired staves, a resting hand, editable boxes, range and single-visit corrections, an unmapped passage, second-pass seeking, loops and Wait grading. [Acceptance procedure](DEVELOPMENT.md#companion-pdf-checks)
+- [ ] **Owner acceptance.** Try a publisher's piano part with printed first and second endings and an imperfect scan. Check touch editing on iPad and play with physical MIDI. Review the extra suggested box in the three-measure Guitar Pro smoke fixture. [Observed results](DEVELOPMENT.md#companion-pdf-checks)
+- [ ] **Manual recording sync.** If a piano recording becomes part of practice, test a small tap/anchor workflow against a repeated passage before considering the full Guitar Trainer editor.
+- [ ] **Standalone PDF + recording.** Track separately as an optional tap-timed, ungraded Realtime workflow without a digital score.
+- [ ] **Score-based Auto-sync.** Evaluate separately on actual piano recordings after manual recording mapping works.
+- [ ] **Looper speed trainer.** Port the Guitar Trainer option for gradually increasing the tempo on successive passage loops.
+- [ ] **Existing library merge regression.** The starter library has 17 scores and the version-1 import assertion still expects 16. Confirm the historical compatibility fixture separately. [Failing assertion](../tests/library-merge.cjs)
+
 Reproduce the relevant case before deciding on a fix. The [October 20 review](CODE_REVIEW_2026-10-20.md#conditional-risks-and-design-questions) records the original hypotheses; the [development checklist](DEVELOPMENT.md#manual-regression-checklist) defines protected behavior.
 
 ### Score and input investigations
