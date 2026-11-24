@@ -1,5 +1,9 @@
 # Change history and future update records
 
+## 2026-11-24 — Scores menu layout
+
+The desktop Scores drawer is 100 px wider. The action buttons share one row when space permits, and the score and library groups wrap independently on smaller screens. Unavailable score actions appear dimmed. Checked the empty and attached-PDF layouts in isolated Chrome at 320, 390, 768, 900 and 1280 px, including action visibility, height and overlap. The library workflow, library appearance and companion PDF regressions passed.
+
 ## 2026-11-24 — Companion PDF practice
 
 Added local PDF attachment, editable grand-staff boxes, page following and visit-to-print mapping. A written-out repeat can reuse a printed range, an ending can be corrected individually and an unmatched passage can be left blank. MuseScore PDF/MIDI and MusicXML acceptance ran in isolated Chrome. The existing library merge test still expects the prior starter-score count. [Workflow and credits](COMPANION_PDF.md) · [Validation](DEVELOPMENT.md#companion-pdf-checks)

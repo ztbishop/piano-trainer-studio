@@ -62,6 +62,8 @@ Maintenance evidence: [review recommendations](CODE_REVIEW_2026-10-20.md#mainten
 
 ## Completed or superseded work
 
+- Corrected the uneven Scores action rows after adding Attach PDF. [Layout and viewport checks](CHANGELOG.md#2026-11-24--scores-menu-layout)
+
 Keep detailed implementation and validation in [CHANGELOG.md](CHANGELOG.md), rather than repeating completed checklists here.
 
 - **Expressive comparison demo:** added an original eight-measure study to permanent Demo Scores with staccato, accents and explicit crescendo/diminuendo targets. Playback strengths remain unchanged; listening acceptance remains above. See [validation](DEVELOPMENT.md#expressive-comparison-demo-checks).

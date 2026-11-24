@@ -324,8 +324,8 @@ fieldset label {
     position: fixed;
     top: 58px;
     left: 14px;
-    width: 760px;
-    max-width: min(96vw, 820px);
+    width: 860px;
+    max-width: calc(100vw - 28px);
     bottom: 12px;
     background: rgba(255,255,255,0.72);
     backdrop-filter: blur(20px);
@@ -390,15 +390,22 @@ fieldset label {
 .scores-action-toolbar {
     display: flex;
     flex-wrap: wrap;
-    align-items: stretch;
+    align-items: flex-start;
     gap: 10px 18px;
 }
 .scores-action-group {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
-    flex: 1 1 320px;
-    min-width: min(100%, 320px);
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.scores-action-group > button {
+    flex: 1 1 auto;
+}
+.scores-action-group > button:disabled {
+    opacity: .55;
+    cursor: default;
 }
 .scores-action-group-library {
     position: relative;
@@ -2163,8 +2170,7 @@ body.app-fullscreen-active .score-overlay-controls {
 @media (max-width: 900px) {
     .scores-drawer {
         left: 8px;
-        width: min(96vw, 740px);
-        max-width: min(96vw, 740px);
+        max-width: calc(100vw - 18px);
     }
 }
 
@@ -2178,11 +2184,13 @@ body.app-fullscreen-active .score-overlay-controls {
 }
 
 @media (max-width: 560px) {
-    .scores-action-group {
-        grid-template-columns: 1fr;
+    .scores-action-group-current:has(#pdf-show:not([hidden])) {
+        display: grid;
+        flex-basis: 100%;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+    .scores-action-group > button { padding-inline: 8px; }
 }
-
 
 .scores-library-toolbar {
     width: 100%;
