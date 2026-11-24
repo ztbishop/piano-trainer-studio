@@ -62,6 +62,8 @@ Maintenance evidence: [review recommendations](CODE_REVIEW_2026-10-20.md#mainten
 
 ## Completed or superseded work
 
+- Matched Guitar Trainer's companion attachment flow. A new pair starts in Mark measures for drawing or optional detection. A pair with saved boxes returns to reading view. [Practice guide](COMPANION_PDF.md)
+
 - Ported whole-score PDF detection and review from Guitar Trainer `85803aa`, including numbering checks, hand-mark protection and saved-map reopening. [Workflow](COMPANION_PDF.md#correct-the-printed-boxes) · [Browser checks](DEVELOPMENT.md#companion-pdf-checks)
 
 - Corrected the uneven Scores action rows after adding Attach PDF. [Layout and viewport checks](CHANGELOG.md#2026-11-24--scores-menu-layout)

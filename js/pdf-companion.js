@@ -314,7 +314,7 @@ function initPdfCompanion() {
       reader.populate(boxes,boxElement,String);
     }
     sheet.classList.toggle('mapping', editing);
-    message(editing ? 'Find boxes in the score, drag a blue divider, or choose a measure and redraw its box.' : '');
+    message(editing ? 'Drag a box around both staves for the selected measure, or choose Find boxes in score.' : '');
     paintBoxes();
   }
   const musicArea = document.getElementById('music-area');
@@ -374,31 +374,19 @@ function initPdfCompanion() {
       const identity = HandAssignment.scoreIdentity();
       const storageKey = identity && 'pt_companionPDF_v1_' + identity + '_' + loaded.fingerprints[0];
       let saved;
-      try { saved = storageKey && JSON.parse(appLocalStorage.getItem(storageKey)); } catch { /* Rebuild from the PDF. */ }
+      try { saved = storageKey && JSON.parse(appLocalStorage.getItem(storageKey)); } catch { /* Open for manual marking. */ }
       if (!validSavedBoxes(saved?.boxes, loaded.numPages)) saved = null;
-      const pages = [], missedPages = [], detected = {};
-      let count = 0;
+      const pages = [];
       for (let i = 1; i <= loaded.numPages; i++) {
         if (version !== generation) return;
-        const pdfPage = await loaded.getPage(i);
-        if (version !== generation) return;
-        pages.push(pdfPage);
-        if (saved?.boxes) continue;
-        updateAttachStatus('Finding measure boxes on page ' + i + ' of ' + loaded.numPages + '…');
-        let found = [];
-        try {
-          const {detectPdfPage} = await import('./pdf-measure-detection.js');
-          found = await detectPdfPage(pdfPage, i);
-        } catch { /* This page can still be marked manually. */ }
-        if (!found.length) missedPages.push(i);
-        for (const box of found) detected[++count] = box;
+        pages.push(await loaded.getPage(i));
       }
       if (version !== generation || score !== osmd.Sheet) return;
       pausePlaybackFromToolbar();
       reader.load(pages);
       const oldTask = documentTask;
       documentTask = task; task = null; oldTask?.destroy();
-      pdf = loaded; key = storageKey; boxes = saved?.boxes || detected;
+      pdf = loaded; key = storageKey; boxes = saved?.boxes || {};
       visits = traversal;
       const limit = Math.max(score.SourceMeasures.length, ...Object.keys(boxes).map(Number));
       mapping = Array.isArray(saved?.mapping) && saved.mapping.length === visits.length &&
@@ -418,9 +406,6 @@ function initPdfCompanion() {
       setEditing(!Object.keys(boxes).length);
       currentVisit = visitIndex(visits, osmd.cursor.Iterator.CurrentEnrolledTimestamp.RealValue);
       sync();
-      if (missedPages.length) message('Check pages ' + missedPages.join(', ') + ' and draw any missing measures.');
-      else if (!saved && count !== score.SourceMeasures.length)
-        message(count + ' printed boxes for ' + score.SourceMeasures.length + ' digital measures. Review the repeat and ending mapping.');
     } catch (error) {
       if (version === generation) updateAttachStatus('Could not open this PDF. ' + error.message);
     } finally { if (task) await task.destroy(); }

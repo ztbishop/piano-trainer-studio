@@ -1,5 +1,9 @@
 # Change history and future update records
 
+## 2026-11-24 — Start new companion PDFs in Mark measures
+
+New score/PDF pairs open on page one with an empty map. Draw the first measure or choose **Find boxes in score**. Reattaching a pair with saved boxes opens reading view, including partially marked scores. [Companion PDF guide](COMPANION_PDF.md)
+
 ## 2026-11-24 — Whole-score PDF box review
 
 Ported Guitar Trainer Studio's sequential scan from `85803aa`. A review can accept all pages at once or carry a corrected page's numbering forward. Saving keeps hand marks and checks ownership and numbering against OSMD's written score. The Scores drawer now groups attachment and library commands under PDF and Library tools. [Practice guide and source credit](COMPANION_PDF.md) · [Browser regression](DEVELOPMENT.md#companion-pdf-checks)

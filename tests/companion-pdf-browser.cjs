@@ -39,6 +39,12 @@ async function main() {
             if (first !== null) await el('pdf-first').fill(String(first));
             await el(first === null ? 'pdf-unmap' : 'pdf-apply-range').click();
         }
+        async function expectBlankEditor() {
+            assert.equal(await el('pdf-map').getAttribute('aria-pressed'), 'true');
+            assert.equal(await el('pdf-find').isVisible(), true);
+            assert.equal(await el('pdf-measure').inputValue(), '1');
+            assert.equal(await page.locator('#pdf-view .pdf-box').count(), 0);
+        }
         async function scanFromPageTwo() {
             await el('pdf-page').selectOption('2');
             assert.equal(await el('pdf-page').inputValue(), '2');
@@ -85,6 +91,10 @@ async function main() {
         await el('file-input').setInputFiles(fixture('mid'));
         await page.waitForFunction(() => !document.getElementById('pdf-attach').disabled);
         await attach();
+        await expectBlankEditor();
+        assert.equal(await savedMap(), null);
+        await scanFromPageTwo();
+        await el('pdf-use-score').click();
         console.log('MIDI import and PDF box geometry', await page.evaluate(() => ({
             measures: osmd.Sheet.SourceMeasures.length, visits: document.querySelector('#pdf-from').length,
             boxes: [...document.querySelectorAll('.pdf-boxes .pdf-box')].map(b => [b.style.left,b.style.top,b.style.width,b.style.height])
@@ -119,6 +129,7 @@ async function main() {
         await el('file-input').setInputFiles(fixture('mid'));
         await page.waitForFunction(() => !document.getElementById('pdf-attach').disabled);
         await attach();
+        assert.equal(await el('pdf-map').getAttribute('aria-pressed'), 'false');
         assert.equal(await page.locator('.pdf-boxes .pdf-box').count(), 3);
         assert.equal(await box(2).evaluate(b => b.closest('[data-page]').dataset.page), '2');
         assert.deepEqual(await savedMap(), corrected);
@@ -265,6 +276,22 @@ async function main() {
         await el('file-input').setInputFiles(fixture('musicxml'));
         await page.waitForFunction(() => document.getElementById('pdf-view').hidden && !document.getElementById('pdf-attach').disabled);
         await attach();
+        // The same PDF paired with a different score starts blank. Hand-mark
+        // the first grand-staff measure, then reopen this partial map.
+        await expectBlankEditor();
+        const sheet = await el('pdf-sheet').boundingBox();
+        await page.mouse.move(sheet.x + sheet.width * .12, sheet.y + sheet.height * .145);
+        await page.mouse.down();
+        await page.mouse.move(sheet.x + sheet.width * .56, sheet.y + sheet.height * .26);
+        await page.mouse.up();
+        assert.equal(await el('pdf-measure').inputValue(), '2');
+        await page.reload();
+        await el('file-input').setInputFiles(fixture('musicxml'));
+        await page.waitForFunction(() => !document.getElementById('pdf-attach').disabled);
+        await attach();
+        assert.equal(await el('pdf-map').getAttribute('aria-pressed'), 'false');
+        assert.equal(await page.locator('.pdf-boxes .pdf-box').count(), 1);
+        await box(1).click(); await expectVisit(1,1);
         await el('pdf-map').click();
         await scanFromPageTwo();
         await el('pdf-measure').selectOption('2');

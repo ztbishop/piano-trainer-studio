@@ -130,6 +130,8 @@ Run expressive-playback, score-expression and hairpin-expression alongside the t
 
 ## Companion PDF checks
 
+The browser regression covers both first-attachment choices. It scans a new MIDI/PDF pair on request, pairs the same PDF with a different MusicXML score, draws a box from scratch, and reloads the partial map in reading view.
+
 Run `node tests/companion-pdf-browser.cjs` against the local app server with Playwright available to Node and Chrome installed. Use `PT_TEST_ORIGIN` for a different loopback origin. The check creates a disposable browser context, blocks external requests and uses injected virtual-key input. The app itself needs no Playwright installation.
 
 The November 24 Chrome run used MuseScore Studio 4.7.6 exports of the original two-page fixture. Four printed boxes cover both staves across six written-out MIDI measures. The run checks the resting left hand, divider adjustment, repeated range, individual ending override, unmapped visit, loop shading, both seek directions between passes, wrong/partial/correct Wait input, loop restart, Realtime at 150%, Follow Me, automatic page turn, saved edits after reload, and a second-pass seek in the repeat-bearing MusicXML. The desktop and phone layouts were inspected at 1160 × 800 and 390 × 844. Physical MIDI/LED response, listening, iPad and third-party PDFs remain owner checks. [Fixture and workflow](COMPANION_PDF.md)

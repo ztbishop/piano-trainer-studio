@@ -2,7 +2,9 @@
 
 Open the digital score in **Scores**, then choose **PDF → Attach PDF** and select the local printed edition. MusicXML, MXL and scores opened through the existing MIDI or Guitar Pro importer all supply the trainer's notes and timing. The PDF supplies the page you read. The virtual keyboard, hand assignments, grading and three practice modes still use the digital score.
 
-The reader finds measure boxes on each page. One box should cover both piano staves, even through a full-measure rest in one hand. Click a box to pause and seek. When several score visits use the same box, the reader chooses the nearest visit allowed by the loop. **Score visit** lets you choose another eligible pass. **Show notation** returns to the digital view. **Scores → PDF → Show PDF** reopens the attached pages.
+A new score/PDF pair opens in **Mark measures** with a blank map. Drag a box around the first measure, covering both piano staves even when one hand rests. The measure selector advances after each box. Or choose **Find boxes in score** to review suggested boxes. Choose **Done marking** when you are ready to practice. Reattaching the same pair with saved boxes opens directly in reading view, even if you marked only part of the score.
+
+Click a box in reading view to pause and seek. When several score visits use the same box, the reader chooses the nearest visit allowed by the loop. **Score visit** lets you choose another eligible pass. **Show notation** returns to the digital view. **Scores → PDF → Show PDF** reopens the attached pages.
 
 ## Repeats and endings
 
