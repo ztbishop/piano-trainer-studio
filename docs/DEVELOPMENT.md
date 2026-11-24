@@ -136,6 +136,8 @@ The November 24 Chrome run used MuseScore Studio 4.7.6 exports of the original t
 
 Additional Chrome smoke checks opened a MuseScore MXL export and the pinned Guitar Trainer `first-notes.gp` demo with their corresponding PDFs and sought to digital measure 2. The MXL yielded four printed boxes for four measures. The Guitar Pro example yielded four suggestions for three digital measures, illustrating the need to review numbering and geometry.
 
+The whole-score regression starts in the editor on page two and verifies the scan reports pages one and two in that order. It removes a proposal on page one, checks the first number on page two, saves and reloads the score and PDF. It also exercises whole-score acceptance, hand-mark preservation, cross-page collisions, exceeding the written measure count, cancellation, and both native repeat passes after reopening. The Scores menu was checked at 320, 390, 768 and 1280 CSS pixels in Chrome, including keyboard dismissal, the import file chooser and a library backup download.
+
 ## Manual regression checklist
 
 Run checks relevant to the changed area. Timing/input/rendering changes need the corresponding protected-system checks, not just syntax validation. Record score, measure, browser, input device, mode, tempo, expected result, and actual result. Separate passed checks from those awaiting hardware or sample scores. Use backups before tests that intentionally change library/settings; never clear storage as a shortcut.

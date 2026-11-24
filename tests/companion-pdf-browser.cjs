@@ -26,7 +26,9 @@ async function main() {
         const box = n => page.locator('.pdf-boxes [data-measure="' + n + '"]');
         async function attach() {
             await el('btn-scores').click();
-            await el('pdf-file').setInputFiles(fixture('pdf'));
+            await page.locator('.scores-tools summary', {hasText:/^PDF$/}).click();
+            const [chooser] = await Promise.all([page.waitForEvent('filechooser'), el('pdf-attach').click()]);
+            await chooser.setFiles(fixture('pdf'));
             await page.waitForFunction(() => !document.getElementById('pdf-view').hidden ||
                 document.getElementById('pdf-attach-status').textContent.startsWith('Could not'));
             assert.equal(await el('pdf-view').isVisible(), true, await el('pdf-attach-status').textContent());
@@ -37,6 +39,36 @@ async function main() {
             if (first !== null) await el('pdf-first').fill(String(first));
             await el(first === null ? 'pdf-unmap' : 'pdf-apply-range').click();
         }
+        async function scanFromPageTwo() {
+            await el('pdf-page').selectOption('2');
+            assert.equal(await el('pdf-page').inputValue(), '2');
+            await page.evaluate(() => {
+                window.scanPages = [];
+                const observer = new MutationObserver(records => {
+                    for (const record of records) for (const node of record.addedNodes) {
+                        const match = /^Finding boxes on page (\d+)/.exec(node.textContent);
+                        if (match) window.scanPages.push(Number(match[1]));
+                    }
+                    if (!document.getElementById('pdf-use-score').hidden) observer.disconnect();
+                });
+                observer.observe(document.getElementById('pdf-status'), {childList:true});
+            });
+            await el('pdf-find').click();
+            await el('pdf-use-score').waitFor({state:'visible'});
+            assert.equal(await el('pdf-page').inputValue(), '1');
+            assert.deepEqual(await page.evaluate(() => window.scanPages), [1,2]);
+        }
+        async function correctProposal(index, action) {
+            await el('pdf-action').selectOption(action);
+            const proposal = page.locator('#pdf-boxes .pdf-box').nth(index);
+            await proposal.scrollIntoViewIfNeeded();
+            const rect = await proposal.boundingBox();
+            await page.mouse.click(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        }
+        const savedMap = () => page.evaluate(() => {
+            const key = Object.keys(localStorage).find(k => k.startsWith('pt_companionPDF_v1_'));
+            return JSON.parse(localStorage.getItem(key));
+        });
         async function mode(id) {
             await el('btn-practice').click();
             await el('mode-' + id).check();
@@ -69,11 +101,67 @@ async function main() {
             }));
         }
         await el('pdf-map').click();
+        // Correct the first page and carry its count to page two.
+        await scanFromPageTwo();
+        await page.setViewportSize({width:390,height:844});
+        const accept = await el('pdf-use-score').boundingBox();
+        assert(accept.x >= 0 && accept.x + accept.width <= 390);
+        assert((await el('pdf-scroll').boundingBox()).height > 80);
+        await page.setViewportSize({width:1160,height:800});
+        await correctProposal(1, 'remove');
+        await el('pdf-use').click();
+        assert.equal(await el('pdf-page').inputValue(), '2');
+        assert.equal(await el('pdf-measure').inputValue(), '2');
+        await el('pdf-use').click();
+        const corrected = await savedMap();
+        assert.deepEqual(Object.values(corrected.boxes).map(b => b.page), [1,2,2]);
+        await page.reload();
+        await el('file-input').setInputFiles(fixture('mid'));
+        await page.waitForFunction(() => !document.getElementById('pdf-attach').disabled);
+        await attach();
+        assert.equal(await page.locator('.pdf-boxes .pdf-box').count(), 3);
+        assert.equal(await box(2).evaluate(b => b.closest('[data-page]').dataset.page), '2');
+        assert.deepEqual(await savedMap(), corrected);
+        await el('pdf-map').click();
+        await scanFromPageTwo();
+        await el('pdf-use-score').click();
+        assert.equal(await page.locator('.pdf-boxes .pdf-box').count(), 4);
+        await el('pdf-map').click();
         const divider = page.locator('.pdf-barline').first();
+        await el('pdf-page').selectOption('1');
         const original = await divider.getAttribute('aria-valuenow');
         await divider.press('ArrowRight');
         assert.notEqual(await divider.getAttribute('aria-valuenow'), original);
-        await el('pdf-map').click();
+        await el('pdf-measure').selectOption('4');
+        const lastBox = page.locator('#pdf-boxes .pdf-box', {hasText:/^4$/});
+        await lastBox.scrollIntoViewIfNeeded();
+        const last = await lastBox.boundingBox();
+        await page.mouse.move(last.x + 2, last.y + 2);
+        await page.mouse.down();
+        await page.mouse.move(last.x + last.width - 2, last.y + last.height - 2);
+        await page.mouse.up();
+        const handMarked = await savedMap();
+        assert(!handMarked.boxes[4].automatic);
+        await el('pdf-find-page').click();
+        await el('pdf-use').waitFor({state:'visible'});
+        assert.equal(await el('pdf-page').inputValue(), '2');
+        assert.equal(await el('pdf-use-score').isVisible(), false);
+        await el('pdf-use').click();
+        assert.deepEqual(await savedMap(), handMarked);
+        await scanFromPageTwo();
+        await correctProposal(0, 'join');
+        assert.equal(await el('pdf-use-score').isDisabled(), true);
+        assert.match(await el('pdf-status').textContent(), /Measure 2 belongs to page 1.*page 2/);
+        await el('pdf-use').click();
+        assert.equal(await el('pdf-measure').inputValue(), '2');
+        assert.equal(await el('pdf-use').isDisabled(), true);
+        assert.deepEqual(await savedMap(), handMarked);
+        await el('pdf-cancel').click();
+        await scanFromPageTwo();
+        await el('pdf-use-score').click();
+        assert.deepEqual((await savedMap()).boxes[1], handMarked.boxes[1]);
+        assert.deepEqual((await savedMap()).boxes[2], handMarked.boxes[2]);
+        assert.deepEqual((await savedMap()).boxes[4], handMarked.boxes[4]);
         await page.locator('#pdf-order summary').click();
         await range(3,4,1);
         await range(5,6,3);
@@ -143,7 +231,9 @@ async function main() {
         await el('btn-play').click();
         await el('pdf-native').click();
         assert.equal(await el('canvas-wrapper').isVisible(), true);
-        await el('btn-scores').click(); await el('pdf-show').click();
+        await el('btn-scores').click();
+        await page.locator('.scores-tools summary', {hasText:'PDF'}).click();
+        await el('pdf-show').click();
         await el('scores-panel').waitFor({state:'hidden'});
         await box(1).click();
         await expectVisit(3,1);
@@ -162,6 +252,11 @@ async function main() {
         await el('file-input').setInputFiles(fixture('mid'));
         await page.waitForFunction(() => !document.getElementById('pdf-attach').disabled);
         await attach();
+        await el('pdf-map').click();
+        await scanFromPageTwo();
+        await el('pdf-use-score').click();
+        await box(1).click();
+        await expectVisit(1,1);
         await box(1).click(); await el('pdf-visit').selectOption('2');
         await expectVisit(3,1);
         await el('pdf-map').click();
@@ -170,6 +265,18 @@ async function main() {
         await el('file-input').setInputFiles(fixture('musicxml'));
         await page.waitForFunction(() => document.getElementById('pdf-view').hidden && !document.getElementById('pdf-attach').disabled);
         await attach();
+        await el('pdf-map').click();
+        await scanFromPageTwo();
+        await el('pdf-measure').selectOption('2');
+        assert.equal(await el('pdf-use-score').isDisabled(), true);
+        assert.match(await el('pdf-status').textContent(), /last written measure \(4\)/);
+        await el('pdf-measure').selectOption('1');
+        await el('pdf-use-score').click();
+        await page.reload();
+        await el('file-input').setInputFiles(fixture('musicxml'));
+        await page.waitForFunction(() => !document.getElementById('pdf-attach').disabled);
+        await attach();
+        await box(1).click(); await expectVisit(1,1);
         await box(1).click(); await el('pdf-visit').selectOption('2');
         await expectVisit(3,1);
         assert.equal(await page.evaluate(() => osmd.cursor.Iterator.CurrentMeasureIndex), 0);

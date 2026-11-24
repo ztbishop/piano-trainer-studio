@@ -7,12 +7,14 @@ export function mountPdfEditor(view) {
             <button id="pdf-map" type="button" aria-pressed="false">Mark measures</button>
             <span id="pdf-edit" hidden><label><span id="pdf-number-label">Measure</span> <select id="pdf-measure"></select></label>
               <button id="pdf-remove" type="button">Remove box</button>
-              <button id="pdf-find" type="button">Find boxes on page</button>
+              <button id="pdf-find" type="button">Find boxes in score</button>
+              <button id="pdf-find-page" type="button">Find on this page</button>
               <span id="pdf-review" hidden><label>Correction <select id="pdf-action">
                 <option value="draw">Draw or redraw</option><option value="split">Split at click</option>
                 <option value="join">Join with next</option><option value="remove">Remove extra</option>
               </select></label>
               <label id="pdf-replace-label" hidden><input id="pdf-replace" type="checkbox"> Replace saved boxes on this page</label>
+              <button id="pdf-use-score" type="button" hidden>Use score boxes</button>
               <button id="pdf-use" type="button">Use page boxes</button><button id="pdf-cancel" type="button">Cancel</button></span></span>
             <label id="pdf-position" hidden>Score visit <select id="pdf-visit"></select></label>
             <span id="pdf-target"></span>

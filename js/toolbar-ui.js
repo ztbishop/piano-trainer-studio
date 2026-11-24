@@ -54,6 +54,7 @@ function showToolbarPanel(panel) {
 
 function closeToolbarPanel(panel, immediate = false) {
     if (!panel || panel.classList.contains('hidden')) return;
+    if (panel === scoresPanel) closeScoreTools();
 
     if (panel === helpOverlay && firstRunQuickStartActive) {
         markFirstRunIntroSeen();
@@ -102,6 +103,28 @@ function toggleToolbarPanel(panel) {
 }
 
 const btnScores = document.getElementById('btn-scores');
+function closeScoreTools() {
+    scoresPanel?.querySelectorAll('.scores-tools[open]').forEach(menu => { menu.open = false; });
+}
+
+document.addEventListener('click', event => {
+    if (!event.target.closest('.scores-tools')) closeScoreTools();
+});
+scoresPanel?.addEventListener('click', event => {
+    const menu = event.target.closest('.scores-tools-list button')?.closest('details');
+    if (menu) {
+        menu.open = false;
+        if (scoresPanel.classList.contains('is-open')) menu.querySelector('summary').focus();
+    }
+});
+scoresPanel?.addEventListener('keydown', event => {
+    const menu = event.target.closest('.scores-tools[open]');
+    if (event.key === 'Escape' && menu) {
+        event.stopPropagation();
+        menu.open = false;
+        menu.querySelector('summary').focus();
+    }
+});
 if (btnScores && scoresPanel) {
     btnScores.addEventListener('click', async (e) => {
         e.stopPropagation();

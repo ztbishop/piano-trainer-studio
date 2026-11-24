@@ -1313,7 +1313,7 @@ async function importScoreLibraryBackupFile(file) {
         await refreshScoresDrawer();
         setLibraryStatus(`Backup merged: ${result.added} scores added, ${result.skipped} already represented; ${result.foldersAdded} new folders, ${result.foldersReused} reused. Existing scores kept.`);
     });
-    if (document.activeElement === document.body) document.getElementById('btn-scores-import-library')?.focus();
+    if (document.activeElement === document.body) document.getElementById('scores-library-tools')?.focus();
 }
 
 

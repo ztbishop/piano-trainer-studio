@@ -170,6 +170,19 @@ export async function detectPdfPage(pdfPage,page) {
     const rgba=context.getImageData(0,0,canvas.width,canvas.height).data;
     const gray=new Uint8Array(canvas.width*canvas.height);
     for(let i=0;i<gray.length;i++) gray[i]=(rgba[i*4]+2*rgba[i*4+1]+rgba[i*4+2])/4;
-    return detectMeasureBoxes(gray,canvas.width,canvas.height,page);
+    return detectMeasureBoxes(gray,canvas.width,canvas.height,page).map(box => ({...box, automatic:true}));
   } finally {canvas.width=canvas.height=1;}
+}
+
+// Guitar Trainer 85803aa. Release each detection raster before starting the next page.
+export async function detectPdfScore(pdf, isCurrent, onPage) {
+  const pages = [];
+  for (let page = 1; page <= pdf.numPages; page++) {
+    if (!isCurrent()) return null;
+    onPage(page);
+    const sheet = await pdf.getPage(page);
+    if (!isCurrent()) return null;
+    pages.push(await detectPdfPage(sheet, page));
+  }
+  return isCurrent() ? pages : null;
 }

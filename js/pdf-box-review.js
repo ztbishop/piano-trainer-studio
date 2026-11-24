@@ -14,10 +14,10 @@ export function editPageBoxes(boxes, index, action, x, drawn) {
       result.splice(next<0?result.length:next,0,drawn);
     }
   } else if(box && action==='split' && x-box.x>=.005 && box.x+box.w-x>=.005) {
-    result.splice(index,1,{...box,w:x-box.x},{...box,x,w:box.x+box.w-x});
+    result.splice(index,1,{...box,w:x-box.x,automatic:false},{...box,x,w:box.x+box.w-x,automatic:false});
   } else if(box && action==='join' && boxes[index+1] && sameRow(box,boxes[index+1])) {
     const next=boxes[index+1], y=Math.min(box.y,next.y);
-    result.splice(index,2,{...box,y,w:next.x+next.w-box.x,h:Math.max(box.y+box.h,next.y+next.h)-y});
+    result.splice(index,2,{...box,y,w:next.x+next.w-box.x,h:Math.max(box.y+box.h,next.y+next.h)-y,automatic:false});
   } else if(box && action==='remove') result.splice(index,1);
   return result;
 }
@@ -29,4 +29,21 @@ export function replacePageBoxes(saved,page,numbers,proposals) {
   const result=Object.fromEntries(Object.entries(saved).filter(([,box])=>box.page!==page));
   numbers.forEach((n,i)=>{result[n]=proposals[i];});
   return result;
+}
+
+// Adapted from Guitar Trainer 85803aa. Build the entire candidate before
+// saving. Protected numbers on the same page keep their original geometry.
+export function addScoreBoxes(saved, first, proposals, writtenCount) {
+  if (!Number.isInteger(first) || first < 1 || first + proposals.length - 1 > writtenCount)
+    return {error: 'The proposed numbering goes past the last written measure (' + writtenCount + ').'};
+  const boxes = {...saved};
+  for (const [i, box] of proposals.entries()) {
+    const number = first + i;
+    if (boxes[number] && boxes[number].page !== box.page) {
+      return {error: 'Measure ' + number + ' belongs to page ' + boxes[number].page +
+        ' and is also proposed on page ' + box.page + '.'};
+    }
+    boxes[number] ??= box;
+  }
+  return {boxes};
 }

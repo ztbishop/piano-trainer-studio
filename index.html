@@ -100,28 +100,35 @@
     <div id="scores-panel" class="scores-drawer popup-surface hidden">
         <div class="scores-drawer-inner">
             <div class="scores-drawer-header">
-                <strong>Current score</strong>
-                <div id="scores-current-title">No score loaded</div>
+                <div class="scores-heading">
+                    <strong>Scores</strong>
+                    <div>Current score <strong id="scores-current-title">No score loaded</strong></div>
+                </div>
                 <div id="scores-current-state" class="setting-note" role="status">Open a file or choose a demo to begin.</div>
             </div>
 
             <div class="scores-drawer-body">
                 <div class="scores-section scores-actions">
-                    <div class="scores-section-label"></div>
                     <div class="scores-action-toolbar">
-                        <div class="scores-action-group scores-action-group-current">
-                            <button type="button" id="btn-scores-open-file">Open File</button>
-                            <button type="button" id="pdf-attach" disabled>Attach PDF</button>
-                            <button type="button" id="pdf-show" hidden>Show PDF</button>
-                            <button type="button" id="btn-scores-save-current" disabled>Save to Library</button>
-                            <button type="button" id="btn-scores-save-copy" disabled hidden>Save a copy</button>
-                        </div>
-                        <input type="file" id="pdf-file" accept=".pdf,application/pdf" hidden>
-                        <div class="scores-action-group scores-action-group-library">
-                            <button type="button" id="btn-scores-export-library">Backup Library</button>
-                            <button type="button" id="btn-scores-import-library">Import Library (Merge)</button>
-                        </div>
+                        <button type="button" id="btn-scores-open-file">Open File</button>
+                        <button type="button" id="btn-scores-save-current" disabled>Save to Library</button>
+                        <button type="button" id="btn-scores-save-copy" disabled hidden>Save a copy</button>
+                        <details class="scores-tools" name="scores-tools">
+                            <summary>PDF</summary>
+                            <div class="scores-tools-list">
+                                <button type="button" id="pdf-attach" disabled>Attach PDF</button>
+                                <button type="button" id="pdf-show" hidden>Show PDF</button>
+                            </div>
+                        </details>
+                        <details class="scores-tools" name="scores-tools">
+                            <summary id="scores-library-tools">Library tools</summary>
+                            <div class="scores-tools-list">
+                                <button type="button" id="btn-scores-export-library">Backup Library</button>
+                                <button type="button" id="btn-scores-import-library">Import Library (Merge)</button>
+                            </div>
+                        </details>
                     </div>
+                    <input type="file" id="pdf-file" accept=".pdf,application/pdf" hidden>
                     <span id="pdf-attach-status" role="status" hidden></span>
                 </div>
 
@@ -187,7 +194,7 @@
                     <ul>
                         <li>Your score library is stored in your browser. Back it up if it matters to you. If storage is unavailable, Open File and demos still work; preference changes are session-only. Restore browser storage access and retry or reload. Do not clear site data.</li>
                         <li>Search title or filename within the selected folder. Song menus download saved MusicXML/MXL; folder menus export a JSON backup.</li>
-                        <li>Use <strong>Scores → Backup Library</strong> to back up your song library. Restore a folder or library with Import Library (Merge).</li>
+                        <li>Use <strong>Scores → Library tools → Backup Library</strong> to back up your song library. Restore a folder or library with Import Library (Merge).</li>
                         <li>Display offers Light, Soft Light and Dark appearance. Settings shows your version and a link to download releases.</li>
                         <li>Use <strong>Settings → Backup All Settings</strong> to save trainer preferences, connections, and LED calibration.</li>
                     </ul>

@@ -1,8 +1,8 @@
 # Practice with a companion PDF
 
-Open the digital score in **Scores**, then choose **Attach PDF** and select the local printed edition. MusicXML, MXL and scores opened through the existing MIDI or Guitar Pro importer all supply the trainer's notes and timing. The PDF supplies the page you read. The virtual keyboard, hand assignments, grading and three practice modes still use the digital score.
+Open the digital score in **Scores**, then choose **PDF → Attach PDF** and select the local printed edition. MusicXML, MXL and scores opened through the existing MIDI or Guitar Pro importer all supply the trainer's notes and timing. The PDF supplies the page you read. The virtual keyboard, hand assignments, grading and three practice modes still use the digital score.
 
-The reader finds measure boxes on each page. One box should cover both piano staves, even through a full-measure rest in one hand. Click a box to pause and seek. When several score visits use the same box, the reader chooses the nearest visit allowed by the loop. **Score visit** lets you choose another eligible pass. **Show notation** returns to the digital view. **Scores → Show PDF** reopens the attached pages.
+The reader finds measure boxes on each page. One box should cover both piano staves, even through a full-measure rest in one hand. Click a box to pause and seek. When several score visits use the same box, the reader chooses the nearest visit allowed by the loop. **Score visit** lets you choose another eligible pass. **Show notation** returns to the digital view. **Scores → PDF → Show PDF** reopens the attached pages.
 
 ## Repeats and endings
 
@@ -17,7 +17,11 @@ For the included study, the PDF shows four measures and the MIDI plays six. The 
 
 ## Correct the printed boxes
 
-Choose **Mark measures**. Select a printed measure and drag its rectangle around the grand staff. A blue divider adjusts the two neighboring boxes together and supports the arrow keys. **Find boxes on page** lets you redraw, split, join or remove proposals before applying them. Review the first measure number and select **Replace saved boxes on this page** if you intend to replace existing geometry. Choose **Done marking** to practice.
+Choose **Mark measures → Find boxes in score** from any page. The scan starts at page one and processes one page at a time in printed order. Choose **Use score boxes** to accept the set. To correct a page, redraw, split, join or remove its proposed boxes, then choose **Review next page**. Its first measure number follows the count you just approved. You can adjust **First measure** on each page. **Use score boxes** also accepts the remaining pages, and **Save reviewed pages** finishes on the last page. **Cancel** discards the draft, including earlier pages in this review.
+
+A rescan keeps hand-drawn boxes, adjusted dividers and boxes from older saved mappings. The editor flags a number claimed by two pages or numbering past the last written digital measure and blocks saving until you resolve it. Repeat and ending assignments survive a rescan.
+
+To change a saved rectangle directly, select its measure and drag around the grand staff. A blue divider adjusts two neighbors together and supports the arrow keys. **Find on this page** limits detection to the current page. Select **Replace saved boxes on this page** when you want its proposals to replace existing marks. Choose **Done marking** to practice.
 
 Edits to boxes and assignments are kept in this browser for the digital score identity and PDF fingerprint. Reattach the PDF after reopening the score. Keep the PDF file separately. Current library and settings backups do not include the PDF or its mapping. Poor scans, unconnected staves or unusual page layouts can need manual correction.
 
@@ -26,3 +30,5 @@ Edits to boxes and assignments are kept in this browser for the digital score id
 The page reader, editable box and divider tools, raster detector and editor layout come from Guitar Trainer Studio at commit `1e68d3e` under the project AGPL. Piano Trainer adapts them to OSMD visit positions and the existing looper. The detector recognizes the opening repeat dots on a paired piano staff. The local Mozilla PDF.js 6.5.438 distribution supplies the renderer, worker, maps, fonts and codecs with their accompanying licenses. [Guitar Trainer source](https://github.com/ztbishop/guitar-trainer-studio/tree/1e68d3e) · [Project license](../LICENSE) · [PDF.js provenance](../assets/vendor/pdfjs/SOURCE.md) · [PDF.js license](../assets/vendor/pdfjs/LICENSE)
 
 The original CC0 two-page study and its MuseScore Studio 4.7.6 PDF and MIDI exports are checked in with the regression fixtures. [MusicXML](../tests/fixtures/grand-staff-repeat.musicxml) · [PDF](../tests/fixtures/grand-staff-repeat.pdf) · [MIDI](../tests/fixtures/grand-staff-repeat.mid)
+
+The whole-score scan and numbering checks were ported from Guitar Trainer Studio under the same license. Piano Trainer uses OSMD's written measures for numbering and stages page corrections until the review is saved. [Guitar Trainer commit 85803aa](https://github.com/ztbishop/guitar-trainer-studio/commit/85803aa)

@@ -1,7 +1,7 @@
 // PDF reader and box editor adapted from Guitar Trainer Studio 1e68d3, 2026-11-24.
 // AGPL-3.0. See LICENSE and docs/COMPANION_PDF.md.
 import {scoreVisits, visitIndex, mapVisitRange} from './pdf-visits.js';
-import {editPageBoxes, replacePageBoxes} from './pdf-box-review.js';
+import {editPageBoxes, replacePageBoxes, addScoreBoxes} from './pdf-box-review.js';
 import {barlineHandle} from './pdf-barline-controls.js';
 import {mountPdfEditor} from './pdf-editor-layout.js';
 import {readingPages} from './pdf-reading-pages.js';
@@ -31,7 +31,9 @@ function initPdfCompanion() {
   let pdf, documentTask, key, boxes = {}, page = 1, editing = false, visible = false, generation = 0;
   let drag, current, visits = [], mapping = [], currentVisit = 0, savedScroll = 0;
   let proposals=null, scanVersion=0, loopMeasures=null, loopKey;
+  let scoreReview = null;
   const find=byId('find'), action=byId('action'), replace=byId('replace');
+  const findPage = byId('find-page'), useScore = byId('use-score');
   const pagesRoot=byId('pages');
   const reader=readingPages(scroll,pagesRoot,jumpToMeasure,number=>{
     if(number===page || !visible || view.hidden)return;
@@ -68,7 +70,8 @@ function initPdfCompanion() {
     }
     overlay.replaceChildren();
     const selected = Number(measure.value);
-    const entries = proposals ? proposals.map((box,i)=>[Number(measure.options[measure.selectedIndex+i]?.value),box]) : Object.entries(boxes);
+    const first = scoreReview ? reviewFirstNumber() : selected;
+    const entries = proposals ? proposals.map((box,i)=>[first+i,box]) : Object.entries(boxes);
     let previous=null;
     for (const [i,[number, box]] of entries.entries()) {
       if (box?.page !== page) continue;
@@ -80,8 +83,13 @@ function initPdfCompanion() {
       if((!proposals || action.value==='draw') && previous && (proposals || Number(number)===Number(previous.number)+1)) {
         const left=previous;
         const handle=barlineHandle(sheet,left.box,box,left.el,el,'Move barline before measure '+label,(a,b)=>{
+          a.automatic = b.automatic = false;
           if(proposals) {proposals[i-1]=a;proposals[i]=b;}
-          else {boxes[left.number]=a;boxes[number]=b;saveBoxes();}
+          else {
+            boxes[left.number] = a;
+            boxes[number] = b;
+            saveBoxes();
+          }
           // Refresh the limits of the handles on either side of this pair.
           const refocus=document.activeElement===handle;
           paintBoxes();
@@ -149,35 +157,88 @@ function initPdfCompanion() {
   };
   function reviewControls() {
     byId('review').hidden=!proposals;
+    pageSelect.disabled=!!scoreReview;
     find.hidden=!!proposals;
+    findPage.hidden=!!proposals;
+    useScore.hidden=!scoreReview;
     byId('remove').hidden=!!proposals;
     byId('number-label').textContent=proposals?'First measure':'Measure';
-    byId('use').disabled=!proposals?.length || proposals.length>measure.options.length-measure.selectedIndex;
+    byId('use').textContent = scoreReview ? (page < pdf.numPages ? 'Review next page' : 'Save reviewed pages') : 'Use page boxes';
   }
   function endReview() {
-    scanVersion++; proposals=null; find.disabled=false;replace.checked=false;
+    scanVersion++; proposals=null; scoreReview=null; find.disabled=findPage.disabled=false;replace.checked=false;
     reviewControls();
   }
   function describeReview() {
     reviewControls();
-    const overflow=proposals.length-(measure.options.length-measure.selectedIndex);
-    const collision=replace.checked && proposals.some((_,i)=>{
-      const existing=boxes[measure.options[measure.selectedIndex+i]?.value];
-      return existing && existing.page!==page;
-    });
-    if(collision)byId('use').disabled=true;
     const instructions={draw:'Drag a blue divider to adjust two neighboring boxes. Drag in blank space to add a box or inside a box to redraw it.',
       split:'Click the missing barline inside a box.',join:'Click the first of two boxes on the same line.',remove:'Click the extra box.'};
-    const warning=overflow>0?'The numbering goes past the end of the score. Check the first measure and extra boxes. ':
-      collision?'A measure in this range belongs to another page. Check the first measure or correct that page first. ':'';
-    message(proposals.length+' boxes on this page. '+warning+instructions[action.value]);
+    if (scoreReview) {
+      const here = reviewMapping(false), all = reviewMapping(true);
+      byId('use').disabled = !!here.error;
+      useScore.disabled = !!all.error;
+      const detail = here.error || all.error || '';
+      message('Page ' + page + ' of ' + pdf.numPages + ' · ' + proposals.length + ' proposed boxes. ' +
+        (detail ? detail + ' ' : '') + instructions[action.value]);
+    } else {
+      const result = addScoreBoxes(boxes, Number(measure.value), proposals, measure.length);
+      byId('use').disabled = !proposals.length || !!result.error;
+      message(proposals.length+' boxes on this page. '+(result.error ? result.error+' ' : '')+instructions[action.value]);
+    }
     paintBoxes();
   }
-  find.onclick=async()=>{
+  function reviewMapping(includeRemaining) {
+    const pending = includeRemaining ? proposals.concat(scoreReview.pages.slice(page).flat()) : proposals;
+    return addScoreBoxes(scoreReview.draft, reviewFirstNumber(), pending, osmd.Sheet.SourceMeasures.length);
+  }
+  function reviewFirstNumber() {
+    return measure.value ? Number(measure.value) : scoreReview.first;
+  }
+  function showScorePage(review, number, first) {
+    goPage(number);
+    scoreReview = review;
+    review.first = first;
+    proposals = review.pages[number - 1];
+    measure.value = String(first);
+    byId('replace-label').hidden = true;
+    replace.checked = false;
+    action.value = 'draw';
+    describeReview();
+  }
+  function acceptScoreReview(includeRemaining) {
+    const result = reviewMapping(includeRemaining);
+    if (result.error) { describeReview(); return; }
+    if (!includeRemaining && page < pdf.numPages) {
+      scoreReview.draft = result.boxes;
+      showScorePage(scoreReview, page + 1, reviewFirstNumber() + proposals.length);
+      return;
+    }
+    boxes = result.boxes;
+    saveBoxes();
+    setEditing(false); current = undefined; sync();
+    message(Object.keys(boxes).length + ' printed measure boxes saved.');
+  }
+  useScore.onclick = () => acceptScoreReview(true);
+  async function scan(wholeScore) {
     const version=++scanVersion;
-    find.disabled=true;message('Finding measure boxes on this page…');
+    find.disabled=findPage.disabled=true;message('Finding measure boxes…');
     try {
-      const [{detectPdfPage},pdfPage]=await Promise.all([import('./pdf-measure-detection.js'),pdf.getPage(page)]);
+      const {detectPdfPage, detectPdfScore} = await import('./pdf-measure-detection.js');
+      if(version!==scanVersion)return;
+      if (wholeScore) {
+        const pages = await detectPdfScore(pdf, () => version === scanVersion,
+          n => message('Finding boxes on page ' + n + ' of ' + pdf.numPages + '…'));
+        if (!pages || version !== scanVersion) return;
+        if (!pages.some(boxes => boxes.length)) {
+          message('No measure boxes found. Choose a page and draw its measures.');
+          return;
+        }
+        // Older saved maps have no origin flag. Preserve them like hand marks.
+        const draft = Object.fromEntries(Object.entries(boxes).filter(([,box]) => box.automatic !== true));
+        showScorePage({pages, draft}, 1, 1);
+        return;
+      }
+      const pdfPage=await pdf.getPage(page);
       if(version!==scanVersion)return;
       const result=await detectPdfPage(pdfPage,page);
       if(version!==scanVersion)return;
@@ -186,12 +247,15 @@ function initPdfCompanion() {
       if(mapped.length) measure.value=String(Math.min(...mapped.map(Number)));
       proposals=result;action.value='draw';describeReview();
     } catch(error) {if(version===scanVersion)message('Could not detect boxes. You can draw them on this page. '+error.message);}
-    finally {if(version===scanVersion)find.disabled=false;}
-  };
-  byId('cancel').onclick=()=>{endReview();message('Page suggestions discarded.');paintBoxes();};
+    finally {if(version===scanVersion)find.disabled=findPage.disabled=false;}
+  }
+  find.onclick = () => scan(true);
+  findPage.onclick = () => scan(false);
+  byId('cancel').onclick=()=>{endReview();message('Unaccepted suggestions discarded.');paintBoxes();};
   action.onchange=replace.onchange=describeReview;
   byId('use').onclick=()=>{
     if(!proposals || byId('use').disabled)return;
+    if (scoreReview) { acceptScoreReview(false); return; }
     const count=proposals.length, first=measure.selectedIndex;
     const replacing=replace.checked;
     let added=0;
@@ -250,7 +314,7 @@ function initPdfCompanion() {
       reader.populate(boxes,boxElement,String);
     }
     sheet.classList.toggle('mapping', editing);
-    message(editing ? 'Find boxes on this page, drag a blue divider between measures, or choose a measure and redraw its box.' : '');
+    message(editing ? 'Find boxes in the score, drag a blue divider, or choose a measure and redraw its box.' : '');
     paintBoxes();
   }
   const musicArea = document.getElementById('music-area');
@@ -295,6 +359,7 @@ function initPdfCompanion() {
   async function open(selected) {
     if (!osmd.Sheet || attach.disabled) return;
     const score = osmd.Sheet, version = ++generation;
+    if (pdf) { endReview(); paintBoxes(); }
     let task;
     try {
       updateAttachStatus('Opening PDF…');
@@ -338,7 +403,7 @@ function initPdfCompanion() {
       const limit = Math.max(score.SourceMeasures.length, ...Object.keys(boxes).map(Number));
       mapping = Array.isArray(saved?.mapping) && saved.mapping.length === visits.length &&
         saved.mapping.every(n => n === null || Number.isInteger(n) && n > 0 && n <= limit)
-        ? saved.mapping : visits.map(v => (boxes[v.measure] || !count) ? v.measure : null);
+        ? saved.mapping : visits.map(v => v.measure);
       page = 1; current = undefined; loopKey = undefined;
       pageSelect.replaceChildren(); measure.replaceChildren();
       for (let i = 1; i <= pdf.numPages; i++) pageSelect.add(new Option(i,i));
@@ -366,7 +431,7 @@ function initPdfCompanion() {
     return {x:clamp((event.clientX - rect.left) / rect.width), y:clamp((event.clientY - rect.top) / rect.height)};
   }
   function startBox(event) {
-    if (!editing || !event.isPrimary || event.button !== 0) return;
+    if (!editing || (find.disabled && !proposals) || !event.isPrimary || event.button !== 0) return;
     event.preventDefault();
     const start=point(event);
     const hit=proposals?.findIndex(b=>start.x>=b.x && start.x<=b.x+b.w && start.y>=b.y && start.y<=b.y+b.h) ?? -1;
@@ -411,7 +476,7 @@ function initPdfCompanion() {
   pageSelect.onchange = () => goPage(Number(pageSelect.value));
   byId('remove').onclick = () => { delete boxes[measure.value]; saveBoxes(); paintBoxes(); sync(); };
   mark.onclick = () => { if (!editing) pausePlaybackFromToolbar(); setEditing(!editing); current = undefined; sync(); };
-  byId('native').onclick = () => { visible = false; sync(); musicArea.scrollTop = savedScroll; handleAutoScroll(); };
+  byId('native').onclick = () => { if(editing)setEditing(false); visible = false; sync(); musicArea.scrollTop = savedScroll; handleAutoScroll(); };
   byId('show').onclick = () => { hideToolbarPanels(); savedScroll = musicArea.scrollTop; musicArea.scrollTop = 0; visible = true; current = undefined; sync(); };
   attach.onclick = () => file.click();
   file.onchange = () => { const selected = file.files[0]; file.value = ''; if (selected) open(selected); };

@@ -1,5 +1,9 @@
 # Change history and future update records
 
+## 2026-11-24 — Whole-score PDF box review
+
+Ported Guitar Trainer Studio's sequential scan from `85803aa`. A review can accept all pages at once or carry a corrected page's numbering forward. Saving keeps hand marks and checks ownership and numbering against OSMD's written score. The Scores drawer now groups attachment and library commands under PDF and Library tools. [Practice guide and source credit](COMPANION_PDF.md) · [Browser regression](DEVELOPMENT.md#companion-pdf-checks)
+
 ## 2026-11-24 — Scores menu layout
 
 The desktop Scores drawer is 100 px wider. The action buttons share one row when space permits, and the score and library groups wrap independently on smaller screens. Unavailable score actions appear dimmed. Checked the empty and attached-PDF layouts in isolated Chrome at 320, 390, 768, 900 and 1280 px, including action visibility, height and overlap. The library workflow, library appearance and companion PDF regressions passed.

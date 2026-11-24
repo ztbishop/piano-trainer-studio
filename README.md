@@ -230,7 +230,7 @@ If browser storage is unavailable, the app warns you and keeps preference change
 ⚠️ Browsers may clear this data.
 
 ### Always:
-- Use **Scores → Backup Library**
+- Use **Scores → Library tools → Backup Library**
 - Use **Settings → Backup All Settings**
 
 ### Where can I find MusicXML songs?
