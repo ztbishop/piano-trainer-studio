@@ -138,6 +138,8 @@ The test covers keyboard and pointer disclosure, desktop and phone layout, parti
 
 ## Companion PDF checks
 
+The library PDF browser regression exercises **Forget markings** on a MIDI/PDF pair opened from disk, checks cancellation, reloads the blank editor, and rescans. With two saved arrangements sharing one PDF, it resets one from notation view and verifies the other arrangement’s saved and cached markings and the shared PDF survive.
+
 The menu regression checks that the PDF viewport fills the score pane at 1160 and 390 CSS pixels, opens page two from Scores → PDF, marks the page in view and returns to reading. It also exercises repeat-visit selection through the menu and full-height reading after whole-score acceptance.
 
 The Arirang Fantasy MIDI/PDF check used a fresh mapping in isolated Chrome. Clicking 2 then 1, reducing the paused loop start to 1, playing a 1–1 loop and resetting from the last PDF page all returned to the first measure. The owner identified an unassigned first printed measure in the saved mapping. The fixture regression removes that assignment, clicks the first box, confirms the proposed single-visit repair and resets from page two. The owner's browser data and physical MIDI devices were outside the test.

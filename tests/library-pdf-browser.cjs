@@ -87,12 +87,37 @@ async function main() {
         await el('btn-scores').click();
         await el('scores-panel').waitFor({state:'hidden'});
     }
-    async function openScore(title) {
+    async function openScore(title, marking = false) {
         await drawer();
         await page.locator('.scores-item-button').filter({has:page.getByText(title,{exact:true})}).click();
         await el('scores-panel').waitFor({state:'hidden'});
         await el('pdf-view').waitFor({state:'visible'});
-        assert.equal(await el('pdf-map').isVisible(),false);
+        assert.equal(await el('pdf-map').isVisible(),marking);
+    }
+    async function forget(accept) {
+        await openPdfMenu(page);
+        const button = el('pdf-forget');
+        const bounds = await button.boundingBox();
+        assert(bounds && bounds.x >= 0 && bounds.x + bounds.width <= page.viewportSize().width);
+        if (process.env.PT_TEST_SCREENSHOTS) await page.screenshot({
+            path:path.join(process.env.PT_TEST_SCREENSHOTS,'pdf-forget-'+page.viewportSize().width+'.png')
+        });
+        const dialog = page.waitForEvent('dialog').then(async dialog => {
+            const prompt = dialog.message();
+            if (accept) await dialog.accept(); else await dialog.dismiss();
+            return prompt;
+        });
+        await button.click();
+        assert.match(await dialog,/grand-staff-repeat\.pdf/);
+    }
+    const cachedPairs = () => page.evaluate(() => Object.fromEntries(
+        Object.entries(localStorage).filter(([key]) => key.startsWith('pt_companionPDF_v1_'))));
+    async function expectFreshMap() {
+        assert(await el('pdf-find').isVisible());
+        assert.equal(await el('pdf-page').inputValue(),'1');
+        assert.equal(await el('pdf-measure').inputValue(),'1');
+        assert.equal(await page.locator('#pdf-view .pdf-box').count(),0);
+        assert.deepEqual(await page.evaluate(()=>CompanionPDF.attachment().pdf.mapping),[1,2,3,4,5,6]);
     }
     async function scan() {
         await el('pdf-find').click();
@@ -130,6 +155,23 @@ async function main() {
     try {
         await profile();
         await midi(fixture('mid')); await attach(); await scan();
+        await openPdfMenu(page); await el('pdf-start-order').click(); await range(3,4,1);
+        const originalCache = await cachedPairs();
+        assert.equal(Object.keys(originalCache).length,1);
+        await page.setViewportSize({width:390,height:844});
+        await forget(false);
+        assert.deepEqual(await cachedPairs(),originalCache);
+        await openPdfMenu(page); await el('pdf-start-marking').click();
+        await el('pdf-page').selectOption('2');
+        await el('pdf-find-page').click();
+        await el('pdf-use').waitFor({state:'visible'});
+        await forget(true);
+        await expectFreshMap();
+        assert.deepEqual(await cachedPairs(),{});
+        assert.deepEqual(await scores(),[]);
+        await page.reload(); await midi(fixture('mid')); await attach(); await expectFreshMap();
+        await page.setViewportSize({width:1160,height:800});
+        await scan();
         await openPdfMenu(page);
         await el('pdf-start-order').click(); await range(3,4,1); await range(5,6,3);
         await page.locator('#pdf-order summary').click();
@@ -171,8 +213,18 @@ async function main() {
         const backup = JSON.parse(await fs.readFile(await download.path(),'utf8'));
         assert.equal(backup.version,2); assert.equal(backup.pdfs.length,1);
         assert.deepEqual(Buffer.from(backup.pdfs[0].data,'base64'),await fs.readFile(fixture('pdf')));
-        // Replace B's attachment with another valid PDF stream, then switch it back.
         await el('btn-scores').click(); await el('scores-panel').waitFor({state:'hidden'});
+        const pairA = Object.keys(originalCache)[0];
+        const beforeForget = await cachedPairs();
+        assert.equal(Object.keys(beforeForget).length,2);
+        await openPdfMenu(page); await el('pdf-native').click();
+        await forget(true); await expectFreshMap();
+        assert.deepEqual(await cachedPairs(),{[pairA]:beforeForget[pairA]});
+        await page.reload(); await openScore('Piano B', true); await expectFreshMap();
+        assert.deepEqual((await scores()).find(s=>s.id===second.id).pdf,{...second.pdf,boxes:{}});
+        assert.deepEqual((await scores()).find(s=>s.id===first.id).pdf,corrected);
+        assert.equal(await assetCount(),1);
+        // Replace B's attachment with another valid PDF stream, then switch it back.
         const changedBytes = Buffer.concat([await fs.readFile(fixture('pdf')),Buffer.from('\n% Alternate edition\n')]);
         await attach({name:'alternate.pdf',mimeType:'application/pdf',buffer:changedBytes});
         await save();
@@ -245,7 +297,7 @@ async function main() {
         });
         assert.deepEqual(folderResult,[1,1,true]);
         assert.deepEqual(errors,[]);
-        console.log('Passed PDF save, autosave, reopen, playback, deduplication, backup, merge and last-reference deletion.');
+        console.log('Passed PDF save, autosave, pair-specific reset, reopen, playback, deduplication, backup, merge and last-reference deletion.');
     } catch (error) {
         console.error('Scores drawer:', await el('scores-panel').innerText(), errors);
         throw error;

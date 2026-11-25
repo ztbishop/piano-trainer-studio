@@ -12,6 +12,7 @@ The previously reproduced runtime defects FIX-001–FIX-007 have implementations
 
 ### Companion scores and practice workflows
 
+- [x] **Forget markings for one score/PDF pair.** The PDF menu clears the active pair’s boxes and repeat overrides and reopens the marking editor. [Workflow](COMPANION_PDF.md) · [Regression checks](DEVELOPMENT.md#companion-pdf-checks)
 - [x] **Full-height companion PDF reader.** Page navigation, notation, marking and repeat-visit selection are in Scores → PDF. The browser regression opens the editor on page two and checks the full reading area at desktop and phone widths. [Reader workflow](COMPANION_PDF.md)
 - [x] **Companion PDF with digital score.** Local MuseScore PDF/MIDI and MusicXML regression covers paired staves, a resting hand, editable boxes, range and single-visit corrections, an unmapped passage, second-pass seeking, loops and Wait grading. [Acceptance procedure](DEVELOPMENT.md#companion-pdf-checks)
 - [ ] **Owner acceptance.** Try a publisher's piano part with printed first and second endings and an imperfect scan. Check touch editing on iPad and play with physical MIDI. Review the extra suggested box in the three-measure Guitar Pro smoke fixture. [Observed results](DEVELOPMENT.md#companion-pdf-checks)

@@ -4,6 +4,8 @@ Open the digital score in **Scores**, then choose **PDF → Attach PDF** and sel
 
 A new score/PDF pair opens in **Mark measures** with a blank map. Drag a box around the first measure, covering both piano staves even when one hand rests. The measure selector advances after each box. Or choose **Find boxes in score** to review suggested boxes. Choose **Done marking** when you are ready to practice. Reattaching the same pair with saved boxes opens directly in reading view, even if you marked only part of the score.
 
+The browser remembers boxes and repeat assignments even for files opened directly from disk. To start over, choose **Scores → PDF → Forget markings…** and confirm the score and PDF names. The attached PDF opens in **Mark measures** on page one with empty boxes and the default written-measure numbering. If you opened a library entry with its saved PDF, the reset also saves to that entry. Other arrangements using the same PDF keep their markings.
+
 Click a box in reading view to pause and seek. The printed page fills the score pane. Open **Scores → PDF** to change **Page**, **Show notation**, or **Mark measures** on the page in view. When several score visits use the same box, the reader chooses the nearest visit allowed by the loop. **Score visit** in the same menu lets you choose another eligible pass. **Show PDF** returns from notation to the attached pages.
 
 ## Repeats and endings

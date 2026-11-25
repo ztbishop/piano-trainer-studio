@@ -260,6 +260,7 @@ If browser storage is unavailable, the app warns you and keeps preference change
 
 - **Current score** identifies the loaded song and whether it is saved, a demo, or temporary.
 - While reading a companion PDF, use **Scores → PDF** to change page, show notation, choose a repeat pass, or mark the page in view. **Done marking** returns the full score pane to the music.
+- The browser remembers measure markings even for files opened directly from disk. **Scores → PDF → Forget markings…** clears the boxes and custom repeat assignments for the open pair so you can draw or scan them again.
 - To **add or replace a PDF**, open the saved score from your library, choose **Scores → PDF → Attach PDF**, then reopen **Scores** and click **Save to Library**. This updates the existing entry. For a new score, the same save stores the score and PDF together. **Save a copy** creates a separate entry.
 - **Measure alignment edits save automatically** once the PDF is saved with the library score. You can draw or remove a box, move a barline, or change a repeat assignment and return to practice. If you use **Find boxes in score**, accept the suggestions with **Use score boxes** or **Save reviewed pages** to save those changes.
 - **Add File(s)** uses the selected folder (Unfiled from All Scores or Demo Scores), shows progress, skips exact saved duplicates, and reports individual failures while continuing the batch.

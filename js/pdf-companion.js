@@ -44,9 +44,12 @@ function initPdfCompanion() {
     attachStatus.textContent = text;
     attachStatus.hidden = !text;
   }
-  function saveBoxes() {
+  function saveBoxes({forgetLocal = false} = {}) {
     editRevision++;
-    if (key) appLocalStorage.setItem(key, JSON.stringify({boxes, mapping}));
+    if (key) {
+      if (forgetLocal) appLocalStorage.removeItem(key);
+      else appLocalStorage.setItem(key, JSON.stringify({boxes, mapping}));
+    }
     if (boundScoreId && AppState.currentScoreLibraryId === boundScoreId) {
       const version = generation, revision = editRevision;
       ScoreLibrary.updatePdfMapping(boundScoreId, attachedHash, structuredClone(boxes), mapping.slice()).then(updated => {
@@ -358,6 +361,7 @@ function initPdfCompanion() {
     native.inert = visible;
     musicArea.classList.toggle('reading-pdf', visible);
     byId('show').hidden = !pdf || visible;
+    byId('forget').hidden = !pdf;
     byId('reading-controls').hidden = !visible || editing;
     if (!pdf || !visits.length) return;
     const number = mapping[currentVisit];
@@ -532,6 +536,33 @@ function initPdfCompanion() {
     goPage(Number(pageSelect.value));
   };
   byId('remove').onclick = () => { delete boxes[measure.value]; saveBoxes(); paintBoxes(); sync(); };
+  byId('forget').onclick = () => {
+    if (!attachedFile) return;
+    const libraryNote = boundScoreId && boundScoreId === AppState.currentScoreLibraryId
+      ? ' This also resets the markings on this library entry.' : '';
+    if (!window.confirm('Forget all measure boxes and custom repeat mappings for “' +
+        AppState.currentScoreTitle + '” with “' + attachedFile.name + '”?' + libraryNote +
+        ' The PDF will stay attached.')) return;
+    hideToolbarPanels(true);
+    pausePlaybackFromToolbar();
+    boxes = {};
+    mapping = visits.map(visit => visit.measure);
+    saveBoxes({forgetLocal:true});
+    describeRangeChoices(0, visits.length - 1);
+    byId('from').value = byId('through').value = byId('first').value = '1';
+    measure.length = osmd.Sheet.SourceMeasures.length;
+    measure.value = '1';
+    reader.populate(boxes, boxElement, String);
+    loopKey = undefined;
+    if (!visible) savedScroll = musicArea.scrollTop;
+    visible = true;
+    musicArea.scrollTop = 0;
+    goPage(1, false);
+    setEditing(true);
+    sync();
+    scroll.scrollTo(0, 0);
+    mark.focus({preventScroll:true});
+  };
   byId('start-marking').onclick = () => {
     const viewedPage = page;
     hideToolbarPanels(true);
