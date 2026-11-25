@@ -31,4 +31,3 @@ state.run("appLocalStorage.setItem(PLAYER_PIANO_STORAGE_KEY,'61');appLocalStorag
 assert.equal(state.run('appLocalStorage.getItem(PLAYER_PIANO_STORAGE_KEY)'),'61');
 state.run("importSettingsBackupPayload({settings:{pt_appearance:'dark'}})");assert.equal(state.run("appLocalStorage.getItem('pt_appearance')"),'dark');
 console.log('Full preference initialization, blocked backup/import/reset, non-overwriting defaults and healthy settings import passed.');
-

@@ -363,17 +363,15 @@ Actively developed. Feedback and suggestions welcome.
 
 ## Development and New Chats
 
-- [AGENTS.md](AGENTS.md): project rules, strict regression protections, and suggested commit text for every update.
+- [AGENTS.md](AGENTS.md) covers project rules, regression checks, and the commit and push workflow.
 - [Project context](docs/PROJECT_CONTEXT.md): current capabilities, decisions, limitations, and future ideas.
 - [Architecture](docs/ARCHITECTURE.md): module ownership and data flow.
 - [Development and regression checks](docs/DEVELOPMENT.md): Live Server, Node launchers, testing, and version guidance.
 - [Historical development notes](docs/DEV_NOTES.md): past investigations and fixes.
 
-For a new Codex chat opened in this project:
+Start a new Codex chat in this project with the following prompt.
 
-> Read AGENTS.md and the relevant project documentation, check Git status, and help implement: [describe changes]. Preserve existing behavior except for the changes requested. Leave commits and pushes to me, and provide a suggested commit title and description.
-
-Keep current documentation updated when behavior or workflows change. Commits and pushes remain the project owner's responsibility.
+> Follow AGENTS.md, check Git status, and read the relevant project documentation. Help me implement [describe changes].
 
 ---
 

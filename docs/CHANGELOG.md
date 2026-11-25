@@ -1,5 +1,17 @@
 # Change history and future update records
 
+## 2026-11-25 — Piano Trainer Studio v1.4.0
+
+### What’s new since v1.3.1
+
+- **Realtime loop Speed Trainer.** Pick a measure range and build up to performance tempo. Set the starting speed, target, increment and number of complete passes per increase. The defaults give you two passes at 60%, then two at 65%, continuing to 100%. The count-in follows the new tempo, and practice continues at the target.
+- **Practice with a companion PDF.** Attach printed music to a digital score and follow the highlighted measure as you play. Scan all pages for measure boxes, preview and correct them before saving, or mark measures by hand. Map repeats and endings to their printed locations. Save the PDF and markings with the library score, carry them in backups, or clear the markings for one score/PDF pair.
+- **Expressive playback.** Turn on staccato, accents, written dynamics, crescendos and diminuendos for score playback. Try the eight-measure Expressive Playback Demo to hear the difference.
+- **Custom WLED colors.** Choose colors for each hand, black-key guidance, correct and wrong notes, and calibration. Edit colors with the picker, RGB or hex, and include the palette in settings backups.
+- **Score library and backups.** Search within a folder, open permanent Demo Scores, save a separate copy, download a saved score, or export one folder. Bulk import reports progress and skips exact duplicates. Backup restore previews matches, preserves intentional copies, and recovers more reliably from storage failures.
+- **Notation and practice fixes.** Feedback follows notes through zoom, resize and clef changes. Same-pitch unisons retain their separate notehead markers while receiving one score credit. Multi-segment ties sustain for their full written duration, and changing keyboard size refreshes the notes required at the cursor. Debug can compare feedback anchors with rendered noteheads.
+- **Appearance and local setup.** Choose Light, Soft Light or Dark. The desktop and Wi-Fi launchers use port 5500 by default. Settings shows the running version and links to the latest GitHub release.
+
 ## 2026-11-24 — Editable WLED colors
 
 Added a collapsed WLED palette editor for hand guidance, optional black keys, active/correct, wrong and calibration lights. The picker, RGB and hex fields share one saved value per color. Reset restores the original strip colors. Settings backups include the palette. The two existing brightness controls apply to custom colors. [Usage](MIDI_AUDIO_LED.md#optional-black-key-colors) · [Validation](DEVELOPMENT.md#black-key-led-color-checks)
@@ -190,7 +202,7 @@ For future work:
 1. Check Git status and inspect current code/docs.
 2. Make the requested focused change; update the relevant subsystem document.
 3. Run appropriate checks and record remaining browser/hardware acceptance honestly.
-4. Provide a suggested commit title and description. The user chooses when to commit, group related edits, bump release versions, tag, and push.
+4. Follow the [project instructions](../AGENTS.md) for commits, pushes and release authorization.
 
 Versions identify chosen releases; commits preserve implementation history. Detailed messages are useful, but old broad version-only messages do not erase their diffs. Do not rewrite old commits/tags to invent a finer history. `git log -- path`, `git show <commit> -- path`, and `git blame` can still investigate the recorded snapshots. Uncommitted/intermediate edits never saved in Git cannot be reconstructed reliably from version labels.
 

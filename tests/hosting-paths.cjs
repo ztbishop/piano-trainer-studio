@@ -1,6 +1,7 @@
 // Actual bootstrap and version display in isolated mocks; no browser data.
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const releaseVersion=JSON.parse(read('version.json')).version;
 const html=read('index.html'),bootstrap=html.match(/<script>([\s\S]*?)<\/script>/)[1],manifest=JSON.parse(read('site.webmanifest'));
 for(const href of ['http://127.0.0.1:5500/index.html','http://localhost:8080/','http://127.0.0.1:5500/nested/index.html','https://www.pianotrainerstudio.com/','https://ztbishop.github.io/piano-trainer-studio/']) {
  for(const response of [{version:'1.3.2'},{},null]) {
@@ -11,7 +12,7 @@ for(const href of ['http://127.0.0.1:5500/index.html','http://localhost:8080/','
   }};
   vm.runInNewContext(bootstrap,context);
   assert.equal(requests.length,1);assert.equal(requests[0].pathname,new URL('version.json',href).pathname);
-  assert.equal(context.window.__PT_ASSET_VERSION__,response?.version||'1.3.1');assert.equal(writes.length,3);
+  assert.equal(context.window.__PT_ASSET_VERSION__,response?.version||releaseVersion);assert.equal(writes.length,3);
   assert(writes.every(text=>text.includes('?v='+context.window.__PT_ASSET_VERSION__)));
  }
  const folder=new URL('./',href),manifestUrl=new URL('site.webmanifest',folder);
