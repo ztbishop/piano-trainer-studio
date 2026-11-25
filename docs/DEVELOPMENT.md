@@ -138,6 +138,8 @@ The test covers keyboard and pointer disclosure, desktop and phone layout, parti
 
 ## Companion PDF checks
 
+After the scan, the browser regression checks the numbered draft on both pages, scrolls to the second page before saving, and verifies the numbering on both pages after a first-page correction. One acceptance returns to the full-height reader. A separate Chrome check with the Arirang Fantasy MIDI and eight-page TAB PDF started the scan from page eight, previewed 145 boxes and accepted them in one action in an isolated profile.
+
 The library PDF browser regression exercises **Forget markings** on a MIDI/PDF pair opened from disk, checks cancellation, reloads the blank editor, and rescans. With two saved arrangements sharing one PDF, it resets one from notation view and verifies the other arrangement’s saved and cached markings and the shared PDF survive.
 
 The menu regression checks that the PDF viewport fills the score pane at 1160 and 390 CSS pixels, opens page two from Scores → PDF, marks the page in view and returns to reading. It also exercises repeat-visit selection through the menu and full-height reading after whole-score acceptance.

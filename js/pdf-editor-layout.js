@@ -14,6 +14,7 @@ export function mountPdfEditor(view) {
               </select></label>
               <label id="pdf-replace-label" hidden><input id="pdf-replace" type="checkbox"> Replace saved boxes on this page</label>
               <button id="pdf-use-score" type="button" hidden>Use score boxes</button>
+              <button id="pdf-correct-page" type="button" hidden>Correct this page</button>
               <button id="pdf-use" type="button">Use page boxes</button><button id="pdf-cancel" type="button">Cancel</button></span></span>
           </div>
           <details id="pdf-order"><summary>Map repeats and endings</summary>

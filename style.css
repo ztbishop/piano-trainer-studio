@@ -5330,6 +5330,12 @@ body > .toolbar-popup, #practice-popup, #options-overlay {
 #pdf-sheet, #pdf-boxes, .pdf-boxes { position: absolute; inset: 0; }
 #pdf-boxes, .pdf-boxes { pointer-events: none; }
 #pdf-pages.marking .pdf-boxes { display: none; }
+#pdf-pages.marking.score-preview .pdf-boxes { display: block; }
+.score-preview .pdf-box > span {
+    position: absolute; top: 0; left: 0; transform: translateY(-75%);
+    padding: 0 3px; border: 1px solid #2563a8; border-radius: 3px;
+    color: #123653; background: white; line-height: 1.2;
+}
 #pdf-sheet.mapping { cursor: crosshair; touch-action: none; user-select: none; }
 .pdf-box { position: absolute; box-sizing: border-box; border: 2px dashed #2563a8; color: #123653; font: bold .8rem sans-serif; }
 .pdf-box.current { border: 2px solid #1474bb; background: rgb(61 164 226 / 23%); }

@@ -34,9 +34,12 @@ export function replacePageBoxes(saved,page,numbers,proposals) {
 // Adapted from Guitar Trainer 85803aa. Build the entire candidate before
 // saving. Protected numbers on the same page keep their original geometry.
 export function addScoreBoxes(saved, first, proposals, writtenCount) {
+  return appendScoreBoxes({...saved}, first, proposals, writtenCount);
+}
+
+function appendScoreBoxes(boxes, first, proposals, writtenCount) {
   if (!Number.isInteger(first) || first < 1 || first + proposals.length - 1 > writtenCount)
     return {error: 'The proposed numbering goes past the last written measure (' + writtenCount + ').'};
-  const boxes = {...saved};
   for (const [i, box] of proposals.entries()) {
     const number = first + i;
     if (boxes[number] && boxes[number].page !== box.page) {
@@ -46,4 +49,27 @@ export function addScoreBoxes(saved, first, proposals, writtenCount) {
     boxes[number] ??= box;
   }
   return {boxes};
+}
+
+// Number the entire draft in print order. Only an explicit first-number edit
+// pins a page; otherwise corrections flow through all subsequent pages.
+export function planScoreBoxes(pages, protectedBoxes, starts, writtenCount) {
+  const boxes = {...protectedBoxes}, firsts = [];
+  const preview = pages.map(() => new Map());
+  for (const [n, box] of Object.entries(protectedBoxes)) preview[box.page-1].set(Number(n), box);
+  let next = 1, error = '';
+  for (const [i, proposals] of pages.entries()) {
+    const first = starts[i] ?? next;
+    firsts.push(first);
+    next = first + proposals.length;
+    for (const [j, box] of proposals.entries()) {
+      const n = first + j;
+      if (!preview[i].has(n)) preview[i].set(n, box);
+    }
+    if (!error && proposals.length) {
+      const result = appendScoreBoxes(boxes, first, proposals, writtenCount);
+      if (result.error) error = 'Page ' + (i + 1) + ': ' + result.error;
+    }
+  }
+  return {firsts, preview, boxes, error};
 }

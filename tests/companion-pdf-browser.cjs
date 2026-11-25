@@ -95,6 +95,24 @@ async function main() {
         await expectBlankEditor();
         assert.equal(await savedMap(), null);
         await scanFromPageTwo();
+        const previewNumbers = () => page.locator('.pdf-reading-page').evaluateAll(pages =>
+            pages.map(p => [...p.querySelectorAll('.pdf-boxes .pdf-box')].map(b => Number(b.textContent))));
+        assert.deepEqual(await previewNumbers(), [[1,2],[3,4]]);
+        assert.equal(await el('pdf-sheet').isVisible(), false);
+        await page.locator('.pdf-reading-page[data-page="2"] .pdf-boxes .pdf-box').first().scrollIntoViewIfNeeded();
+        await page.waitForFunction(()=>document.querySelector('#pdf-page').value==='2');
+        assert.equal(await savedMap(), null);
+        // Edit the later page first. Its explicit numbering survives an earlier correction.
+        await el('pdf-correct-page').click();
+        await el('pdf-measure').selectOption('4');
+        await el('pdf-page').selectOption('1');
+        await correctProposal(1, 'remove');
+        await el('pdf-use').click();
+        assert.deepEqual(await previewNumbers(), [[1],[4,5]]);
+        await el('pdf-cancel').click();
+        assert.equal(await savedMap(), null);
+        await scanFromPageTwo();
+        assert.deepEqual(await previewNumbers(), [[1,2],[3,4]]);
         await el('pdf-use-score').click();
         console.log('MIDI import and PDF box geometry', await page.evaluate(() => ({
             measures: osmd.Sheet.SourceMeasures.length, visits: document.querySelector('#pdf-from').length,
@@ -137,12 +155,17 @@ async function main() {
         const accept = await el('pdf-use-score').boundingBox();
         assert(accept.x >= 0 && accept.x + accept.width <= 390);
         assert((await el('pdf-scroll').boundingBox()).height > 80);
+        if (process.env.PT_TEST_SCREENSHOTS) await page.screenshot({path:path.join(process.env.PT_TEST_SCREENSHOTS,'pt-whole-score-phone.png')});
         await page.setViewportSize({width:1160,height:800});
+        await el('pdf-correct-page').click();
         await correctProposal(1, 'remove');
         await el('pdf-use').click();
-        assert.equal(await el('pdf-page').inputValue(), '2');
+        assert.deepEqual(await previewNumbers(), [[1],[2,3]]);
+        await el('pdf-page').selectOption('2');
+        await el('pdf-correct-page').click();
         assert.equal(await el('pdf-measure').inputValue(), '2');
         await el('pdf-use').click();
+        await el('pdf-use-score').click();
         const corrected = await savedMap();
         assert.deepEqual(Object.values(corrected.boxes).map(b => b.page), [1,2,2]);
         await page.reload();
@@ -182,12 +205,15 @@ async function main() {
         await el('pdf-use').click();
         assert.deepEqual(await savedMap(), handMarked);
         await scanFromPageTwo();
+        await el('pdf-correct-page').click();
         await correctProposal(0, 'join');
         assert.equal(await el('pdf-use-score').isDisabled(), true);
         assert.match(await el('pdf-status').textContent(), /Measure 2 belongs to page 1.*page 2/);
         await el('pdf-use').click();
+        await el('pdf-page').selectOption('2');
+        await el('pdf-correct-page').click();
         assert.equal(await el('pdf-measure').inputValue(), '2');
-        assert.equal(await el('pdf-use').isDisabled(), true);
+        assert.equal(await el('pdf-use-score').isDisabled(), true);
         assert.deepEqual(await savedMap(), handMarked);
         await el('pdf-cancel').click();
         await scanFromPageTwo();
@@ -343,6 +369,7 @@ async function main() {
         await openPdfMenu(page);
         await el('pdf-start-marking').click();
         await scanFromPageTwo();
+        await el('pdf-correct-page').click();
         await el('pdf-measure').selectOption('2');
         assert.equal(await el('pdf-use-score').isDisabled(), true);
         assert.match(await el('pdf-status').textContent(), /last written measure \(4\)/);

@@ -87,6 +87,18 @@ export function readingPages(scroll, root, onJump, onPage, onError) {
     if (rect.left < frame.left || rect.right > frame.right) scroll.scrollLeft += rect.left-frame.left-8;
     onPage(Number(el.closest('[data-page]').dataset.page));
   }
+  function preview(entries, makeBox) {
+    targets.clear();
+    pages.forEach((p,i) => {
+      p.layer.replaceChildren(...Array.from(entries[i] || [], ([number,box]) => {
+        const el = makeBox(box);
+        const label = document.createElement('span');
+        label.textContent = number;
+        el.append(label);
+        return el;
+      }));
+    });
+  }
   function update(number, loop, reveal) {
     targets.get(active)?.classList.remove('current');
     targets.get(number)?.classList.add('current');
@@ -112,5 +124,5 @@ export function readingPages(scroll, root, onJump, onPage, onError) {
   function placeEditor(number, sheet) {
     pages[number-1]?.node.append(sheet);
   }
-  return {clear, load, resize, populate, update, jump, placeEditor};
+  return {clear, load, resize, populate, preview, update, jump, placeEditor};
 }

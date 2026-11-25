@@ -1,7 +1,7 @@
 // PDF reader and box editor adapted from Guitar Trainer Studio 1e68d3, 2026-11-24.
 // AGPL-3.0. See LICENSE and docs/COMPANION_PDF.md.
 import {scoreVisits, visitIndex, mapVisitRange} from './pdf-visits.js';
-import {editPageBoxes, replacePageBoxes, addScoreBoxes} from './pdf-box-review.js';
+import {editPageBoxes, replacePageBoxes, addScoreBoxes, planScoreBoxes} from './pdf-box-review.js';
 import {barlineHandle} from './pdf-barline-controls.js';
 import {mountPdfEditor} from './pdf-editor-layout.js';
 import {readingPages} from './pdf-reading-pages.js';
@@ -31,6 +31,7 @@ function initPdfCompanion() {
   const pagesRoot=byId('pages');
   const reader=readingPages(scroll,pagesRoot,jumpToMeasure,number=>{
     if(number===page || !visible || view.hidden)return;
+    if (scoreReview && !proposals) { page=number; pageSelect.value=String(number); return; }
     if(editing){
       if(!proposals && !drag && !find.disabled && !sheet.querySelector(':active'))goPage(number,false);
     } else {page=number;pageSelect.value=String(number);}
@@ -88,8 +89,9 @@ function initPdfCompanion() {
       return;
     }
     overlay.replaceChildren();
+    if (scoreReview && !proposals) return;
     const selected = Number(measure.value);
-    const first = scoreReview ? reviewFirstNumber() : selected;
+    const first = scoreReview ? scoreReview.plan.firsts[page-1] : selected;
     const entries = proposals ? proposals.map((box,i)=>[first+i,box]) : Object.entries(boxes);
     let previous=null;
     for (const [i,[number, box]] of entries.entries()) {
@@ -111,7 +113,7 @@ function initPdfCompanion() {
           }
           // Refresh the limits of the handles on either side of this pair.
           const refocus=document.activeElement===handle;
-          paintBoxes();
+          if (scoreReview) describeReview(); else paintBoxes();
           if(refocus)overlay.querySelector('[data-boundary="'+i+'"]')?.focus({preventScroll:true});
         });
         if(handle){handle.dataset.boundary=i;overlay.append(handle);}
@@ -187,16 +189,28 @@ function initPdfCompanion() {
     byId('first').value = mapping[Number(byId('from').value) - 1] || 1;
   };
   function reviewControls() {
-    byId('review').hidden=!proposals;
-    pageSelect.disabled=!!scoreReview;
-    find.hidden=!!proposals;
-    findPage.hidden=!!proposals;
+    const reviewing = !!(scoreReview || proposals);
+    const overview = !!scoreReview && !proposals;
+    byId('review').hidden=!reviewing;
+    find.hidden=findPage.hidden=byId('remove').hidden=reviewing;
     useScore.hidden=!scoreReview;
-    byId('remove').hidden=!!proposals;
+    byId('correct-page').hidden=!overview;
+    byId('use').hidden=overview;
+    byId('use').textContent = scoreReview ? 'Review whole score' : 'Use page boxes';
+    measure.closest('label').hidden=action.closest('label').hidden=overview;
+    mark.hidden=byId('order').hidden=!!scoreReview;
+    sheet.hidden=!editing || overview;
+    pagesRoot.classList.toggle('score-preview',overview);
     byId('number-label').textContent=proposals?'First measure':'Measure';
-    byId('use').textContent = scoreReview ? (page < pdf.numPages ? 'Review next page' : 'Save reviewed pages') : 'Use page boxes';
   }
   function endReview() {
+    if (scoreReview) {
+      reader.preview([],boxElement);
+      if (editing) {
+        reader.placeEditor(page,sheet);
+        selectPageMeasure(page);
+      }
+    }
     scanVersion++; proposals=null; scoreReview=null; find.disabled=findPage.disabled=false;replace.checked=false;
     reviewControls();
   }
@@ -205,12 +219,20 @@ function initPdfCompanion() {
     const instructions={draw:'Drag a blue divider to adjust two neighboring boxes. Drag in blank space to add a box or inside a box to redraw it.',
       split:'Click the missing barline inside a box.',join:'Click the first of two boxes on the same line.',remove:'Click the extra box.'};
     if (scoreReview) {
-      const here = reviewMapping(false), all = reviewMapping(true);
-      byId('use').disabled = !!here.error;
-      useScore.disabled = !!all.error;
-      const detail = here.error || all.error || '';
-      message('Page ' + page + ' of ' + pdf.numPages + ' · ' + proposals.length + ' proposed boxes. ' +
-        (detail ? detail + ' ' : '') + instructions[action.value]);
+      const {pages, protectedBoxes, starts} = scoreReview;
+      const plan = planScoreBoxes(pages, protectedBoxes, starts, osmd.Sheet.SourceMeasures.length);
+      scoreReview.plan = plan;
+      useScore.disabled = !!plan.error;
+      byId('use').disabled = false;
+      if (proposals) {
+        measure.value = String(plan.firsts[page-1]);
+        message('Page ' + page + ' of ' + pdf.numPages + '. ' + (plan.error || instructions[action.value]));
+      } else {
+        reader.preview(plan.preview,boxElement);
+        const count = plan.preview.reduce((sum, entries) => sum + entries.size, 0);
+        message(count + ' measure boxes across ' + pdf.numPages + ' pages. ' +
+          (plan.error || 'Scroll through the score, then choose Use score boxes.'));
+      }
     } else {
       const result = addScoreBoxes(boxes, Number(measure.value), proposals, measure.length);
       byId('use').disabled = !proposals.length || !!result.error;
@@ -218,37 +240,19 @@ function initPdfCompanion() {
     }
     paintBoxes();
   }
-  function reviewMapping(includeRemaining) {
-    const pending = includeRemaining ? proposals.concat(scoreReview.pages.slice(page).flat()) : proposals;
-    return addScoreBoxes(scoreReview.draft, reviewFirstNumber(), pending, osmd.Sheet.SourceMeasures.length);
-  }
-  function reviewFirstNumber() {
-    return measure.value ? Number(measure.value) : scoreReview.first;
-  }
-  function showScorePage(review, number, first) {
-    goPage(number);
-    scoreReview = review;
-    review.first = first;
-    proposals = review.pages[number - 1];
-    measure.value = String(first);
-    byId('replace-label').hidden = true;
-    replace.checked = false;
+  byId('correct-page').onclick = () => {
+    proposals = scoreReview.pages[page-1];
+    reader.placeEditor(page,sheet);
     action.value = 'draw';
     describeReview();
-  }
-  function acceptScoreReview(includeRemaining) {
-    const result = reviewMapping(includeRemaining);
-    if (result.error) { describeReview(); return; }
-    if (!includeRemaining && page < pdf.numPages) {
-      scoreReview.draft = result.boxes;
-      showScorePage(scoreReview, page + 1, reviewFirstNumber() + proposals.length);
-      return;
-    }
-    boxes = result.boxes;
+    action.focus({preventScroll:true});
+  };
+  useScore.onclick = () => {
+    if (!scoreReview || scoreReview.plan.error) return;
+    boxes = scoreReview.plan.boxes;
     saveBoxes();
     finishMarking();
-  }
-  useScore.onclick = () => acceptScoreReview(true);
+  };
   async function scan(wholeScore) {
     const version=++scanVersion;
     find.disabled=findPage.disabled=true;message('Finding measure boxes…');
@@ -264,8 +268,11 @@ function initPdfCompanion() {
           return;
         }
         // Older saved maps have no origin flag. Preserve them like hand marks.
-        const draft = Object.fromEntries(Object.entries(boxes).filter(([,box]) => box.automatic !== true));
-        showScorePage({pages, draft}, 1, 1);
+        const protectedBoxes = Object.fromEntries(Object.entries(boxes).filter(([,box]) => box.automatic !== true));
+        goPage(1);
+        scoreReview = {pages, protectedBoxes, starts:[]};
+        byId('replace-label').hidden = true;
+        describeReview();
         return;
       }
       const pdfPage=await pdf.getPage(page);
@@ -285,7 +292,12 @@ function initPdfCompanion() {
   action.onchange=replace.onchange=describeReview;
   byId('use').onclick=()=>{
     if(!proposals || byId('use').disabled)return;
-    if (scoreReview) { acceptScoreReview(false); return; }
+    if (scoreReview) {
+      proposals=null;
+      describeReview();
+      byId('correct-page').focus({preventScroll:true});
+      return;
+    }
     const count=proposals.length, first=measure.selectedIndex;
     const replacing=replace.checked;
     let added=0;
@@ -319,6 +331,18 @@ function initPdfCompanion() {
     if (first <= measure.length) measure.value = String(first);
   }
   function goPage(number, scrollToPage=true) {
+    if (scoreReview) {
+      cancelDrag();
+      page = number;
+      pageSelect.value = String(page);
+      if (proposals) {
+        proposals = scoreReview.pages[page-1];
+        reader.placeEditor(page,sheet);
+        describeReview();
+      }
+      if (scrollToPage) reader.jump(page);
+      return;
+    }
     if(page!==number) {
       endReview();cancelDrag();message('');
       byId('position').hidden=true;
@@ -498,7 +522,7 @@ function initPdfCompanion() {
   }
   sheet.onpointerdown=startBox;
   pagesRoot.addEventListener('pointerdown',event=>{
-    if(!editing || sheet.contains(event.target) || event.button!==0 || !event.isPrimary)return;
+    if(!editing || scoreReview || sheet.contains(event.target) || event.button!==0 || !event.isPrimary)return;
     const number=Number(event.target.closest('[data-page]')?.dataset.page);
     if(!number || number===page || proposals || drag || find.disabled)return;
     goPage(number,false);
@@ -517,6 +541,7 @@ function initPdfCompanion() {
     cancelDrag();
     if(proposals) {
       proposals=editPageBoxes(proposals,hit,action.value,end.x,box);
+      if(scoreReview) scoreReview.pages[page-1]=proposals;
       describeReview();return;
     }
     if (!box) return;
@@ -526,7 +551,10 @@ function initPdfCompanion() {
     paintBoxes(); sync();
   };
   sheet.onlostpointercapture = sheet.onpointercancel = cancelDrag;
-  measure.onchange = () => { if(proposals){describeReview();return;}
+  measure.onchange = () => { if(proposals){
+    if(scoreReview) scoreReview.starts[page-1]=Number(measure.value);
+    describeReview();return;
+  }
     const selected=measure.value;
     if (boxes[selected]) goPage(boxes[selected].page);
     measure.value=selected;paintBoxes();

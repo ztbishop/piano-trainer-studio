@@ -23,7 +23,9 @@ For the included study, the PDF shows four measures and the MIDI plays six. The 
 
 ## Correct the printed boxes
 
-Choose **Mark measures → Find boxes in score** from any page. The scan starts at page one and processes one page at a time in printed order. Choose **Use score boxes** to accept the set. To correct a page, redraw, split, join or remove its proposed boxes, then choose **Review next page**. Its first measure number follows the count you just approved. You can adjust **First measure** on each page. **Use score boxes** also accepts the remaining pages, and **Save reviewed pages** finishes on the last page. **Cancel** discards the draft, including earlier pages in this review.
+Choose **Mark measures → Find boxes in score** from any page. The scan starts at page one and previews numbered boxes across the entire PDF. Scroll freely or use **Page** to jump. When the boxes look right, choose **Use score boxes** once to save the whole score.
+
+To fix a spot, navigate to it and choose **Correct this page**. Draw, split, join or remove a box, then choose **Review whole score** to see the result. Later pages renumber automatically unless you explicitly set their **First measure**. You can revisit pages in any order. **Cancel** discards the entire scan draft.
 
 A rescan keeps hand-drawn boxes, adjusted dividers and boxes from older saved mappings. The editor flags a number claimed by two pages or numbering past the last written digital measure and blocks saving until you resolve it. Repeat and ending assignments survive a rescan.
 
