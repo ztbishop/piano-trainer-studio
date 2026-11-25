@@ -210,6 +210,8 @@ Historical score examples in `DEV_NOTES.md` include Mozart Fantasy in D minor K.
 
 ## Black-key LED color checks
 
+The November 24 palette editor extends the isolated browser diagnostic to 226 checks. It exercises picker, hex and RGB changes, invalid RGB recovery, custom scaled frames, optional black-key inheritance, palette reset and a custom settings round trip. The checks passed with the existing LED, settings-backup, storage-unavailable, keyboard-range and numeric-controls Node suites. The expanded editor was inspected at 1100 and 390 pixels, including typed hex entry on the phone layout. Physical strip color and brightness acceptance remains pending.
+
 Run `node tests/led-colors.cjs` with settings-backup, storage-unavailable, keyboard-range and numeric-controls. The isolated LED suite executes the actual palette/frame/preference functions across all 88 pitches, output modes and on/off states, preserving non-guidance colors, brightness multiplication, desired-state identity and backup/legacy/reset behavior. No native browser storage or hardware is used.
 
 Open `docs/diagnostics/led-colors.html` on the existing server, load the isolated app and run color checks. It installs memory-only preferences, blocks IndexedDB/MIDI and external fetches, omits analytics and suppresses WLED queue output. Bundled Moonlight Sonata supplies actual OSMD targets; stationary Realtime/Wait/Follow comparisons check identical targets, cursor, score, virtual-key styles and engraving paths while palette behavior changes. Backup restore, old-backup defaults and in-session Reset All Settings are exercised. Use Desktop/Phone width and the real Settings checkbox to inspect layout and interaction; Inspect preference displays only the isolated setting.

@@ -1,5 +1,9 @@
 # Change history and future update records
 
+## 2026-11-24 — Editable WLED colors
+
+Added a collapsed WLED palette editor for hand guidance, optional black keys, active/correct, wrong and calibration lights. The picker, RGB and hex fields share one saved value per color. Reset restores the original strip colors. Settings backups include the palette. The two existing brightness controls apply to custom colors. [Usage](MIDI_AUDIO_LED.md#optional-black-key-colors) · [Validation](DEVELOPMENT.md#black-key-led-color-checks)
+
 ## 2026-11-24 — Realtime loop Speed Trainer
 
 Added Guitar Trainer's collapsible Speed Trainer to the Loop menu. It increases speed after complete passes, applies the next tempo before loop count-in, and keeps the current speed when ended. [Practice instructions and upstream credit](PRACTICE_ENGINE.md#speed-trainer) · [Regression procedure](DEVELOPMENT.md#speed-trainer-checks)

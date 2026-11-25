@@ -569,11 +569,93 @@ function normalizeLedOutputMode(value) {
     return ['none', 'midi', 'wled'].includes(value) ? value : 'none';
 }
 
+const ledPaletteLabels = {
+    left: 'Left hand', right: 'Right hand', blackLeft: 'Left hand · black keys',
+    blackRight: 'Right hand · black keys', active: 'Active / correct note',
+    wrong: 'Wrong note', calibration: 'Calibration'
+};
+
+function ledHexToRgb(hex) {
+    return hex.slice(1).match(/../g).map(channel => parseInt(channel, 16));
+}
+
+function ledPaletteRgb(palette) {
+    return Object.fromEntries(Object.entries(palette).map(([role, hex]) => [role, ledHexToRgb(hex)]));
+}
+
+let ledPalette = { ...DEFAULT_LED_PALETTE };
+const defaultLedRgb = ledPaletteRgb(DEFAULT_LED_PALETTE);
+let currentLedRgb = defaultLedRgb;
+
+function applyLedPalette(palette, { save = true, redraw = true } = {}) {
+    ledPalette = palette;
+    currentLedRgb = ledPaletteRgb(palette);
+    if (save) appLocalStorage.setItem(LED_PALETTE_STORAGE_KEY, JSON.stringify(palette));
+    syncLedPaletteEditor();
+    if (redraw) renderVirtualKeyboard();
+}
+
+function syncLedPaletteEditor() {
+    const rows = document.getElementById('led-palette-rows');
+    if (!rows) return;
+    for (const row of rows.children) {
+        const role = row.dataset.role;
+        row.hidden = !AppState.ledBlackKeyColors && (role === 'blackLeft' || role === 'blackRight');
+        const [picker, hex, rgb] = row.querySelectorAll('input');
+        picker.value = ledPalette[role];
+        hex.value = ledPalette[role];
+        rgb.value = currentLedRgb[role].join(', ');
+    }
+}
+
+function initLedPaletteEditor() {
+    const rows = document.getElementById('led-palette-rows');
+    if (!rows) return;
+    if (!rows.children.length) {
+        for (const [role, name] of Object.entries(ledPaletteLabels)) {
+            const row = document.createElement('div');
+            row.className = 'palette-row';
+            row.dataset.role = role;
+            row.innerHTML = `<span class="palette-name">${name}</span>
+                <label>Color<input type="color" aria-label="${name} color"></label>
+                <label>Hex<input type="text" spellcheck="false" aria-label="${name} hex"></label>
+                <label>RGB<input type="text" spellcheck="false" aria-label="${name} RGB"></label>`;
+            const [picker, hex, rgb] = row.querySelectorAll('input');
+            function commitColor(value) {
+                applyLedPalette({ ...ledPalette, [role]: value.toUpperCase() });
+            }
+            picker.addEventListener('input', () => commitColor(picker.value));
+            picker.addEventListener('change', () => commitColor(picker.value));
+            hex.addEventListener('change', () => {
+                const match = /^#?([0-9a-f]{6})$/i.exec(hex.value.trim());
+                if (match) commitColor('#' + match[1]);
+                else syncLedPaletteEditor();
+            });
+            rgb.addEventListener('change', () => {
+                const channels = rgb.value.split(',').map(channel => channel.trim());
+                if (channels.length === 3 && channels.every(c => /^\d{1,3}$/.test(c) && Number(c) <= 255)) {
+                    commitColor('#' + channels.map(c => Number(c).toString(16).padStart(2, '0')).join(''));
+                } else syncLedPaletteEditor();
+            });
+            rows.appendChild(row);
+        }
+        document.getElementById('btn-reset-led-palette').addEventListener('click', () => applyLedPalette({ ...DEFAULT_LED_PALETTE }));
+    }
+    let palette = DEFAULT_LED_PALETTE;
+    const saved = appLocalStorage.getItem(LED_PALETTE_STORAGE_KEY);
+    if (saved !== null) {
+        try { palette = parseLedPalette(saved); }
+        catch { /* Use the original colors if the local preference is damaged. */ }
+    }
+    applyLedPalette(palette, { save: false, redraw: false });
+}
+
 function setLedBlackKeyColors(value, { save = true, rerender = true } = {}) {
     AppState.ledBlackKeyColors = !!value;
     if (save) setStoredBool(LED_BLACK_KEY_COLORS_STORAGE_KEY, AppState.ledBlackKeyColors);
     const checkbox = document.getElementById('check-led-black-key-colors');
     if (checkbox) checkbox.checked = AppState.ledBlackKeyColors;
+    syncLedPaletteEditor();
     WLEDController.clearLastSignature();
     if (rerender) renderVirtualKeyboard();
 }
@@ -965,6 +1047,7 @@ function initLedOutputControls() {
     AppState.wledHelperAvailable = false;
     AppState.wledHelperStatus = 'Helper: Not detected.';
     AppState.wledDdpDebugEnabled = getStoredBool(WLED_DDP_DEBUG_STORAGE_KEY, false);
+    initLedPaletteEditor();
     setLedBlackKeyColors(getStoredBool(LED_BLACK_KEY_COLORS_STORAGE_KEY, false), { save: false, rerender: false });
 
     const modeSelect = document.getElementById('led-output-mode');
@@ -1287,51 +1370,24 @@ const LedEngine = {
     return Math.max(1, Math.min(127, Math.round(127 * multiplier)));
   },
 
-  // Physical pitch classes, independent of the score's sharp/flat spelling.
-  blackKeyColors: { left: [96, 0, 255], right: [0, 255, 128] },
-
   getColorForState(state, midiNote) {
-    if (AppState.ledOutputMode === 'wled' && AppState.ledBlackKeyColors &&
-        Number.isInteger(midiNote) && [1, 3, 6, 8, 10].includes(midiNote % 12)) {
-      if (state === 'expected-l' || state === 'future1-l' || state === 'future2-l') return this.blackKeyColors.left;
-      if (state === 'expected-r' || state === 'future1-r' || state === 'future2-r') return this.blackKeyColors.right;
-    }
+    const wled = AppState.ledOutputMode === 'wled';
+    const colors = wled ? currentLedRgb : defaultLedRgb;
+    const black = wled && AppState.ledBlackKeyColors && [1, 3, 6, 8, 10].includes(midiNote % 12);
     switch (state) {
       case 'expected-l':
-        return [0, 0, 255];
-
-      case 'expected-r':
-        return [0, 255, 0];
-
-      case 'pressed-l':
-        return [185, 130, 25];
-
-      case 'pressed-r':
-        return [185, 130, 25];
-
-      case 'wrong':
-        return [255, 0, 0];
-
-      case 'active':
-        return [185, 130, 25];
-
       case 'future1-l':
-        return [0, 0, 255];
-
+      case 'future2-l': return black ? colors.blackLeft : colors.left;
+      case 'expected-r':
       case 'future1-r':
-        return [0, 255, 0];
-
-      case 'future2-l':
-        return [0, 0, 255];
-
-      case 'future2-r':
-        return [0, 255, 0];
-
-      case 'calibration':
-        return [255, 255, 255];
+      case 'future2-r': return black ? colors.blackRight : colors.right;
+      case 'active':
+      case 'pressed-l':
+      case 'pressed-r': return colors.active;
+      case 'wrong': return colors.wrong;
+      case 'calibration': return colors.calibration;
+      default: return [0, 0, 0];
     }
-
-    return [0, 0, 0];
   },
 
   renderFromStates(desiredStates) {

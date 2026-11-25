@@ -136,6 +136,24 @@ const LED_COUNT_STORAGE_KEY = 'pt_ledCount';
 const LED_OUTPUT_MODE_STORAGE_KEY = 'pt_ledOutputMode';
 const LED_REVERSE_STORAGE_KEY = 'pt_ledReverse';
 const LED_BLACK_KEY_COLORS_STORAGE_KEY = 'pt_ledBlackKeyColors';
+const LED_PALETTE_STORAGE_KEY = 'pt_ledPalette';
+const DEFAULT_LED_PALETTE = Object.freeze({
+    left: '#0000FF', right: '#00FF00', blackLeft: '#6000FF', blackRight: '#00FF80',
+    active: '#B98219', wrong: '#FF0000', calibration: '#FFFFFF'
+});
+
+function parseLedPalette(raw) {
+    const colors = JSON.parse(raw);
+    if (!colors || typeof colors !== 'object' || Array.isArray(colors)) throw Error('Invalid LED palette');
+    const palette = { ...DEFAULT_LED_PALETTE };
+    for (const [key, value] of Object.entries(colors)) {
+        if (!Object.hasOwn(palette, key) || typeof value !== 'string' || !/^#[0-9a-f]{6}$/i.test(value)) {
+            throw Error('Expected a six-digit hex value for each LED color');
+        }
+        palette[key] = value.toUpperCase();
+    }
+    return palette;
+}
 const WLED_IP_STORAGE_KEY = 'pt_wledIp';
 const WLED_TRANSPORT_STORAGE_KEY = 'pt_wledTransport';
 const WLED_TRANSPORT_WARNING_ACCEPTED_STORAGE_KEY = 'pt_wledTransportWarningAccepted';
@@ -252,6 +270,7 @@ const RESETTABLE_PREFERENCE_KEYS = [
     LED_OUTPUT_MODE_STORAGE_KEY,
     LED_REVERSE_STORAGE_KEY,
     LED_BLACK_KEY_COLORS_STORAGE_KEY,
+    LED_PALETTE_STORAGE_KEY,
     WLED_IP_STORAGE_KEY,
     WLED_TRANSPORT_STORAGE_KEY,
     WLED_TRANSPORT_WARNING_ACCEPTED_STORAGE_KEY,
@@ -444,6 +463,9 @@ function validateSettingsBackupPayload(payload) {
         } else if (booleans.includes(key)) {
             if (![true, false, 'true', 'false'].includes(value)) invalid(key, 'expected true or false');
             normalized[key] = String(value);
+        } else if (key === LED_PALETTE_STORAGE_KEY) {
+            try { normalized[key] = JSON.stringify(parseLedPalette(value)); }
+            catch { invalid(key, 'expected a palette of six-digit hex colors'); }
         } else if (key === LED_CALIBRATION_STORAGE_KEY) {
             const parsed = jsonObject(value, key), calibration = {};
             for (const [midi, offset] of Object.entries(parsed)) {

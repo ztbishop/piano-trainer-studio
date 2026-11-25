@@ -5,6 +5,7 @@ function runSettingsBackupValidationChecks(api) {
     const assignmentKey = 'pt_handAssignment_v1_' + 'a'.repeat(32);
     const assignment = {mode:'voice',staff:{1:'right',2:'left'},voice:{'["P1","1"]':'accompaniment'},playAccompaniment:false};
     const values = {
+        pt_ledPalette: JSON.stringify({ left: '#884422' }),
         pt_appearance:'soft-light',pt_playerPianoType:61,pt_savedMidiInName:'Old keyboard',pt_savedMidiOutName:'Piano',pt_savedMidiLightsName:'Lights',
         pt_savedMidiIn:'input-id',pt_savedMidiOut:'output-id',pt_savedMidiLights:'light-id',pt_wledIp:'piano.local',
         pt_ledOutputMode:'midi',pt_wledTransport:'http-json',pt_trainerMode:'follow',pt_wledTransportWarningAccepted:'1',

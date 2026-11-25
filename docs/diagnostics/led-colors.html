@@ -42,6 +42,44 @@ document.getElementById('checks').onclick=()=>runInApp(async function(){
  for(const mode of ['none','midi','wled']){AppState.ledOutputMode=mode;syncLedOutputModeControls();check(document.getElementById('led-color-settings').classList.contains('hidden')===(mode!=='wled'),'WLED-only visibility');}
  WLEDController.queueFrame=()=>{}; // Capture framebuffer only; no helper/strip output.
  AppState.ledOutputMode='wled';setLedMasterBrightness(100);setLedFuture1BrightnessPct(10);
+ const editor=document.getElementById('led-palette-editor');
+ const row=role=>editor.querySelector('[data-role="'+role+'"]');
+ const edit=(role,index,value,event='change')=>{
+   const input=row(role).querySelectorAll('input')[index];
+   input.value=value;
+   input.dispatchEvent(new Event(event,{bubbles:true}));
+ };
+ check(!editor.open && row('blackLeft').hidden,'Editor starts collapsed and optional rows hidden');
+ edit('left',1,'123456');
+ edit('right',2,'50, 60, 70');
+ edit('wrong',0,'#103050','input');
+ toggle(true);
+ edit('blackLeft',1,'A0B0C0');
+ edit('blackRight',2,'10, 20, 30');
+ edit('active',1,'112233');
+ edit('calibration',1,'203040');
+ const roles=[[60,'expected-l',[18,52,86]],[64,'future1-r',[50,60,70]],
+   [61,'future1-l',[160,176,192]],[63,'expected-r',[10,20,30]],
+   [65,'wrong',[16,48,80]],[67,'pressed-r',[17,34,51]],[70,'calibration',[32,48,64]]];
+ const states=new Map(roles.map(([note,state])=>[note,state]));
+ LedEngine.renderFromStates(states);
+ for(const [note,state,rgb] of roles){
+   const expected=state.startsWith('future')?rgb.map(c=>Math.round(c*.1)):rgb;
+   check(same(LedEngine.frame[LedEngine.keyToLed.get(note)],expected),'Custom frame '+state);
+ }
+ check(row('right').querySelectorAll('input')[1].value==='#323C46','RGB updates hex');
+ edit('right',2,'256, 0, 0');
+ check(row('right').querySelectorAll('input')[2].value==='50, 60, 70','Invalid RGB restores saved value');
+ toggle(false);
+ check(same(LedEngine.getColorForState('expected-l',61),[18,52,86]),'Black keys inherit edited hand color');
+ toggle(true);
+ const customBackup=buildSettingsBackupPayload();
+ document.getElementById('btn-reset-led-palette').click();
+ check(AppState.ledBlackKeyColors && LedEngine.config.future1BrightnessPct===10,'Palette reset preserves other settings');
+ check(same(LedEngine.getColorForState('wrong',65),[255,0,0]),'Wrong color resets');
+ importSettingsBackupPayload(customBackup);initLedPaletteEditor();
+ check(same(LedEngine.getColorForState('expected-r',63),[10,20,30]),'Custom black keys survive backup round trip');
+ document.getElementById('btn-reset-led-palette').click();
  const demos=await ScoreLibrary.getDemoScores(),score=demos.find(s=>s.title==='Moonlight Sonata 1st Movement');
  await loadScoreIntoApp(score.rawData,{fileName:score.fileName,fileType:score.fileType,title:score.title});
  const it=osmd.cursor.Iterator;

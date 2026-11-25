@@ -5346,3 +5346,13 @@ body > .toolbar-popup, #practice-popup, #options-overlay {
     background: #2563a8; color: white; border: 1px solid white; border-radius: 5px;
 }
 #pdf-boxes .pdf-barline::after { content: '↔'; }
+#led-palette-editor { margin-top: .65rem; }
+#led-palette-editor summary { cursor: pointer; font-weight: 600; }
+#led-palette-editor .palette-row {
+    display: grid; grid-template-columns: 3rem minmax(5rem, .85fr) minmax(6rem, 1fr);
+    gap: .25rem .5rem; margin: .65rem 0 .9rem;
+}
+#led-palette-editor .palette-name { grid-column: 1 / -1; font-weight: 600; }
+#led-palette-editor label { display: grid; gap: .2rem; min-width: 0; font-size: .85em; }
+#led-palette-editor input { box-sizing: border-box; width: 100%; min-width: 0; height: 2rem; }
+#led-palette-editor .palette-row[hidden] { display: none; }

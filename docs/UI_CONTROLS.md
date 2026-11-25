@@ -31,6 +31,6 @@ Practice retains modes, hand selection/playback and visual feedback, with Hand a
 
 Settings lists MIDI and LED setup before About; Debug is in Advanced. Tempo and Loop appear in More only at widths where their direct toolbar buttons are hidden (1060px and below). Menu top/max-height follows the actual wrapped toolbar bounds so phone controls remain reachable. This only positions menus; OSMD layout/feedback geometry is unchanged.
 
-LED Setup places a WLED-only Colors section between Brightness and Calibration. Its single default-off black-key toggle uses the [LED palette and persistence rules](MIDI_AUDIO_LED.md#optional-black-key-colors).
+LED Setup places WLED colors between Brightness and Calibration. Expand **Customize colors** to edit or reset the strip palette. The black-key checkbox enables the two additional hand colors. [Palette and persistence](MIDI_AUDIO_LED.md#optional-black-key-colors)
 
 Validate desktop and phone menus, disclosures, existing setting handlers, summary updates after mode/hand/loop changes and score loads, and keyboard dismissal of save/folder dialogs. Library workflow details live in [Scores and storage](SCORES_AND_STORAGE.md).
