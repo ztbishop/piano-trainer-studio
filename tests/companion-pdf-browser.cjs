@@ -174,6 +174,20 @@ async function main() {
         assert.deepEqual((await savedMap()).boxes[2], handMarked.boxes[2]);
         assert.deepEqual((await savedMap()).boxes[4], handMarked.boxes[4]);
         await page.locator('#pdf-order summary').click();
+        await range(1,1,null);
+        await box(1).click();
+        assert.match(await el('pdf-status').textContent(), /Printed measure 1 has no score visit/);
+        assert.equal(await el('pdf-from').inputValue(),'1');
+        assert.equal(await el('pdf-through').inputValue(),'1');
+        assert.equal(await el('pdf-first').inputValue(),'1');
+        await el('pdf-apply-range').click();
+        await box(4).click(); await expectVisit(4,4);
+        await el('btn-reset').click(); await expectVisit(1,1);
+        await el('pdf-page').selectOption('2');
+        await el('btn-reset').click();
+        await page.waitForFunction(()=>document.querySelector('#pdf-page').value==='1' &&
+            document.querySelector('.pdf-boxes .current').getBoundingClientRect().top <
+            document.querySelector('#pdf-scroll').getBoundingClientRect().bottom);
         await range(3,4,1);
         await range(5,6,3);
         await range(4,4,3); // individual ending override
@@ -199,6 +213,7 @@ async function main() {
         await el('btn-looper').click();
         assert.equal(await box(3).evaluate(b => b.classList.contains('outside-loop')), true);
         await box(3).click();
+        assert.match(await el('pdf-status').textContent(), /outside the current loop \(3–4\)/);
         await expectVisit(3,1);
         await el('btn-play').click();
         await page.waitForFunction(() => AppState.isAudioBusy && AppState.expectedNotes.length > 0);

@@ -624,14 +624,14 @@ function renderLooper() {
     window.CompanionPDF?.loopChanged();
 }
 
-function enforceLooperBounds() {
+function enforceLooperBounds(followStart = false) {
     if (!document.getElementById('check-looper').checked || !osmd.cursor) return;
     
     const minLoop = AppState.looper.min;
     const maxLoop = AppState.looper.max;
     const current = osmd.cursor.Iterator.CurrentMeasureIndex + 1;
     
-    if (current < minLoop || current > maxLoop) {
+    if (followStart || current < minLoop || current > maxLoop) {
         osmd.cursor.reset();
         while (!osmd.cursor.Iterator.EndReached && osmd.cursor.Iterator.CurrentMeasureIndex < minLoop - 1) {
             osmd.cursor.Iterator.moveToNext();
@@ -645,8 +645,8 @@ function enforceLooperBounds() {
 // ==========================================
 // VISUAL FEEDBACK & AUTO-SCROLL
 // ==========================================
-function handleAutoScroll() {
-    if (window.CompanionPDF?.position(osmd.cursor?.Iterator)) return;
+function handleAutoScroll(revealPdf = false) {
+    if (window.CompanionPDF?.position(osmd.cursor?.Iterator, revealPdf)) return;
     const autoScrollCheckbox = document.getElementById('check-autoscroll');
     if (autoScrollCheckbox && !autoScrollCheckbox.checked) return;
     if (!osmd.cursor || !osmd.cursor.cursorElement) return;

@@ -18,6 +18,7 @@ The previously reproduced runtime defects FIX-001–FIX-007 have implementations
 - [ ] **Standalone PDF + recording.** Track separately as an optional tap-timed, ungraded Realtime workflow without a digital score.
 - [ ] **Score-based Auto-sync.** Evaluate separately on actual piano recordings after manual recording mapping works.
 - [x] **Looper Speed Trainer.** Realtime training increases the tempo after complete transport loops and holds at the target. [Behavior](PRACTICE_ENGINE.md#speed-trainer) · [Browser regression](DEVELOPMENT.md#speed-trainer-checks)
+- [x] **Arirang opening measure and Speed Trainer editing.** Owner corrected the missing first-visit mapping. The reader now offers a repair for an unmapped box and reveals the mapped start on Reset. Verified first-measure seeking and looping on the local MIDI/PDF, plus typing and visible step buttons in the trainer. [Browser checks](DEVELOPMENT.md#companion-pdf-checks)
 
 Reproduce the relevant case before deciding on a fix. The [October 20 review](CODE_REVIEW_2026-10-20.md#conditional-risks-and-design-questions) records the original hypotheses; the [development checklist](DEVELOPMENT.md#manual-regression-checklist) defines protected behavior.
 

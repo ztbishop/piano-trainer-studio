@@ -1460,6 +1460,8 @@ function initSongUI() {
     const totalMeasures = osmd.GraphicSheet.MeasureList.length;
     document.getElementById('slider-loop-max').max = totalMeasures;
     document.getElementById('slider-loop-min').max = totalMeasures;
+    document.getElementById('slider-loop-min').value = 1;
+    document.getElementById('slider-loop-max').value = totalMeasures;
     document.getElementById('val-loop-min').min = 1;
     document.getElementById('val-loop-min').max = totalMeasures;
     document.getElementById('val-loop-max').min = 1;
@@ -3425,7 +3427,7 @@ if (playPauseButton) {
 }
 
 document.getElementById('btn-reset').onclick = () => resetPlaybackToLoopStart(true);
-function resetPlaybackToLoopStart(closeMenus) {
+function resetPlaybackToLoopStart(fromToolbar) {
     cancelPlaybackRun();
     AppState.isPlaying = false; 
     AppState.countInActive = false;
@@ -3453,14 +3455,14 @@ function resetPlaybackToLoopStart(closeMenus) {
     }
     osmd.cursor.update();
     globalThis.SpeedTrainer?.reset();
-    handleAutoScroll();
+    handleAutoScroll(fromToolbar);
     AppState.ledPreviewTraversalIndex = -1;
     AppState.lastLedPreviewEvents = [];
     clearVisuals();
     if (AppState.ledOutputMode === 'wled') {
         WLEDController.forceClear().catch(() => {});
     }
-    if (closeMenus) hideToolbarPanels();
+    if (fromToolbar) hideToolbarPanels();
     updatePlayPauseButton();
 }
 
@@ -3920,7 +3922,8 @@ function syncLooper(source, changedId) {
         else if (changedId === 'slider-loop-max' || changedId === 'val-loop-max') minVal = maxVal;
     }
 
-    const changed = minVal !== AppState.looper.min || maxVal !== AppState.looper.max;
+    const previousStart = AppState.looper.min;
+    const changed = minVal !== previousStart || maxVal !== AppState.looper.max;
     loopMinSlider.value = minVal;
     loopMaxSlider.value = maxVal;
     loopMinInput.value = minVal;
@@ -3930,7 +3933,12 @@ function syncLooper(source, changedId) {
 
     renderLooper();
     if (changed && window.SpeedTrainer.active) resetPlaybackToLoopStart(false);
-    else enforceLooperBounds();
+    else {
+        // Keep a paused cursor at the loop entrance when the user moves that entrance earlier.
+        const followStart = !AppState.isPlaying && minVal < previousStart &&
+            osmd.cursor?.Iterator?.CurrentMeasureIndex === previousStart - 1;
+        enforceLooperBounds(followStart);
+    }
 }
 
 function syncLooperInputIfReady(changedId) {

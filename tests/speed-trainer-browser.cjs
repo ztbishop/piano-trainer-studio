@@ -30,6 +30,7 @@ async function main() {
         assert.equal(await el('training-summary').textContent(),'Speed Trainer · 60%');
         assert.equal(await el('val-speed').inputValue(),'60');
         assert.equal(await el('training-start').isDisabled(),true);
+        assert.equal(await page.getByRole('button',{name:'Increase Start (%)',exact:true}).isDisabled(),true);
         assert.equal(await page.evaluate(()=>AppState.isPlaying),false);
     }
     const pause = () => el('btn-play').click();
@@ -60,7 +61,15 @@ async function main() {
         const shaded = () => page.evaluate(()=>GeometryEngine.getLooperGroup().querySelectorAll('rect[fill^="rgba"]').length);
         assert.equal(await shaded(),2);
         for (const [field,value] of Object.entries({start:60,target:100,step:5,every:2})) {
-            assert.equal(await el('training-'+field).inputValue(),String(value));
+            const input = el('training-'+field);
+            const label = await input.evaluate(e=>e.labels[0].textContent);
+            assert.equal(await input.inputValue(),String(value));
+            await input.click(); await input.press('ControlOrMeta+a'); await input.pressSequentially(String(value+2));
+            await page.getByRole('button',{name:'Decrease '+label,exact:true}).click();
+            assert.equal(await input.inputValue(),String(value+1));
+            await page.getByRole('button',{name:'Increase '+label,exact:true}).press('Enter');
+            assert.equal(await input.inputValue(),String(value+2));
+            await input.fill(String(value));
         }
         await el('training-target').fill('60'); await el('training-action').click();
         assert.equal(await el('training-target').evaluate(e=>e.validity.customError),true);
@@ -70,6 +79,9 @@ async function main() {
         await page.setViewportSize({width:390,height:844}); await loopMenu();
         const fields = await page.locator('#training-fields input').evaluateAll(inputs=>inputs.map(i=>i.getBoundingClientRect().toJSON()));
         assert(fields.every(r=>r.x>=0 && r.right<=390 && r.width>0)); assert(fields[3].y>fields[0].y);
+        await page.getByRole('button',{name:'Increase Speed increase (%)',exact:true}).click();
+        assert.equal(await el('training-step').inputValue(),'6');
+        await page.getByRole('button',{name:'Decrease Speed increase (%)',exact:true}).click();
         await screenshot('phone-expanded'); await summary.click(); await screenshot('phone-collapsed'); await summary.press('Enter');
         await page.setViewportSize({width:1280,height:820});
         await page.evaluate(()=>{
@@ -175,6 +187,8 @@ async function main() {
         await el('mode-realtime').check(); await enable(); await load(fixture);
         await page.waitForFunction(()=>document.querySelector('#training-summary').textContent==='Speed Trainer');
         await loopMenu();
+        assert.equal(await el('slider-loop-min').inputValue(),'1');
+        assert.equal(await el('slider-loop-max').inputValue(),await el('val-loop-max').inputValue());
         await el('val-loop-max').fill('2'); await el('val-loop-max').press('Tab');
         await enable();
         await el('btn-scores').click();
@@ -185,7 +199,14 @@ async function main() {
         const grayPdf = page.locator('.pdf-boxes .outside-loop');
         assert.deepEqual(await grayPdf.evaluateAll(boxes=>boxes.map(b=>b.dataset.measure)),['3','4']);
         assert.equal(await summary.textContent(),'Speed Trainer · 60%');
-        await loopMenu(); await el('check-looper').uncheck();
+        await loopMenu(); await el('training-action').click();
+        await el('btn-loop-min-increase').click();
+        const activeBox = page.locator('.pdf-boxes .current');
+        assert.equal(await activeBox.getAttribute('data-measure'),'2');
+        await el('btn-loop-min-decrease').click();
+        assert.equal(await activeBox.getAttribute('data-measure'),'1');
+        assert.equal(await page.evaluate(()=>osmd.cursor.Iterator.CurrentMeasureIndex),0);
+        await el('check-looper').uncheck();
         assert.equal(await grayPdf.count(),0);
         assert.deepEqual(errors,[]);
         console.log('Transport, partial pass, reset, availability and responsive menu checks passed.');

@@ -15,9 +15,15 @@ window.SpeedTrainer = (() => {
         get('action').disabled = !usable;
         get('action').textContent = run ? 'End speed training' : 'Enable speed training';
         get('summary').textContent = run ? 'Speed Trainer · ' + run.percent + '%' : 'Speed Trainer';
-        let status = usable ? '' : 'Enable a loop in Realtime to train speed.';
-        if (run) status = run.percent === run.target ? 'Target reached. Looping at this speed.' :
-            run.completed + ' of ' + run.every + ' loops at this speed.';
+        let status = '';
+        if (!ready) status = 'Open a score to train speed.';
+        else if (AppState.mode !== 'realtime') status = 'Choose Realtime in Practice to edit speed settings.';
+        else if (!usable) status = 'Enable Loop and choose a valid measure range.';
+        else if (run) {
+            const progress = run.percent === run.target ? 'Target reached. Looping at this speed.' :
+                run.completed + ' of ' + run.every + ' loops at this speed.';
+            status = progress + ' End training to edit settings.';
+        }
         if (get('status').textContent !== status) get('status').textContent = status;
     }
     function end() { run = null; sync(); }
@@ -34,6 +40,21 @@ window.SpeedTrainer = (() => {
         sync();
     }
     const form = document.getElementById('speed-training-form');
+    for (const input of get('fields').querySelectorAll('input')) {
+        for (const increase of [true, false]) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'training-arrow';
+            button.textContent = increase ? '▴' : '▾';
+            button.setAttribute('aria-label', (increase ? 'Increase ' : 'Decrease ') + input.labels[0].textContent);
+            button.addEventListener('click', () => {
+                if (increase) input.stepUp();
+                else input.stepDown();
+                input.dispatchEvent(new Event('input', {bubbles: true}));
+            });
+            input.parentElement.append(button);
+        }
+    }
     form.addEventListener('input', () => get('target').setCustomValidity(''));
     form.addEventListener('submit', event => {
         event.preventDefault();

@@ -36,6 +36,8 @@ At a loop boundary with required notes, Wait/Follow retain a `pendingLoopRestart
 
 ## Speed Trainer
 
+To edit the four settings, type a number or use the up and down arrows beside it. Choose **End speed training** to unlock them during a run. The Loop menu shows which prerequisite is missing when the controls are disabled.
+
 With a playable score in Realtime, enable **Loop**, select the measures and expand **Speed Trainer**. Start defaults to 60%, Target to 100%, Speed increase to 5 percentage points and Every to 2 completed loops. Enabling training sets the tempo and positions the cursor at the loop start. Press the usual **Play** button. The collapsed summary shows the current percentage. At the target, playback keeps looping at that speed.
 
 Pause and resume preserve the completed-pass count. Pausing during the final sounding group resumes on that group so the transport can finish the pass once. Seeking into the middle of a pass gives that pass no credit. Reset or a change to either end of the range returns to the loop start and starting speed. Turning Loop off, leaving Realtime, opening another score or manually changing tempo ends the run. **End speed training** keeps the current speed.

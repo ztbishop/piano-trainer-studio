@@ -136,7 +136,18 @@ function initPdfCompanion() {
     const choices = [];
     visits.forEach((visit, i) => { if (mapping[i] === number && inLoop(visit)) choices.push(i); });
     if (!choices.length) {
-      message('No score visit maps here within the current playback range.');
+      const mapped = mapping.includes(number);
+      if (!mapped) {
+        // Offer a single-visit edit. The user still chooses whether to apply it.
+        const written = visits.findIndex(v => v.measure === number);
+        const choice = String((written < 0 ? currentVisit : written) + 1);
+        byId('from').value = byId('through').value = choice;
+        byId('first').value = number;
+        byId('order').open = true;
+      }
+      message(mapped
+        ? 'Printed measure ' + number + ' is outside the current loop (' + AppState.looper.min + '–' + AppState.looper.max + '). Adjust the loop range to seek here.'
+        : 'Printed measure ' + number + ' has no score visit. Check the selected visit above and choose Map range to link it.');
       return;
     }
     const nearest = choices.reduce((best, i) =>
@@ -357,10 +368,20 @@ function initPdfCompanion() {
     }
     renderPage();
   }
-  function position(iterator) {
+  function position(iterator, reveal = false) {
     if (!pdf || !iterator || !visits.length) return false;
     const next = iterator.EndReached ? visits.length - 1 : visitIndex(visits, iterator.CurrentEnrolledTimestamp.RealValue);
     if (next !== currentVisit) { currentVisit = next; sync(); }
+    if (reveal && visible && !editing) {
+      const number = mapping[next];
+      if (boxes[number]) {
+        message('');
+        reader.update(number, loopMeasures, true);
+      } else {
+        message(number == null ? 'Score measure ' + visits[next].measure + ' is unmapped. Choose its printed measure in Map repeats and endings.'
+          : 'Printed measure ' + number + ' has no box. Choose Mark measures to draw it.');
+      }
+    }
     return visible;
   }
   function reset() {

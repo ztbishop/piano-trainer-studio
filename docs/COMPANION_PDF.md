@@ -8,6 +8,8 @@ Click a box in reading view to pause and seek. When several score visits use the
 
 ## Repeats and endings
 
+While paused at the beginning of a loop, moving **Beginning Measure** earlier also moves the cursor and PDF highlight to the new start. **Reset** brings the mapped start back into view, even after browsing to another page. If you click a box with no assigned visit, the reader opens **Map repeats and endings**. Check the proposed visit and choose **Map range** to save the link. If a loop excludes an already mapped box, the message shows the active range.
+
 A **visit** is one measure in playback order. For a score with repeat signs, OSMD supplies the order and each pass initially points to the same printed measure. A MIDI export can instead contain separate digital measures for each pass. The reader starts with matching measure numbers. Check the mapping when the arrangement differs from the print.
 
 For the included study, the PDF shows four measures and the MIDI plays six. The intended printed sequence is **1, 2, 1, 2, 3, 4**.

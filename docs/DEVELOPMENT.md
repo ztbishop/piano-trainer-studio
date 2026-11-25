@@ -130,11 +130,15 @@ Run expressive-playback, score-expression and hairpin-expression alongside the t
 
 ## Speed Trainer checks
 
+The browser regression types into each field and operates its arrow buttons by pointer and keyboard. It also checks the phone layout, disabled buttons during training, loop slider positions after reloading a score, and the PDF highlight when a paused loop start moves from measure 2 back to 1.
+
 Run `node tests/speed-trainer-browser.cjs` against the normal local app server with Playwright and Chrome. The test uses the two-hand repeat study with different written tempos at the loop entrance and ending. It records piano output events, Web Audio signal level, click intervals and missed-note processing while the normal transport plays. At Start 60, Target 68, Increase 5 and Every 2, each complete two-measure loop includes the written repeat. Six passes should run at 60, 60, 65, 65, 68 and 68 percent with loop count-in on and off.
 
 The test covers keyboard and pointer disclosure, desktop and phone layout, partial seeks, pause/resume, Reset, range edits, leaving Realtime, manual tempo, score load and the existing notation/PDF shading. Use `PT_TEST_ORIGIN` to select the local server and `PT_TEST_SCREENSHOTS` to save menu screenshots. The isolated Chrome run uses local Web Audio and no device permissions.
 
 ## Companion PDF checks
+
+The Arirang Fantasy MIDI/PDF check used a fresh mapping in isolated Chrome. Clicking 2 then 1, reducing the paused loop start to 1, playing a 1–1 loop and resetting from the last PDF page all returned to the first measure. The owner identified an unassigned first printed measure in the saved mapping. The fixture regression removes that assignment, clicks the first box, confirms the proposed single-visit repair and resets from page two. The owner's browser data and physical MIDI devices were outside the test.
 
 Run `node tests/library-pdf-browser.cjs` with the same local server and Chrome setup as the companion reader test below. It saves a two-page PDF with a MIDI arrangement, removes, redraws and adjusts page-two boxes, reopens the library entry, and verifies the corrected box during Realtime playback. A second MIDI arrangement uses independent mappings for the same PDF. The test downloads a backup, compares the PDF bytes to the fixture, then imports it in an empty browser context. It also covers replacing an edition, shared-file deletion, a folder export, a version-1 database upgrade, and merging into scores with missing or existing attachments.
 
