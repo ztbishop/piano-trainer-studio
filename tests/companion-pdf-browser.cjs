@@ -1,6 +1,7 @@
 // Run against the normal app server with Playwright and a local Chrome install.
 // Uses a disposable browser context, no device permissions or external requests.
 const assert = require('node:assert/strict');
+const {openPdfMenu} = require('./pdf-menu.cjs');
 const path = require('node:path');
 const {chromium} = require('playwright');
 const origin = process.env.PT_TEST_ORIGIN || 'http://127.0.0.1:5500';
@@ -40,7 +41,7 @@ async function main() {
             await el(first === null ? 'pdf-unmap' : 'pdf-apply-range').click();
         }
         async function expectBlankEditor() {
-            assert.equal(await el('pdf-map').getAttribute('aria-pressed'), 'true');
+            assert.equal(await el('pdf-map').isVisible(), true);
             assert.equal(await el('pdf-find').isVisible(), true);
             assert.equal(await el('pdf-measure').inputValue(), '1');
             assert.equal(await page.locator('#pdf-view .pdf-box').count(), 0);
@@ -100,6 +101,24 @@ async function main() {
             boxes: [...document.querySelectorAll('.pdf-boxes .pdf-box')].map(b => [b.style.left,b.style.top,b.style.width,b.style.height])
         })));
         assert.equal(await el('pdf-from').locator('option').count(), 6);
+        for (const width of [1160,390]) {
+            await page.setViewportSize({width,height:800});
+            const pane = await el('pdf-view').boundingBox();
+            const paper = await el('pdf-scroll').boundingBox();
+            assert(Math.abs(pane.height-paper.height)<1 && Math.abs(pane.y-paper.y)<1);
+            assert(!await el('pdf-target').isVisible());
+            await openPdfMenu(page);
+            const button = await el('pdf-start-marking').boundingBox();
+            assert(button.x>=0 && button.x+button.width<=width);
+            if (process.env.PT_TEST_SCREENSHOTS) await page.screenshot({path:path.join(process.env.PT_TEST_SCREENSHOTS,'pt-pdf-menu-'+width+'.png')});
+            await el('pdf-page').selectOption('2');
+            await openPdfMenu(page); await el('pdf-start-marking').click();
+            assert.equal(await el('pdf-sheet').evaluate(s=>s.closest('[data-page]').dataset.page),'2');
+            await el('pdf-map').click();
+            assert(!await el('pdf-tools').isVisible());
+            await openPdfMenu(page); await el('pdf-page').selectOption('1');
+        }
+        await page.setViewportSize({width:1160,height:800});
         assert.equal(await page.locator('.pdf-boxes .pdf-box').count(), 4);
         assert.equal(await page.locator('.pdf-reading-page').count(), 2);
         // Staff extents measured on the rendered MuseScore pages.
@@ -110,7 +129,8 @@ async function main() {
                     parseFloat(e.style.top) + parseFloat(e.style.height) > (first ? 25 : 18.7);
             }));
         }
-        await el('pdf-map').click();
+        await openPdfMenu(page);
+        await el('pdf-start-marking').click();
         // Correct the first page and carry its count to page two.
         await scanFromPageTwo();
         await page.setViewportSize({width:390,height:844});
@@ -129,15 +149,17 @@ async function main() {
         await el('file-input').setInputFiles(fixture('mid'));
         await page.waitForFunction(() => !document.getElementById('pdf-attach').disabled);
         await attach();
-        assert.equal(await el('pdf-map').getAttribute('aria-pressed'), 'false');
+        assert.equal(await el('pdf-map').isVisible(), false);
         assert.equal(await page.locator('.pdf-boxes .pdf-box').count(), 3);
         assert.equal(await box(2).evaluate(b => b.closest('[data-page]').dataset.page), '2');
         assert.deepEqual(await savedMap(), corrected);
-        await el('pdf-map').click();
+        await openPdfMenu(page);
+        await el('pdf-start-marking').click();
         await scanFromPageTwo();
         await el('pdf-use-score').click();
         assert.equal(await page.locator('.pdf-boxes .pdf-box').count(), 4);
-        await el('pdf-map').click();
+        await openPdfMenu(page);
+        await el('pdf-start-marking').click();
         const divider = page.locator('.pdf-barline').first();
         await el('pdf-page').selectOption('1');
         const original = await divider.getAttribute('aria-valuenow');
@@ -173,7 +195,8 @@ async function main() {
         assert.deepEqual((await savedMap()).boxes[1], handMarked.boxes[1]);
         assert.deepEqual((await savedMap()).boxes[2], handMarked.boxes[2]);
         assert.deepEqual((await savedMap()).boxes[4], handMarked.boxes[4]);
-        await page.locator('#pdf-order summary').click();
+        await openPdfMenu(page);
+        await el('pdf-start-order').click();
         await range(1,1,null);
         await box(1).click();
         assert.match(await el('pdf-status').textContent(), /Printed measure 1 has no score visit/);
@@ -183,6 +206,7 @@ async function main() {
         await el('pdf-apply-range').click();
         await box(4).click(); await expectVisit(4,4);
         await el('btn-reset').click(); await expectVisit(1,1);
+        await openPdfMenu(page);
         await el('pdf-page').selectOption('2');
         await el('btn-reset').click();
         await page.waitForFunction(()=>document.querySelector('#pdf-page').value==='1' &&
@@ -200,9 +224,11 @@ async function main() {
         await page.locator('#pdf-order summary').click();
         await box(1).click();
         await expectVisit(3,1);
+        await openPdfMenu(page);
         await el('pdf-visit').selectOption('0');
         await expectVisit(1,1);
         await box(1).click();
+        await openPdfMenu(page);
         await el('pdf-visit').selectOption('2');
         await expectVisit(3,1);
         await mode('wait');
@@ -255,6 +281,7 @@ async function main() {
         assert.deepEqual(await pitches(), [64]); await press(64);
         await expectVisit(6,4);
         await el('btn-play').click();
+        await openPdfMenu(page);
         await el('pdf-native').click();
         assert.equal(await el('canvas-wrapper').isVisible(), true);
         await el('btn-scores').click();
@@ -263,11 +290,13 @@ async function main() {
         await el('scores-panel').waitFor({state:'hidden'});
         await box(1).click();
         await expectVisit(3,1);
+        await openPdfMenu(page);
         await el('pdf-position').locator('select').selectOption('0');
         if (process.env.PT_TEST_SCREENSHOTS)
             await page.screenshot({path:path.join(process.env.PT_TEST_SCREENSHOTS,'qa-desktop.png')});
         await page.setViewportSize({width:390,height:844});
-        await page.locator('#pdf-order summary').click();
+        await openPdfMenu(page);
+        await el('pdf-start-order').click();
         const bounds = await el('pdf-apply-range').boundingBox();
         assert(bounds.x >= 0 && bounds.x + bounds.width <= 391);
         if (process.env.PT_TEST_SCREENSHOTS)
@@ -278,14 +307,18 @@ async function main() {
         await el('file-input').setInputFiles(fixture('mid'));
         await page.waitForFunction(() => !document.getElementById('pdf-attach').disabled);
         await attach();
-        await el('pdf-map').click();
+        await openPdfMenu(page);
+        await el('pdf-start-marking').click();
         await scanFromPageTwo();
         await el('pdf-use-score').click();
         await box(1).click();
         await expectVisit(1,1);
-        await box(1).click(); await el('pdf-visit').selectOption('2');
+        await box(1).click();
+        await openPdfMenu(page);
+        await el('pdf-visit').selectOption('2');
         await expectVisit(3,1);
-        await el('pdf-map').click();
+        await openPdfMenu(page);
+        await el('pdf-start-marking').click();
         assert.notEqual(await divider.getAttribute('aria-valuenow'), original);
         await el('pdf-map').click();
         await el('file-input').setInputFiles(fixture('musicxml'));
@@ -304,10 +337,11 @@ async function main() {
         await el('file-input').setInputFiles(fixture('musicxml'));
         await page.waitForFunction(() => !document.getElementById('pdf-attach').disabled);
         await attach();
-        assert.equal(await el('pdf-map').getAttribute('aria-pressed'), 'false');
+        assert.equal(await el('pdf-map').isVisible(), false);
         assert.equal(await page.locator('.pdf-boxes .pdf-box').count(), 1);
         await box(1).click(); await expectVisit(1,1);
-        await el('pdf-map').click();
+        await openPdfMenu(page);
+        await el('pdf-start-marking').click();
         await scanFromPageTwo();
         await el('pdf-measure').selectOption('2');
         assert.equal(await el('pdf-use-score').isDisabled(), true);
@@ -319,7 +353,9 @@ async function main() {
         await page.waitForFunction(() => !document.getElementById('pdf-attach').disabled);
         await attach();
         await box(1).click(); await expectVisit(1,1);
-        await box(1).click(); await el('pdf-visit').selectOption('2');
+        await box(1).click();
+        await openPdfMenu(page);
+        await el('pdf-visit').selectOption('2');
         await expectVisit(3,1);
         assert.equal(await page.evaluate(() => osmd.cursor.Iterator.CurrentMeasureIndex), 0);
         await mode('wait'); await el('btn-play').click();

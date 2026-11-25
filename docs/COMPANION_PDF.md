@@ -4,7 +4,7 @@ Open the digital score in **Scores**, then choose **PDF → Attach PDF** and sel
 
 A new score/PDF pair opens in **Mark measures** with a blank map. Drag a box around the first measure, covering both piano staves even when one hand rests. The measure selector advances after each box. Or choose **Find boxes in score** to review suggested boxes. Choose **Done marking** when you are ready to practice. Reattaching the same pair with saved boxes opens directly in reading view, even if you marked only part of the score.
 
-Click a box in reading view to pause and seek. When several score visits use the same box, the reader chooses the nearest visit allowed by the loop. **Score visit** lets you choose another eligible pass. **Show notation** returns to the digital view. **Scores → PDF → Show PDF** reopens the attached pages.
+Click a box in reading view to pause and seek. The printed page fills the score pane. Open **Scores → PDF** to change **Page**, **Show notation**, or **Mark measures** on the page in view. When several score visits use the same box, the reader chooses the nearest visit allowed by the loop. **Score visit** in the same menu lets you choose another eligible pass. **Show PDF** returns from notation to the attached pages.
 
 ## Repeats and endings
 
@@ -14,7 +14,7 @@ A **visit** is one measure in playback order. For a score with repeat signs, OSM
 
 For the included study, the PDF shows four measures and the MIDI plays six. The intended printed sequence is **1, 2, 1, 2, 3, 4**.
 
-1. Open **Map repeats and endings**. Set **From visit** to 3, **Through visit** to 4 and **First printed measure** to 1. Click **Map range**. Both visits now point to the printed repeat.
+1. Open **Scores → PDF → Map repeats and endings**. Set **From visit** to 3, **Through visit** to 4 and **First printed measure** to 1. Click **Map range**. Both visits now point to the printed repeat.
 2. Map visits 5–6 to printed measures starting at 3. To correct an individual ending, choose the same first and last visit and enter its printed measure.
 3. Choose **Leave unmapped** for a digital introduction, interlude or other passage absent from the PDF. The trainer continues through it with the PDF highlight cleared. The visit selectors show the current assignments.
 4. Use **Loop** with digital score measure numbers. In the MIDI study, set beginning 3 and ending 4 to practice the second pass. Both printed boxes highlight again and boxes outside the loop are shaded. In Wait mode, the highlight holds until all required notes have been played. **Auto-scroll** controls whether the PDF follows a highlighted box onto another page.
@@ -34,6 +34,8 @@ With the PDF attached, choose **Scores → Save to Library**. Opening that libra
 Two arrangements can share the same PDF file while keeping different boxes and repeat assignments. **Library tools → Backup Library** and folder exports include the PDF once per backup. Importing into a matching score fills a missing attachment and keeps an existing attachment with its local edits. For a score opened directly from disk, you can still reattach the PDF to recover the browser's local markings.
 
 ## Implementation and credits
+
+The reading menu and the separate marking toolbar follow Guitar Trainer Studio’s companion PDF update. [Guitar Trainer commit b18beaf](https://github.com/ztbishop/guitar-trainer-studio/commit/b18beaf)
 
 The page reader, editable box and divider tools, raster detector and editor layout come from Guitar Trainer Studio at commit `1e68d3e` under the project AGPL. Piano Trainer adapts them to OSMD visit positions and the existing looper. The detector recognizes the opening repeat dots on a paired piano staff. The local Mozilla PDF.js 6.5.438 distribution supplies the renderer, worker, maps, fonts and codecs with their accompanying licenses. [Guitar Trainer source](https://github.com/ztbishop/guitar-trainer-studio/tree/1e68d3e) · [Project license](../LICENSE) · [PDF.js provenance](../assets/vendor/pdfjs/SOURCE.md) · [PDF.js license](../assets/vendor/pdfjs/LICENSE)
 

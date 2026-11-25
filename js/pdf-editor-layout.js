@@ -1,10 +1,9 @@
 // Adapted from Guitar Trainer Studio 1e68d3 (AGPL-3.0), 2026-11-24.
 export function mountPdfEditor(view) {
   view.innerHTML = `
-          <div class="pdf-tools">
-            <button id="pdf-native" type="button">Show notation</button>
-            <label>Page <select id="pdf-page"></select></label>
-            <button id="pdf-map" type="button" aria-pressed="false">Mark measures</button>
+          <div id="pdf-tools" class="pdf-tools" hidden>
+            <button id="pdf-map" type="button">Done marking</button>
+            <span id="pdf-editor-page"></span>
             <span id="pdf-edit" hidden><label><span id="pdf-number-label">Measure</span> <select id="pdf-measure"></select></label>
               <button id="pdf-remove" type="button">Remove box</button>
               <button id="pdf-find" type="button">Find boxes in score</button>
@@ -16,8 +15,6 @@ export function mountPdfEditor(view) {
               <label id="pdf-replace-label" hidden><input id="pdf-replace" type="checkbox"> Replace saved boxes on this page</label>
               <button id="pdf-use-score" type="button" hidden>Use score boxes</button>
               <button id="pdf-use" type="button">Use page boxes</button><button id="pdf-cancel" type="button">Cancel</button></span></span>
-            <label id="pdf-position" hidden>Score visit <select id="pdf-visit"></select></label>
-            <span id="pdf-target"></span>
           </div>
           <details id="pdf-order"><summary>Map repeats and endings</summary>
             <p>Visits count measures in playback order. Map a range to consecutive printed measures, or choose one visit to correct an ending.</p>

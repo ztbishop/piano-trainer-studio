@@ -138,6 +138,8 @@ The test covers keyboard and pointer disclosure, desktop and phone layout, parti
 
 ## Companion PDF checks
 
+The menu regression checks that the PDF viewport fills the score pane at 1160 and 390 CSS pixels, opens page two from Scores → PDF, marks the page in view and returns to reading. It also exercises repeat-visit selection through the menu and full-height reading after whole-score acceptance.
+
 The Arirang Fantasy MIDI/PDF check used a fresh mapping in isolated Chrome. Clicking 2 then 1, reducing the paused loop start to 1, playing a 1–1 loop and resetting from the last PDF page all returned to the first measure. The owner identified an unassigned first printed measure in the saved mapping. The fixture regression removes that assignment, clicks the first box, confirms the proposed single-visit repair and resets from page two. The owner's browser data and physical MIDI devices were outside the test.
 
 Run `node tests/library-pdf-browser.cjs` with the same local server and Chrome setup as the companion reader test below. It saves a two-page PDF with a MIDI arrangement, removes, redraws and adjusts page-two boxes, reopens the library entry, and verifies the corrected box during Realtime playback. A second MIDI arrangement uses independent mappings for the same PDF. The test downloads a backup, compares the PDF bytes to the fixture, then imports it in an empty browser context. It also covers replacing an edition, shared-file deletion, a folder export, a version-1 database upgrade, and merging into scores with missing or existing attachments.

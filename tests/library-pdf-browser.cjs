@@ -1,5 +1,6 @@
 // Run against the local app server with Playwright and Chrome. All profiles are disposable.
 const assert = require('node:assert/strict');
+const {openPdfMenu} = require('./pdf-menu.cjs');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const {chromium} = require('playwright');
@@ -91,7 +92,7 @@ async function main() {
         await page.locator('.scores-item-button').filter({has:page.getByText(title,{exact:true})}).click();
         await el('scores-panel').waitFor({state:'hidden'});
         await el('pdf-view').waitFor({state:'visible'});
-        assert.equal(await el('pdf-map').getAttribute('aria-pressed'),'false');
+        assert.equal(await el('pdf-map').isVisible(),false);
     }
     async function scan() {
         await el('pdf-find').click();
@@ -118,6 +119,7 @@ async function main() {
         const target = page.locator('.pdf-reading-page[data-page="2"] button[data-measure="3"]');
         assert(Math.abs(await target.evaluate(b => parseFloat(b.style.width)) - 100*expected.w) < .0001);
         await page.locator('.pdf-boxes button[data-measure="2"]').click();
+        await openPdfMenu(page);
         await el('pdf-visit').selectOption('3'); // visit 4, last measure before page two
         await el('btn-practice').click(); await el('mode-realtime').check(); await el('btn-practice').click();
         await el('btn-play').click();
@@ -128,12 +130,14 @@ async function main() {
     try {
         await profile();
         await midi(fixture('mid')); await attach(); await scan();
-        await page.locator('#pdf-order summary').click(); await range(3,4,1); await range(5,6,3);
+        await openPdfMenu(page);
+        await el('pdf-start-order').click(); await range(3,4,1); await range(5,6,3);
         await page.locator('#pdf-order summary').click();
         await save('Piano A');
         const [first] = await scores();
         assert.equal(first.pdf.fileName,'grand-staff-repeat.pdf');
-        await el('pdf-map').click(); await el('pdf-page').selectOption('2');
+        await openPdfMenu(page);
+        await el('pdf-start-marking').click(); await el('pdf-page').selectOption('2');
         await el('pdf-measure').selectOption('4');
         const lastBox = page.locator('#pdf-boxes .pdf-box',{hasText:/^4$/});
         await lastBox.scrollIntoViewIfNeeded();

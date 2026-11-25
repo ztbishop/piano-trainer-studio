@@ -5304,6 +5304,16 @@ body > .toolbar-popup, #practice-popup, #options-overlay {
     background: var(--score-paper, white); color: inherit;
 }
 #pdf-view [hidden], #pdf-show[hidden] { display: none !important; }
+#pdf-reading-controls { display: grid; gap: 4px; max-width: min(19rem, 84vw); }
+#pdf-reading-controls[hidden], #pdf-reading-controls [hidden] { display: none !important; }
+#pdf-reading-controls label { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .25rem; }
+#pdf-reading-controls select { min-width: 0; max-width: 70%; }
+#pdf-target { font-size: .85rem; padding: .25rem; }
+#pdf-view:not(.editing) #pdf-order:not([open]) { display: none; }
+#pdf-view:not(.editing) #pdf-order:not([open]) ~ #pdf-status:not([hidden]) {
+    position: absolute; z-index: 1; bottom: .5rem; left: .5rem; right: .5rem; width: fit-content;
+    background: var(--score-paper); border-radius: .4rem; padding: .4rem .65rem; pointer-events: none;
+}
 .pdf-tools, .pdf-range { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .75rem; padding: .4rem .7rem; }
 .pdf-tools { padding-right: 4rem; }
 .pdf-tools :is(button, select), .pdf-range :is(button, select, input) { border: 1px solid #a3b1bf; }

@@ -160,6 +160,7 @@ function initPdfCompanion() {
     byId('position').hidden = choices.length < 2;
   }
   byId('visit').onchange = event => {
+    hideToolbarPanels(true);
     const visit = visits[Number(event.target.value)];
     if (visit && inLoop(visit)) seekCompanionVisit(visit.step);
   };
@@ -242,8 +243,7 @@ function initPdfCompanion() {
     }
     boxes = result.boxes;
     saveBoxes();
-    setEditing(false); current = undefined; sync();
-    message(Object.keys(boxes).length + ' printed measure boxes saved.');
+    finishMarking();
   }
   useScore.onclick = () => acceptScoreReview(true);
   async function scan(wholeScore) {
@@ -308,17 +308,18 @@ function initPdfCompanion() {
     if (pdf && !view.hidden && scroll.clientWidth)
       reader.resize(Math.max(1, Math.round(scroll.clientWidth * AppState.zoom)));
   }
+  function selectPageMeasure(number) {
+    const mapped = Object.entries(boxes);
+    const here = mapped.filter(([,box]) => box.page === number).map(([n]) => Number(n));
+    const before = mapped.filter(([,box]) => box.page < number).map(([n]) => Number(n));
+    const first = here.length ? Math.min(...here) : Math.max(0, ...before) + 1;
+    if (first <= measure.length) measure.value = String(first);
+  }
   function goPage(number, scrollToPage=true) {
     if(page!==number) {
       endReview();cancelDrag();message('');
       byId('position').hidden=true;
-      if(editing) {
-        const mapped=Object.entries(boxes);
-        const onPage=mapped.filter(([,b])=>b.page===number).map(([n])=>Number(n));
-        const before=mapped.filter(([,b])=>b.page<number).map(([n])=>Number(n));
-        const first=onPage.length?Math.min(...onPage):before.length?Math.max(...before)+1:null;
-        if(first!==null && Array.from(measure.options).some(o=>Number(o.value)===first))measure.value=String(first);
-      }
+      if(editing) selectPageMeasure(number);
     }
     page = number;
     pageSelect.value = String(page);
@@ -329,8 +330,10 @@ function initPdfCompanion() {
     editing = value;
     endReview();byId('position').hidden=true;
     cancelDrag();
-    mark.textContent = editing ? 'Done marking' : 'Mark measures';
-    mark.setAttribute('aria-pressed', String(editing));
+    byId('tools').hidden = !editing;
+    view.classList.toggle('editing', editing);
+    byId('order').open = false;
+    byId(editing ? 'editor-page' : 'menu-page').append(byId('page-label'));
     byId('edit').hidden = !editing;
     sheet.hidden=!editing;
     pagesRoot.classList.toggle('marking',editing);
@@ -345,11 +348,17 @@ function initPdfCompanion() {
     paintBoxes();
   }
   const musicArea = document.getElementById('music-area');
+  function finishMarking() {
+    setEditing(false);
+    sync();
+    scroll.focus({preventScroll:true});
+  }
   function sync() {
     view.hidden = !visible;
     native.inert = visible;
     musicArea.classList.toggle('reading-pdf', visible);
     byId('show').hidden = !pdf || visible;
+    byId('reading-controls').hidden = !visible || editing;
     if (!pdf || !visits.length) return;
     const number = mapping[currentVisit];
     const rangeKey = document.getElementById('check-looper').checked ?
@@ -391,7 +400,7 @@ function initPdfCompanion() {
     documentTask?.destroy(); documentTask = null;
     pdf = null; key = null; boxes = {}; visits = []; mapping = []; visible = false;
     current = undefined; loopKey = undefined; currentVisit = 0;
-    file.value = ''; attach.disabled = true; byId('order').open = false;
+    file.value = ''; attach.disabled = true;
     setEditing(false); updateAttachStatus(''); sync();
   }
   async function open(selected, libraryPdf = null, libraryId = null) {
@@ -518,10 +527,27 @@ function initPdfCompanion() {
     if (boxes[selected]) goPage(boxes[selected].page);
     measure.value=selected;paintBoxes();
   };
-  pageSelect.onchange = () => goPage(Number(pageSelect.value));
+  pageSelect.onchange = () => {
+    if (!editing) hideToolbarPanels(true);
+    goPage(Number(pageSelect.value));
+  };
   byId('remove').onclick = () => { delete boxes[measure.value]; saveBoxes(); paintBoxes(); sync(); };
-  mark.onclick = () => { if (!editing) pausePlaybackFromToolbar(); setEditing(!editing); current = undefined; sync(); };
-  byId('native').onclick = () => { if(editing)setEditing(false); visible = false; sync(); musicArea.scrollTop = savedScroll; handleAutoScroll(); };
+  byId('start-marking').onclick = () => {
+    const viewedPage = page;
+    hideToolbarPanels(true);
+    pausePlaybackFromToolbar();
+    if (page !== viewedPage) goPage(viewedPage);
+    selectPageMeasure(page);
+    setEditing(true); sync();
+    mark.focus({preventScroll:true});
+  };
+  mark.onclick = finishMarking;
+  byId('start-order').onclick = () => {
+    hideToolbarPanels(true);
+    byId('order').open = true;
+    byId('from').focus({preventScroll:true});
+  };
+  byId('native').onclick = () => { hideToolbarPanels(true); visible = false; sync(); musicArea.scrollTop = savedScroll; handleAutoScroll(); };
   byId('show').onclick = () => { hideToolbarPanels(); savedScroll = musicArea.scrollTop; musicArea.scrollTop = 0; visible = true; current = undefined; sync(); };
   attach.onclick = () => file.click();
   file.onchange = () => { const selected = file.files[0]; file.value = ''; if (selected) open(selected); };
