@@ -17,6 +17,7 @@ The frontend is static HTML/CSS/JavaScript with ordered classic scripts and shar
 - `/assets/vendor/webmscore` = browser-side score converter and WASM/data assets
 - `/js` = extracted app modules with focused ownership
 - `js/trainer-core.js` = remaining integration layer for rendering lifecycle, playback scheduling, metronome flow, repeat/jump handling, and cross-module orchestration
+- `js/speed-trainer.js` owns the Loop menu disclosure and the current training run. Core signals actual transport loop completion after grading and before count-in. [Speed Trainer](PRACTICE_ENGINE.md#speed-trainer)
 - `/docs` = architecture notes and development notes
 
 ## Current modules

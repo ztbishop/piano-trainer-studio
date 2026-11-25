@@ -738,6 +738,19 @@
                     </div>
                 </div>
             </div>
+            <details class="speed-training">
+                <summary id="training-summary">Speed Trainer</summary>
+                <form id="speed-training-form">
+                    <fieldset id="training-fields" aria-label="Speed Trainer settings" disabled>
+                        <label>Start (%)<input id="training-start" type="number" min="25" max="199" value="60" required></label>
+                        <label>Target (%)<input id="training-target" type="number" min="26" max="200" value="100" required></label>
+                        <label>Speed increase (%)<input id="training-step" type="number" min="1" max="175" value="5" required></label>
+                        <label>Every (loops)<input id="training-every" type="number" min="1" max="9007199254740991" value="2" required></label>
+                    </fieldset>
+                    <button id="training-action" type="submit" disabled>Enable speed training</button>
+                    <span id="training-status" role="status">Enable a loop in Realtime to train speed.</span>
+                </form>
+            </details>
         </fieldset>
     </div>
 
@@ -801,6 +814,7 @@
     <script>document.write('<script src="js/hand-assignment.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
     <script>document.write('<script src="js/score-expression-source.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
     <script>document.write('<script src="js/score-expression.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
+    <script>document.write('<script src="js/speed-trainer.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
     <script>document.write('<script src="js/trainer-core.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
     <script>document.write('<script src="js/numeric-controls.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>
     <script>document.write('<script src="js/appearance.js?v=' + encodeURIComponent(window.__PT_ASSET_VERSION__ || 'dev') + '"><\/script>');</script>

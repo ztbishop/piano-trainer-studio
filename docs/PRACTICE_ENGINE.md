@@ -34,6 +34,14 @@ Empty-entry traversal uses animation-frame continuation. A score ending without 
 
 At a loop boundary with required notes, Wait/Follow retain a `pendingLoopRestart` continuation and enter the ordinary satisfaction gate. The last required group remains the matching/grading target until every note is hit. Then pending accompaniment and sustain visuals start; Wait preserves the full final-event duration before restart, while Follow uses its existing adaptive remaining/full interval. Already-satisfied early-input groups enter this gate automatically. Realtime and boundaries without required notes retain their timed restart. Stop/reset/load/mode changes clear the pending continuation through transient-state cleanup, and scheduled completion uses run-owned cancellation. This fixes the review's `WAIT-LOOP-GATE` finding; future-note preview and production geometry are unchanged. See the [change record](CHANGELOG.md#2026-10-20-final-loop-note-gate-no-application-release) for actual validation and pending checks.
 
+## Speed Trainer
+
+With a playable score in Realtime, enable **Loop**, select the measures and expand **Speed Trainer**. Start defaults to 60%, Target to 100%, Speed increase to 5 percentage points and Every to 2 completed loops. Enabling training sets the tempo and positions the cursor at the loop start. Press the usual **Play** button. The collapsed summary shows the current percentage. At the target, playback keeps looping at that speed.
+
+Pause and resume preserve the completed-pass count. Pausing during the final sounding group resumes on that group so the transport can finish the pass once. Seeking into the middle of a pass gives that pass no credit. Reset or a change to either end of the range returns to the loop start and starting speed. Turning Loop off, leaving Realtime, opening another score or manually changing tempo ends the run. **End speed training** keeps the current speed.
+
+The transport counts a pass after grading the outgoing loop's final group. The next count-in uses the tempo at the loop entrance and the new percentage. Written repeats, page turns and simultaneous notes all stay within the transport's pass. The notation and PDF readers use their existing loop shading. The controls and progression were adapted from Guitar Trainer Studio under the project AGPL. [Reference implementation](https://github.com/ztbishop/guitar-trainer-studio/tree/2bf5d3b)
+
 ## Modes and routing
 
 | Mode | Progression | Hand controls |

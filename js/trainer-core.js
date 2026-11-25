@@ -1229,6 +1229,7 @@ function getOsmdLoadPayload(rawData, fileType = 'xml', fileName = 'Untitled Scor
 
 async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType = 'xml', libraryScoreId = null, libraryPdf = null, title = null, originalRawData = undefined, originalFileName = undefined, originalFileType = undefined, skipTransposeReset = false } = {}) {
     try {
+        window.SpeedTrainer?.setReady(false);
         resetPlaybackForLoadedScore();
         window.CompanionPDF?.reset();
 
@@ -1282,6 +1283,7 @@ async function loadScoreIntoApp(rawData, { fileName = 'Untitled Score', fileType
         AppState.currentScoreOriginalFileType = resolvedOriginalFileType;
         AppState.currentScoreLibraryId = libraryScoreId ?? null;
         AppState.currentScoreTitle = title || getScoreDisplayTitle(fileName || '');
+        window.SpeedTrainer?.setReady(!!osmd.cursor?.Iterator && !osmd.cursor.Iterator.EndReached);
         window.CompanionPDF?.scoreReady();
         if (libraryScoreId && libraryPdf) await window.CompanionPDF?.restoreLibrary(libraryScoreId, libraryPdf);
 
@@ -2842,6 +2844,7 @@ function checkWaitModeAdvance() {
 // UI LISTENERS & SYNC LOGIC
 // ==========================================
 function applyModeSettings() {
+    globalThis.SpeedTrainer?.sync();
     applyToneLatencyProfileForMode();
     const isWait = AppState.mode === 'wait';
     const isFollow = AppState.mode === 'follow';
@@ -3022,6 +3025,7 @@ function seekCompanionVisit(step) {
     for (let i = 0; i < step && !osmd.cursor.Iterator.EndReached; i++) {
         osmd.cursor.Iterator.moveToNext();
     }
+    globalThis.SpeedTrainer?.seek();
     osmd.cursor.update();
     clearVisuals();
     handleAutoScroll();
@@ -3157,6 +3161,7 @@ document.getElementById('canvas-wrapper').addEventListener('click', (e) => {
         while (!osmd.cursor.Iterator.EndReached && osmd.cursor.Iterator.CurrentMeasureIndex < targetMeasureIdx) {
             osmd.cursor.Iterator.moveToNext();
         }
+        window.SpeedTrainer.seek();
         osmd.cursor.update();
         handleAutoScroll();
         clearVisuals();
@@ -3387,7 +3392,18 @@ function stopPlaybackState({ pauseTransport = true } = {}) {
 }
 
 function pausePlaybackFromToolbar() {
+    const finalTime = globalThis.SpeedTrainer?.takePausedBoundary();
     stopPlaybackState({ pauseTransport: true });
+    // The iterator is already beyond the final sounding group. Resume on that
+    // group so the canceled wrap can finish once, even at the end of the score.
+    if (finalTime != null) {
+        osmd.cursor.reset();
+        while (!osmd.cursor.Iterator.EndReached && osmd.cursor.Iterator.CurrentEnrolledTimestamp.RealValue < finalTime) {
+            osmd.cursor.Iterator.moveToNext();
+        }
+        osmd.cursor.update();
+        handleAutoScroll();
+    }
 }
 
 function resetPlaybackForLoadedScore() {
@@ -3408,7 +3424,8 @@ if (playPauseButton) {
     };
 }
 
-document.getElementById('btn-reset').onclick = () => { 
+document.getElementById('btn-reset').onclick = () => resetPlaybackToLoopStart(true);
+function resetPlaybackToLoopStart(closeMenus) {
     cancelPlaybackRun();
     AppState.isPlaying = false; 
     AppState.countInActive = false;
@@ -3435,6 +3452,7 @@ document.getElementById('btn-reset').onclick = () => {
         }
     }
     osmd.cursor.update();
+    globalThis.SpeedTrainer?.reset();
     handleAutoScroll();
     AppState.ledPreviewTraversalIndex = -1;
     AppState.lastLedPreviewEvents = [];
@@ -3442,9 +3460,9 @@ document.getElementById('btn-reset').onclick = () => {
     if (AppState.ledOutputMode === 'wled') {
         WLEDController.forceClear().catch(() => {});
     }
-    hideToolbarPanels();
+    if (closeMenus) hideToolbarPanels();
     updatePlayPauseButton();
-};
+}
 
 let resizeTimer;
 window.addEventListener('resize', () => {
@@ -3566,9 +3584,13 @@ function updateTempo(source, value) {
     }
 }
 speedSlider.addEventListener('input', (e) => syncTempoPreviewFromPercent(e.target.value));
-speedSlider.addEventListener('change', (e) => updateTempo('percent', e.target.value));
-speedInput.addEventListener('change', (e) => updateTempo('percent', e.target.value));
-bpmInput.addEventListener('change', (e) => updateTempo('bpm', e.target.value));
+function changePracticeTempo(source, value) {
+    if (window.SpeedTrainer.active) window.SpeedTrainer.end();
+    updateTempo(source, value);
+}
+speedSlider.addEventListener('change', (e) => changePracticeTempo('percent', e.target.value));
+speedInput.addEventListener('change', (e) => changePracticeTempo('percent', e.target.value));
+bpmInput.addEventListener('change', (e) => changePracticeTempo('bpm', e.target.value));
 
 const pianoVolSlider = document.getElementById('slider-piano-vol');
 const pianoVolInput = document.getElementById('val-piano-vol');
@@ -3799,6 +3821,7 @@ const loopMaxDecreaseBtn = document.getElementById('btn-loop-max-decrease');
 const loopMaxIncreaseBtn = document.getElementById('btn-loop-max-increase');
 
 function syncLooperDependentUi() {
+    window.SpeedTrainer.sync();
     const looperCheckbox = document.getElementById('check-looper');
     const loopCountInCheckbox = document.getElementById('check-loop-countin');
     const loopCountInRow = document.getElementById('looper-countin-row');
@@ -3897,6 +3920,7 @@ function syncLooper(source, changedId) {
         else if (changedId === 'slider-loop-max' || changedId === 'val-loop-max') minVal = maxVal;
     }
 
+    const changed = minVal !== AppState.looper.min || maxVal !== AppState.looper.max;
     loopMinSlider.value = minVal;
     loopMaxSlider.value = maxVal;
     loopMinInput.value = minVal;
@@ -3905,7 +3929,8 @@ function syncLooper(source, changedId) {
     AppState.looper.max = maxVal;
 
     renderLooper();
-    enforceLooperBounds();
+    if (changed && window.SpeedTrainer.active) resetPlaybackToLoopStart(false);
+    else enforceLooperBounds();
 }
 
 function syncLooperInputIfReady(changedId) {
@@ -4043,7 +4068,7 @@ function playbackLoop() {
     window.CompanionPDF?.position(osmd.cursor.Iterator);
     if (currentMeasure && currentMeasure.TempoInBPM && currentMeasure.TempoInBPM !== AppState.baseBpm) {
         AppState.baseBpm = currentMeasure.TempoInBPM;
-        updateTempo('percent', AppState.speedPercent * 100); 
+        updateTempo('percent', Math.round(AppState.speedPercent * 100));
     }
 
     buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimestamp);
@@ -4110,7 +4135,8 @@ function playbackLoop() {
         }
     }
 
-    osmd.cursor.Iterator.moveToNext(); 
+    const trainingEventTime = globalThis.SpeedTrainer?.active ? osmd.cursor.Iterator.CurrentEnrolledTimestamp.RealValue : null;
+    osmd.cursor.Iterator.moveToNext();
     
     const nextMeasureIdx = osmd.cursor.Iterator.CurrentMeasureIndex;
     let nextTimestamp = osmd.cursor.Iterator.currentTimeStamp.RealValue;
@@ -4159,11 +4185,19 @@ function playbackLoop() {
     const minLoop = parseInt(document.getElementById('val-loop-min').value);
     
     if (isLoopEnabled && (isEndReached || (osmd.cursor.Iterator.CurrentMeasureIndex + 1 > maxLoop))) {
+        globalThis.SpeedTrainer?.pendingBoundary(trainingEventTime);
         
         const finishLoop = () => {
             if (!AppState.isPlaying) return;
             
-            processMissedNotes(); 
+            processMissedNotes();
+            if (trainingEventTime != null && !document.getElementById('check-looper').checked) {
+                osmd.cursor.update();
+                handleAutoScroll();
+                AppState.anchorTime = Tone.now();
+                playbackLoop();
+                return;
+            }
             Tone.Transport.stop(); 
 
             osmd.cursor.reset();
@@ -4171,6 +4205,7 @@ function playbackLoop() {
                 osmd.cursor.Iterator.moveToNext();
             }
             osmd.cursor.update();
+            globalThis.SpeedTrainer?.finishPass();
             handleAutoScroll();
             clearVisuals();
 

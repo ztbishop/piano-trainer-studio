@@ -284,7 +284,7 @@ A successful import replaces global preferences; omitted globals return to defau
 
 - **Practice Menu** — core training modes and feedback
 - **Tempo** — speed + metronome
-- **Loop** — repeat sections
+- **Loop** — repeat a measure range. In Realtime, expand **Speed Trainer**, set Start, Target, Speed increase and Every, then choose **Enable speed training** and press **Play**. The defaults give you two complete passes at 60%, then two at 65%, continuing up to 100%. [Speed Trainer controls](docs/PRACTICE_ENGINE.md#speed-trainer)
 - **Display** — Light / Soft Light / Dark appearance, zoom, virtual keyboard
 - **Transpose** — key or semitone changes
 

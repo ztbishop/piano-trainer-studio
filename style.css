@@ -4779,6 +4779,20 @@ input[type="range"] {
   cursor: default;
 }
 
+.speed-training { margin-top: 14px; border-top: 1px solid rgba(125, 142, 158, .45); }
+.speed-training summary { display: list-item; padding: 12px 0; cursor: pointer; }
+#training-fields {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px;
+    min-width: 0; border: 0; margin: 0 0 12px; padding: 0;
+}
+#training-fields label { display: grid; gap: 4px; margin: 0; }
+#training-fields input { box-sizing: border-box; width: 100%; min-width: 0; }
+#training-status { font-size: .85rem; margin-inline-start: 6px; }
+@media (max-width: 700px) {
+    #looper-popup { width: calc(100vw - 24px); max-width: calc(100vw - 24px); }
+    #fs-looper { box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; }
+}
+
 
 .loop-stepper-btn.is-holding {
     background: rgba(255, 255, 255, 0.98);

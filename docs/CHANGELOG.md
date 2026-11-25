@@ -1,5 +1,9 @@
 # Change history and future update records
 
+## 2026-11-24 — Realtime loop Speed Trainer
+
+Added Guitar Trainer's collapsible Speed Trainer to the Loop menu. It increases speed after complete passes, applies the next tempo before loop count-in, and keeps the current speed when ended. [Practice instructions and upstream credit](PRACTICE_ENGINE.md#speed-trainer) · [Regression procedure](DEVELOPMENT.md#speed-trainer-checks)
+
 ## 2026-11-24 — Save companion PDFs with library scores
 
 Saving a score can now store its companion PDF, filename, boxes and repeat assignments. Later corrections save to that score, and opening the library entry restores its PDF. Full and folder backups carry each shared file once. Import fills missing attachments on matching scores and preserves existing markings. [User guide and credits](COMPANION_PDF.md#save-and-reopen-a-marked-pdf) · [Browser checks](DEVELOPMENT.md#companion-pdf-checks)
