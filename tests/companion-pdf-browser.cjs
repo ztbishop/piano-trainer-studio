@@ -425,6 +425,10 @@ async function main() {
                 const first = document.querySelector('#pdf-pages [data-measure="1"]');
                 return parseFloat(first?.style.getPropertyValue('--pdf-beat-inset')) > 0;
             });
+            assert(await box(11).evaluate(b => {
+                const inset = parseFloat(b.style.getPropertyValue('--pdf-beat-inset'));
+                return inset > 35 && inset < 50;
+            }), 'Measure 11 uses its standalone first notehead even when later noteheads share a PDF text run');
             const starts = await page.evaluate(() => {
                 const it = osmd.Sheet.MusicPartManager.getIterator();
                 const starts = [];
