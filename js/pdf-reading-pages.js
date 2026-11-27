@@ -1,8 +1,21 @@
 // Adapted from Guitar Trainer Studio 1e68d3 (AGPL-3.0), 2026-11-24.
 // Page geometry and hit targets stay mounted. Only nearby pages need raster images.
+import {beatInset, readBeatGlyphs} from './pdf-beat-anchors.js';
+
 export function readingPages(scroll, root, onJump, onPage, onError) {
   let pages = [], width = 0, observer, active, range, scrollFrame = 0;
   const targets = new Map();
+  function setBeatInset(el, box, glyphs) {
+    const inset = beatInset(box, glyphs);
+    if (inset) el.style.setProperty('--pdf-beat-inset', 100 * inset + '%');
+  }
+  function prepareBeatAnchors(p) {
+    if (p.beatScan || root.classList.contains('marking')) return;
+    p.beatScan = readBeatGlyphs(p.pdf, p.base).then(glyphs => {
+      p.beatGlyphs = glyphs;
+      for (const [el, box] of p.beatBoxes) setBeatInset(el, box, glyphs);
+    }).catch(() => { p.beatGlyphs = []; });
+  }
   function release(p) {
     p.task?.cancel();
     p.task = null;
@@ -24,6 +37,7 @@ export function readingPages(scroll, root, onJump, onPage, onError) {
   function draw(p) {
     release(p);
     if (!width || !p.near || root.hidden) return;
+    prepareBeatAnchors(p);
     const canvas = document.createElement('canvas');
     const scale = Math.min(devicePixelRatio || 1, 2, Math.sqrt(8000000 / (width ** 2 * p.base.height / p.base.width)));
     const viewport = p.pdf.getViewport({scale:width * scale / p.base.width});
@@ -47,7 +61,7 @@ export function readingPages(scroll, root, onJump, onPage, onError) {
       layer.className = 'pdf-boxes';
       node.append(layer);
       root.append(node);
-      return {node, layer, pdf, number, base};
+      return {node, layer, pdf, number, base, beatBoxes: new Map()};
     });
     observer = new IntersectionObserver(entries => {
       for (const entry of entries) {
@@ -66,7 +80,10 @@ export function readingPages(scroll, root, onJump, onPage, onError) {
     pages.filter(p => p.near).forEach(draw);
   }
   function populate(boxes, makeBox, label) {
-    pages.forEach(p => p.layer.replaceChildren());
+    pages.forEach(p => {
+      p.layer.replaceChildren();
+      p.beatBoxes.clear();
+    });
     targets.clear();
     active = range = undefined;
     for (const [key, box] of Object.entries(boxes)) {
@@ -77,6 +94,9 @@ export function readingPages(scroll, root, onJump, onPage, onError) {
       el.setAttribute('aria-label', 'Go to measure '+label(number));
       el.onclick = () => onJump(number);
       p.layer.append(el);
+      p.beatBoxes.set(el, box);
+      if (p.beatGlyphs?.length) setBeatInset(el, box, p.beatGlyphs);
+      if (p.near) prepareBeatAnchors(p);
       targets.set(number, el);
     }
   }
@@ -93,6 +113,7 @@ export function readingPages(scroll, root, onJump, onPage, onError) {
   function preview(entries, makeBox) {
     targets.clear();
     pages.forEach((p,i) => {
+      p.beatBoxes.clear();
       p.layer.replaceChildren(...Array.from(entries[i] || [], ([number,box]) => {
         const el = makeBox(box);
         const label = document.createElement('span');
@@ -136,8 +157,8 @@ export function readingPages(scroll, root, onJump, onPage, onError) {
     const mark = document.createElement('span');
     mark.className = 'pdf-beat-mark active-event';
     mark.setAttribute('aria-hidden', 'true');
-    mark.style.left = 100 * start + '%';
-    mark.style.width = 100 * (end - start) + '%';
+    mark.style.left = 'calc(' + (100 * start) + '% + var(--pdf-beat-inset, 0%) * ' + (1 - start) + ')';
+    mark.style.width = 'calc((100% - var(--pdf-beat-inset, 0%)) * ' + (end - start) + ')';
     target.append(mark);
     return mark;
   }

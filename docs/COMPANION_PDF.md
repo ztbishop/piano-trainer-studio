@@ -55,8 +55,8 @@ Completed marks remain after pausing or finishing. A loop restart clears marks i
 
 ### Beat guide trial and Guitar Trainer handoff
 
-The Arirang MIDI and TAB PDF provide 16 successive segments in the first bar. The ninth starts halfway across the measure and the sixteenth starts at about 94%. Try how the guide reads on dense runs, long rests and repeats. Printed notes can be spaced unevenly, especially where a system begins with a clef and key signature.
+On nearby reading pages, the guide can use a separate first-note position when the PDF exposes recognizable music-font glyphs. It requires a clef before the first notehead, another note column, and no recognized leading rest. Arirang's opening bar uses this adjustment. PDFs with unsupported glyphs, scanned pages, or boxes without a clear match use the full box. The guide still distributes the remaining events by time, so uneven printed spacing can affect alignment.
 
-The segment begins at the event’s offset from the written measure start and spans the event’s scheduled score duration, capped at the barline. Both values are expressed as fractions of the written measure duration. The guide uses the existing playback cursor, grading and mapped PDF box.
+The segment begins at the event’s offset from the written measure start and spans the event’s scheduled score duration, capped at the barline. Both values are expressed as fractions of the written measure duration and applied between the first-note position and the right edge of the box when available. The reader extracts glyphs once per nearby page and keeps the result in memory. Highlighting, click-to-seek and saved box geometry use the full box.
 
 For an alphaTab trial after piano acceptance, use Guitar Trainer’s playback visit to resolve the printed box, then express the beat’s start, end and measure duration in the same tick coordinate system. Reuse Guitar Trainer’s live wrong-input state and finalize each segment from its grading outcome. Keep completed marks for review and clear the relevant marks on loop restart. Check pause, seek, repeats, wrong-key release and a correction in Wait mode.

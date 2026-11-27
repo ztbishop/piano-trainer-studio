@@ -11,7 +11,7 @@ The previously reproduced runtime defects FIX-001–FIX-007 have implementations
 ## Things still to test or investigate
 
 - Check the [PDF beat guide](COMPANION_PDF.md#beat-guide-trial-and-guitar-trainer-handoff) on physical piano. Check system starts like Arirang measure 11 for the effect of clef and key-signature space, and verify that PDF auto-scroll headroom keeps high notes visible at the usual zoom.
-  - Investigate whether automatic box detection can suggest a separate first-note position for system starts while retaining the full box for highlighting and click-to-seek.
+  - The reader now identifies a separate first-note position from supported PDF text glyphs. Chrome verified the Arirang opening bar and full-box fallback. Check additional system starts and exports in practice.
 
 ### Companion scores and practice workflows
 

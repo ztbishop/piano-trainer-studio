@@ -280,6 +280,7 @@ async function main() {
         const stripColor = () => strip.evaluate(b => getComputedStyle(b).backgroundColor);
         assert((await strip.boundingBox()).y < (await box(1).boundingBox()).y);
         assert.equal((await strip.boundingBox()).height, 14);
+        assert.equal(await strip.evaluate(mark => getComputedStyle(mark).left), '0px');
         await el('check-feedback').evaluate(input => input.click());
         assert.equal(await stripColor(), 'rgba(15, 75, 155, 0.23)');
         await el('check-feedback').evaluate(input => input.click());
@@ -420,6 +421,10 @@ async function main() {
             await el('pdf-file').setInputFiles(process.env.PT_BEAT_PDF);
             await el('pdf-find').click();
             await el('pdf-use-score').click({timeout:120000});
+            await page.waitForFunction(() => {
+                const first = document.querySelector('#pdf-pages [data-measure="1"]');
+                return parseFloat(first?.style.getPropertyValue('--pdf-beat-inset')) > 0;
+            });
             const starts = await page.evaluate(() => {
                 const it = osmd.Sheet.MusicPartManager.getIterator();
                 const starts = [];
@@ -431,12 +436,16 @@ async function main() {
                     const end = it.CurrentMeasureIndex === 0 ? it.currentTimeStamp.RealValue :
                         measure.AbsoluteTimestamp.RealValue + measure.Duration.RealValue;
                     CompanionPDF.beginBeat(measure, timestamp, 4 * (end - timestamp));
-                    starts.push(parseFloat(document.querySelector('.pdf-beat-mark.active-event').style.left));
+                    const mark = document.querySelector('.pdf-beat-mark.active-event');
+                    starts.push(parseFloat(getComputedStyle(mark).left) / mark.parentElement.clientWidth);
                 }
                 CompanionPDF.cancelBeat();
                 return starts;
             });
-            assert.deepEqual(starts, Array.from({length:16}, (_, i) => i * 6.25));
+            assert.equal(starts.length, 16);
+            assert(starts[0] > 0.30 && starts[0] < 0.40, 'Start near the first printed Arirang note');
+            assert(starts.every((start, i) => Math.abs(start - (starts[0] + (1 - starts[0]) * i / 16)) < 0.003));
+            assert.equal(await box(2).evaluate(b => b.style.getPropertyValue('--pdf-beat-inset')), '');
         }
         assert.deepEqual(errors, []);
         console.log('Companion PDF browser acceptance passed.');
