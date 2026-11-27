@@ -83,7 +83,10 @@ export function readingPages(scroll, root, onJump, onPage, onError) {
   function follow(el) {
     if (!el) return;
     const frame = scroll.getBoundingClientRect(), rect = el.getBoundingClientRect();
-    if (rect.top < frame.top || rect.bottom > frame.bottom) scroll.scrollTop += rect.top-frame.top-12;
+    const headroom = Math.min(64, Math.max(32, scroll.clientWidth * .05), scroll.clientHeight * .15);
+    if (rect.top < frame.top + headroom || rect.bottom > frame.bottom) {
+      scroll.scrollTop += rect.top - frame.top - headroom;
+    }
     if (rect.left < frame.left || rect.right > frame.right) scroll.scrollLeft += rect.left-frame.left-8;
     onPage(Number(el.closest('[data-page]').dataset.page));
   }

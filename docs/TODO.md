@@ -10,7 +10,7 @@ The previously reproduced runtime defects FIX-001–FIX-007 have implementations
 
 ## Things still to test or investigate
 
-- Evaluate the optional [PDF beat guide](COMPANION_PDF.md#beat-guide-trial-and-guitar-trainer-handoff) during physical-piano practice. Chrome checks cover Arirang's first-bar segments, Wait wrong-key release and correction, Realtime success and loop reset. Check whether the colors and approximate positions are helpful on dense or irregularly spaced passages before requesting a Guitar Trainer port.
+- Check the [PDF beat guide](COMPANION_PDF.md#beat-guide-trial-and-guitar-trainer-handoff) on physical piano. Check system starts like Arirang measure 11 for the effect of clef and key-signature space, and verify that PDF auto-scroll headroom keeps high notes visible at the usual zoom.
 
 ### Companion scores and practice workflows
 

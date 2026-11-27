@@ -5343,12 +5343,12 @@ body > .toolbar-popup, #practice-popup, #options-overlay {
     position: absolute;
     pointer-events: none;
     bottom: calc(100% + 2px);
-    height: 5px;
+    height: 7px;
     background: rgb(15 75 155 / 23%);
 }
-.pdf-beat-mark.correct-event { background: rgb(16 131 63 / 23%); }
+.pdf-beat-mark.live-correct { background: rgb(16 131 63 / 23%); }
 .pdf-beat-mark.missed-event,
-body.pdf-beat-feedback:has(#virtual-keyboard .wrong) .pdf-beat-mark.active-event { background: rgb(193 35 44 / 23%); }
+.pdf-beat-mark.live-wrong { background: rgb(193 35 44 / 23%); }
 #pdf-pages .pdf-boxes button.pdf-box {
     pointer-events: auto; border: 0; border-radius: 0; padding: 0; min-width: 0; min-height: 0;
     box-shadow: none; background: transparent !important;

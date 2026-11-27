@@ -2107,6 +2107,7 @@ function findSatisfiedOrSustainedMatchForMidi(midi) {
 }
 
 function renderVirtualKeyboard(currentEntries = null, currentMeasureIdx = null, currentTimestamp = null) {
+    globalThis.CompanionPDF?.updateBeatColor();
     const desiredStates = new Map();
     const previewStateMap = new Map();
 
@@ -2724,7 +2725,7 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
                         AppState.realtimeWrongPressInCurrentContext = true;
                     }
                     registerHeldIncorrectFeedback(midi, targetStaffId, forceMIdx, anchor);
-                    globalThis.CompanionPDF?.wrongBeat();
+                    globalThis.CompanionPDF?.wrongBeat(midi);
                     AppState.score.wrong++;
                     updateScoreDisplay();
                 }
@@ -2791,7 +2792,7 @@ function checkWaitModeAdvance() {
         const loopRestart = AppState.pendingLoopRestart;
         AppState.pendingLoopRestart = null;
         const advance = () => {
-            globalThis.CompanionPDF?.finishBeat(AppState.expectedNotes);
+            globalThis.CompanionPDF?.finishBeat();
             if (loopRestart) {
                 loopRestart.callback();
             } else {
@@ -2989,6 +2990,7 @@ document.getElementById('check-keyboard').addEventListener('change', (e) => {
 document.getElementById('check-feedback').addEventListener('change', (e) => {
     AppState.feedbackEnabled = e.target.checked;
     setStoredBool(TRAINER_FEEDBACK_STORAGE_KEY, AppState.feedbackEnabled);
+    globalThis.CompanionPDF?.feedbackChanged();
     if (!e.target.checked) {
         GeometryEngine.clearSvgFeedback();
     } else {

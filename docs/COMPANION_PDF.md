@@ -49,9 +49,9 @@ The whole-score scan and numbering checks were ported from Guitar Trainer Studio
 
 Library attachment storage, reference cleanup and portable backups were adapted from Guitar Trainer Studio under the project AGPL. [Guitar Trainer commit 3a7752b](https://github.com/ztbishop/guitar-trainer-studio/commit/3a7752b)
 
-**Scores → PDF → Show approximate beat position (experimental)** draws a narrow, translucent strip above the measure box. Dark blue shows the active event and turns red while the virtual keyboard shows a wrong key. When the event ends, a correctly played segment turns green and a mistake or missed note leaves a red segment. A wrong key followed by a correction still leaves a red mark. Rests and ungraded events leave no result color.
+**Practice → Visual Feedback → Highlight correct / incorrect notes (on staff)** also controls the translucent event guide above the companion PDF measure box. The active segment is blue, green while a correct key is held, and red while an explicitly wrong key is held. Red takes priority if both are held. Only events with an explicit wrong key retain a red mark after the cursor advances, including events corrected in Wait mode.
 
-Completed marks remain after pausing or finishing. A loop restart clears marks in the loop range, and a repeated visit refreshes its printed measure. Reset or turning the guide off clears the marks. The option starts off on each app launch.
+Red marks remain after pausing or finishing. A loop restart clears marks in the loop range, and a repeated visit refreshes its printed measure. Reset or turning staff feedback off clears the marks. PDF auto-scroll leaves up to 64 pixels of room above the active box for higher notes and annotations, scaled down on smaller screens.
 
 ### Beat guide trial and Guitar Trainer handoff
 

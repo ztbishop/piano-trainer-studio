@@ -29,21 +29,30 @@ function initPdfCompanion() {
   const find=byId('find'), action=byId('action'), replace=byId('replace');
   const findPage = byId('find-page'), useScore = byId('use-score');
   const pagesRoot=byId('pages');
-  const beatGuide = byId('beat-guide');
   let beatMark, beatMistake = false;
   const markedVisits = new Map();
+  const wrongKeys = new Set();
+  function updateBeatColor() {
+    if (!beatMark) return;
+    for (const midi of wrongKeys) {
+      if (!AppState.pressedKeys.has(midi)) wrongKeys.delete(midi);
+    }
+    beatMark.classList.toggle('live-wrong', wrongKeys.size > 0);
+    beatMark.classList.toggle('live-correct', AppState.heldCorrectNotes.size > 0);
+  }
   function cancelBeat() {
     beatMark?.remove();
     beatMark = undefined;
   }
   function clearBeats(numbers) {
     cancelBeat();
+    wrongKeys.clear();
     reader.clearBeatMarks(numbers);
     if (numbers) for (const number of numbers) markedVisits.delete(number);
     else markedVisits.clear();
   }
   function beginBeat(measure, timestamp, beats) {
-    if (!beatGuide.checked || !visible || editing) return;
+    if (!AppState.feedbackEnabled || !visible || editing) return;
     cancelBeat();
     const number = mapping[currentVisit];
     if (!boxes[number] || !measure) return;
@@ -56,18 +65,15 @@ function initPdfCompanion() {
     }
     beatMistake = false;
     beatMark = reader.addBeatMark(number, start, end);
+    updateBeatColor();
   }
-  function finishBeat(notes) {
+  function finishBeat() {
     if (!beatMark) return;
-    if (notes.length) {
-      beatMark.className = 'pdf-beat-mark ' + (beatMistake || notes.some(note => !note.hit) ? 'missed-event' : 'correct-event');
+    if (beatMistake) {
+      beatMark.className = 'pdf-beat-mark missed-event';
       beatMark = undefined;
     } else cancelBeat();
   }
-  beatGuide.onchange = () => {
-    document.body.classList.toggle('pdf-beat-feedback', beatGuide.checked);
-    if (!beatGuide.checked) clearBeats();
-  };
   const reader=readingPages(scroll,pagesRoot,jumpToMeasure,number=>{
     if(number===page || !visible || view.hidden)return;
     if (scoreReview && !proposals) { page=number; pageSelect.value=String(number); return; }
@@ -393,7 +399,7 @@ function initPdfCompanion() {
     if(scrollToPage)reader.jump(page);
   }
   function setEditing(value) {
-    if (beatGuide.checked) clearBeats();
+    if (AppState.feedbackEnabled) clearBeats();
     editing = value;
     endReview();byId('position').hidden=true;
     cancelDrag();
@@ -652,8 +658,14 @@ function initPdfCompanion() {
   file.onchange = () => { const selected = file.files[0]; file.value = ''; if (selected) open(selected); };
   new ResizeObserver(renderPage).observe(scroll);
   return {position, reset, attachment, bindSaved, restoreLibrary, beginBeat, finishBeat, cancelBeat,
-    wrongBeat: () => { if (beatMark) beatMistake = true; },
-    resetBeats: (loopOnly = false) => { if (beatGuide.checked) clearBeats(loopOnly ? loopMeasures : undefined); },
+    wrongBeat: midi => {
+      if (!beatMark) return;
+      beatMistake = true;
+      wrongKeys.add(midi);
+    },
+    updateBeatColor,
+    feedbackChanged: () => { if (!AppState.feedbackEnabled) clearBeats(); },
+    resetBeats: (loopOnly = false) => { if (AppState.feedbackEnabled) clearBeats(loopOnly ? loopMeasures : undefined); },
     needsLibrarySave: id => !!attachedFile && (id !== boundScoreId || needsRetry),
     loopChanged: sync, resize: renderPage, scoreReady: () => { attach.disabled = false; }};
 }

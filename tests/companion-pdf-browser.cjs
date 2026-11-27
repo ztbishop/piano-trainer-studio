@@ -257,11 +257,7 @@ async function main() {
         await openPdfMenu(page);
         await el('pdf-visit').selectOption('2');
         await expectVisit(3,1);
-        await openPdfMenu(page);
-        assert.equal(await el('pdf-beat-guide').isChecked(), false);
-        await el('pdf-beat-guide').check();
-        await el('btn-scores').click();
-        await el('scores-panel').waitFor({state:'hidden'});
+        assert.equal(await el('check-feedback').isChecked(), true);
         assert.equal(await page.locator('.pdf-beat-mark').count(), 0);
         await mode('wait');
         await el('btn-looper').click();
@@ -287,9 +283,16 @@ async function main() {
         assert.equal(await stripColor(), 'rgba(193, 35, 44, 0.23)');
         await page.evaluate(() => triggerVirtualKey(71,false,'ui'));
         assert.equal(await stripColor(), 'rgba(15, 75, 155, 0.23)');
-        await press(60);
+        await page.evaluate(() => triggerVirtualKey(60,true,'ui'));
+        assert.equal(await stripColor(), 'rgba(16, 131, 63, 0.23)');
+        await page.evaluate(() => triggerVirtualKey(71,true,'ui'));
+        assert.equal(await stripColor(), 'rgba(193, 35, 44, 0.23)');
+        await page.evaluate(() => {
+            triggerVirtualKey(71,false,'ui');
+            triggerVirtualKey(60,false,'ui');
+        });
         await expectVisit(3,1);
-        assert.deepEqual(await page.evaluate(() => AppState.score), {correct:1,wrong:1});
+        assert.deepEqual(await page.evaluate(() => AppState.score), {correct:1,wrong:2});
         await press(48);
         await expectVisit(4,2);
         assert.equal(await box(1).locator('.missed-event').count(), 1);
@@ -312,11 +315,11 @@ async function main() {
         await press(62);
         assert(await page.evaluate(() => AppState.score.correct > 0));
         await expectVisit(5,3);
-        assert.equal(await box(2).locator('.correct-event').count(), 1);
+        assert.equal(await box(2).locator('.pdf-beat-mark').count(), 0);
         await page.waitForFunction(() => document.querySelector('#pdf-page').value === '2' &&
             document.querySelector('#pdf-scroll').scrollTop > document.querySelector('#pdf-scroll').clientHeight);
         await el('btn-play').click();
-        assert.equal(await box(2).locator('.correct-event').count(), 1);
+        assert.equal(await box(2).locator('.pdf-beat-mark').count(), 0);
         await mode('follow');
         await box(3).click();
         await el('btn-play').click();
@@ -413,8 +416,6 @@ async function main() {
             await el('pdf-file').setInputFiles(process.env.PT_BEAT_PDF);
             await el('pdf-find').click();
             await el('pdf-use-score').click({timeout:120000});
-            await openPdfMenu(page);
-            await el('pdf-beat-guide').check();
             const starts = await page.evaluate(() => {
                 const it = osmd.Sheet.MusicPartManager.getIterator();
                 const starts = [];
