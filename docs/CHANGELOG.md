@@ -1,5 +1,13 @@
 # Change history and future update records
 
+## 2026-11-27 — Piano Trainer Studio v1.4.1
+
+- **Follow the beat on companion PDFs.** A 14-pixel translucent blue strip shows your position within the current measure. On compatible PDFs, it starts at the first printed note after the clef and key signature. Other measures use the full measure box.
+- **Review PDF practice feedback.** Enable **Practice → Visual Feedback → Highlight correct / incorrect notes (on staff)** to see green for correct notes and red for wrong notes. Any wrong or missed note makes the completed beat red, even if you played the rest of the chord correctly. Marks remain available for review after playback, and a loop restart refreshes the loop range.
+- **See more above the staff.** PDF auto-scroll leaves up to 80 pixels above the active measure to help keep high notes and fingerings in view.
+
+[Companion PDF guide](COMPANION_PDF.md)
+
 ## 2026-11-25 — Piano Trainer Studio v1.4.0
 
 ### What’s new since v1.3.1
