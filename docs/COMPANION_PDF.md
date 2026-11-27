@@ -51,7 +51,7 @@ Library attachment storage, reference cleanup and portable backups were adapted 
 
 The PDF shows a 14-pixel translucent blue guide above the current event during playback. **Practice → Visual Feedback → Highlight correct / incorrect notes (on staff)** adds live green for held correct notes and live red for held wrong notes, with red taking priority. Completed graded events leave green for a clean event or red for a wrong or missed note.
 
-Completed marks remain after pausing or finishing. A loop restart clears marks in the loop range, and a repeated visit refreshes its printed measure. Reset or turning staff feedback off clears the completed marks. PDF auto-scroll leaves up to 64 pixels of room above the active box for higher notes and annotations, scaled down on smaller screens.
+Completed marks remain after pausing or finishing. A loop restart clears marks in the loop range, and a repeated visit refreshes its printed measure. Reset or turning staff feedback off clears the completed marks. PDF auto-scroll aims for up to 80 pixels of room above the active box for higher notes and annotations, scaled down in narrower or shorter score panes.
 
 ### Beat guide trial and Guitar Trainer handoff
 

@@ -103,7 +103,7 @@ export function readingPages(scroll, root, onJump, onPage, onError) {
   function follow(el) {
     if (!el) return;
     const frame = scroll.getBoundingClientRect(), rect = el.getBoundingClientRect();
-    const headroom = Math.min(64, Math.max(32, scroll.clientWidth * .05), scroll.clientHeight * .15);
+    const headroom = Math.min(80, Math.max(32, scroll.clientWidth * .06), scroll.clientHeight * .18);
     if (rect.top < frame.top + headroom || rect.bottom > frame.bottom) {
       scroll.scrollTop += rect.top - frame.top - headroom;
     }
