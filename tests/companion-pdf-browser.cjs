@@ -279,6 +279,10 @@ async function main() {
         const strip = box(1).locator('.pdf-beat-mark.active-event');
         const stripColor = () => strip.evaluate(b => getComputedStyle(b).backgroundColor);
         assert((await strip.boundingBox()).y < (await box(1).boundingBox()).y);
+        assert.equal((await strip.boundingBox()).height, 14);
+        await el('check-feedback').evaluate(input => input.click());
+        assert.equal(await stripColor(), 'rgba(15, 75, 155, 0.23)');
+        await el('check-feedback').evaluate(input => input.click());
         await page.evaluate(() => triggerVirtualKey(71,true,'ui'));
         assert.equal(await stripColor(), 'rgba(193, 35, 44, 0.23)');
         await page.evaluate(() => triggerVirtualKey(71,false,'ui'));
@@ -315,11 +319,11 @@ async function main() {
         await press(62);
         assert(await page.evaluate(() => AppState.score.correct > 0));
         await expectVisit(5,3);
-        assert.equal(await box(2).locator('.pdf-beat-mark').count(), 0);
+        assert.equal(await box(2).locator('.correct-event').count(), 1);
         await page.waitForFunction(() => document.querySelector('#pdf-page').value === '2' &&
             document.querySelector('#pdf-scroll').scrollTop > document.querySelector('#pdf-scroll').clientHeight);
         await el('btn-play').click();
-        assert.equal(await box(2).locator('.pdf-beat-mark').count(), 0);
+        assert.equal(await box(2).locator('.correct-event').count(), 1);
         await mode('follow');
         await box(3).click();
         await el('btn-play').click();

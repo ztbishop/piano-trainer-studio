@@ -128,7 +128,7 @@ export function readingPages(scroll, root, onJump, onPage, onError) {
     pages[number-1]?.node.append(sheet);
   }
   function clearBeatMarks(numbers = targets.keys()) {
-    for (const number of numbers) targets.get(number)?.querySelectorAll('.pdf-beat-mark').forEach(mark => mark.remove());
+    for (const number of numbers) targets.get(number)?.querySelectorAll('.pdf-beat-mark:not(.active-event)').forEach(mark => mark.remove());
   }
   function addBeatMark(number, start, end) {
     const target = targets.get(number);

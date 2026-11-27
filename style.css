@@ -5343,10 +5343,11 @@ body > .toolbar-popup, #practice-popup, #options-overlay {
     position: absolute;
     pointer-events: none;
     bottom: calc(100% + 2px);
-    height: 7px;
+    height: 14px;
     background: rgb(15 75 155 / 23%);
 }
-.pdf-beat-mark.live-correct { background: rgb(16 131 63 / 23%); }
+.pdf-beat-mark.live-correct,
+.pdf-beat-mark.correct-event { background: rgb(16 131 63 / 23%); }
 .pdf-beat-mark.missed-event,
 .pdf-beat-mark.live-wrong { background: rgb(193 35 44 / 23%); }
 #pdf-pages .pdf-boxes button.pdf-box {

@@ -2792,7 +2792,7 @@ function checkWaitModeAdvance() {
         const loopRestart = AppState.pendingLoopRestart;
         AppState.pendingLoopRestart = null;
         const advance = () => {
-            globalThis.CompanionPDF?.finishBeat();
+            globalThis.CompanionPDF?.finishBeat(AppState.expectedNotes);
             if (loopRestart) {
                 loopRestart.callback();
             } else {

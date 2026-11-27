@@ -37,8 +37,8 @@ function initPdfCompanion() {
     for (const midi of wrongKeys) {
       if (!AppState.pressedKeys.has(midi)) wrongKeys.delete(midi);
     }
-    beatMark.classList.toggle('live-wrong', wrongKeys.size > 0);
-    beatMark.classList.toggle('live-correct', AppState.heldCorrectNotes.size > 0);
+    beatMark.classList.toggle('live-wrong', AppState.feedbackEnabled && wrongKeys.size > 0);
+    beatMark.classList.toggle('live-correct', AppState.feedbackEnabled && AppState.heldCorrectNotes.size > 0);
   }
   function cancelBeat() {
     beatMark?.remove();
@@ -52,7 +52,7 @@ function initPdfCompanion() {
     else markedVisits.clear();
   }
   function beginBeat(measure, timestamp, beats) {
-    if (!AppState.feedbackEnabled || !visible || editing) return;
+    if (!visible || editing) return;
     cancelBeat();
     const number = mapping[currentVisit];
     if (!boxes[number] || !measure) return;
@@ -67,10 +67,11 @@ function initPdfCompanion() {
     beatMark = reader.addBeatMark(number, start, end);
     updateBeatColor();
   }
-  function finishBeat() {
+  function finishBeat(notes) {
     if (!beatMark) return;
-    if (beatMistake) {
-      beatMark.className = 'pdf-beat-mark missed-event';
+    if (AppState.feedbackEnabled && notes.length) {
+      const incorrect = beatMistake || notes.some(note => !note.hit);
+      beatMark.className = 'pdf-beat-mark ' + (incorrect ? 'missed-event' : 'correct-event');
       beatMark = undefined;
     } else cancelBeat();
   }
@@ -399,7 +400,7 @@ function initPdfCompanion() {
     if(scrollToPage)reader.jump(page);
   }
   function setEditing(value) {
-    if (AppState.feedbackEnabled) clearBeats();
+    clearBeats();
     editing = value;
     endReview();byId('position').hidden=true;
     cancelDrag();
@@ -659,13 +660,20 @@ function initPdfCompanion() {
   new ResizeObserver(renderPage).observe(scroll);
   return {position, reset, attachment, bindSaved, restoreLibrary, beginBeat, finishBeat, cancelBeat,
     wrongBeat: midi => {
-      if (!beatMark) return;
+      if (!beatMark || !AppState.feedbackEnabled) return;
       beatMistake = true;
       wrongKeys.add(midi);
     },
     updateBeatColor,
-    feedbackChanged: () => { if (!AppState.feedbackEnabled) clearBeats(); },
-    resetBeats: (loopOnly = false) => { if (AppState.feedbackEnabled) clearBeats(loopOnly ? loopMeasures : undefined); },
+    feedbackChanged: () => {
+      if (!AppState.feedbackEnabled) {
+        reader.clearBeatMarks();
+        wrongKeys.clear();
+        beatMistake = false;
+      }
+      updateBeatColor();
+    },
+    resetBeats: (loopOnly = false) => clearBeats(loopOnly ? loopMeasures : undefined),
     needsLibrarySave: id => !!attachedFile && (id !== boundScoreId || needsRetry),
     loopChanged: sync, resize: renderPage, scoreReady: () => { attach.disabled = false; }};
 }
