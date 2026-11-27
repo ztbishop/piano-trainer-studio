@@ -124,5 +124,19 @@ export function readingPages(scroll, root, onJump, onPage, onError) {
   function placeEditor(number, sheet) {
     pages[number-1]?.node.append(sheet);
   }
-  return {clear, load, resize, populate, preview, update, jump, placeEditor};
+  function clearBeatMarks(numbers = targets.keys()) {
+    for (const number of numbers) targets.get(number)?.querySelectorAll('.pdf-beat-mark').forEach(mark => mark.remove());
+  }
+  function addBeatMark(number, start, end) {
+    const target = targets.get(number);
+    if (!target) return;
+    const mark = document.createElement('span');
+    mark.className = 'pdf-beat-mark active-event';
+    mark.setAttribute('aria-hidden', 'true');
+    mark.style.left = 100 * start + '%';
+    mark.style.width = 100 * (end - start) + '%';
+    target.append(mark);
+    return mark;
+  }
+  return {clear, load, resize, populate, preview, update, jump, placeEditor, addBeatMark, clearBeatMarks};
 }

@@ -262,7 +262,7 @@ async function main() {
         await el('pdf-beat-guide').check();
         await el('btn-scores').click();
         await el('scores-panel').waitFor({state:'hidden'});
-        assert.equal(await el('pdf-pages').evaluate(p => p.style.getPropertyValue('--pdf-beat-width')), 'max(5px, 0%)');
+        assert.equal(await page.locator('.pdf-beat-mark').count(), 0);
         await mode('wait');
         await el('btn-looper').click();
         await el('val-loop-max').fill('4'); await el('val-loop-max').press('Tab');
@@ -280,21 +280,25 @@ async function main() {
         const press = midi => page.evaluate(n => {
             triggerVirtualKey(n,true,'ui'); triggerVirtualKey(n,false,'ui');
         },midi);
-        const stripColor = () => box(1).evaluate(b => getComputedStyle(b, '::after').backgroundColor);
+        const strip = box(1).locator('.pdf-beat-mark.active-event');
+        const stripColor = () => strip.evaluate(b => getComputedStyle(b).backgroundColor);
+        assert((await strip.boundingBox()).y < (await box(1).boundingBox()).y);
         await page.evaluate(() => triggerVirtualKey(71,true,'ui'));
-        assert.equal(await stripColor(), 'rgb(181, 45, 48)');
+        assert.equal(await stripColor(), 'rgba(193, 35, 44, 0.23)');
         await page.evaluate(() => triggerVirtualKey(71,false,'ui'));
-        assert.equal(await stripColor(), 'rgb(18, 101, 160)');
+        assert.equal(await stripColor(), 'rgba(15, 75, 155, 0.23)');
         await press(60);
         await expectVisit(3,1);
         assert.deepEqual(await page.evaluate(() => AppState.score), {correct:1,wrong:1});
         await press(48);
         await expectVisit(4,2);
+        assert.equal(await box(1).locator('.missed-event').count(), 1);
         assert.deepEqual(await pitches(), [62]);
         await page.waitForTimeout(350);
         assert.equal(await active(), '2');
         await press(62);
         await expectVisit(3,1);
+        assert.equal(await page.locator('.pdf-beat-mark:not(.active-event)').count(), 0);
         assert.deepEqual(await pitches(), [48,60]);
         await el('btn-play').click();
         await el('btn-looper').click(); await el('check-looper').uncheck(); await el('btn-looper').click();
@@ -308,9 +312,11 @@ async function main() {
         await press(62);
         assert(await page.evaluate(() => AppState.score.correct > 0));
         await expectVisit(5,3);
+        assert.equal(await box(2).locator('.correct-event').count(), 1);
         await page.waitForFunction(() => document.querySelector('#pdf-page').value === '2' &&
             document.querySelector('#pdf-scroll').scrollTop > document.querySelector('#pdf-scroll').clientHeight);
         await el('btn-play').click();
+        assert.equal(await box(2).locator('.correct-event').count(), 1);
         await mode('follow');
         await box(3).click();
         await el('btn-play').click();
@@ -409,20 +415,23 @@ async function main() {
             await el('pdf-use-score').click({timeout:120000});
             await openPdfMenu(page);
             await el('pdf-beat-guide').check();
-            const widths = await page.evaluate(() => {
+            const starts = await page.evaluate(() => {
                 const it = osmd.Sheet.MusicPartManager.getIterator();
-                const widths = [];
+                const starts = [];
+                const measure = osmd.Sheet.SourceMeasures[0];
                 while (!it.EndReached && it.CurrentMeasureIndex === 0) {
                     CompanionPDF.position(it);
-                    const box = document.querySelector('#pdf-pages .pdf-box.current');
-                    widths.push(parseFloat(getComputedStyle(box, '::after').width) / box.clientWidth);
+                    const timestamp = it.currentTimeStamp.RealValue;
                     it.moveToNext();
+                    const end = it.CurrentMeasureIndex === 0 ? it.currentTimeStamp.RealValue :
+                        measure.AbsoluteTimestamp.RealValue + measure.Duration.RealValue;
+                    CompanionPDF.beginBeat(measure, timestamp, 4 * (end - timestamp));
+                    starts.push(parseFloat(document.querySelector('.pdf-beat-mark.active-event').style.left));
                 }
-                return widths;
+                CompanionPDF.cancelBeat();
+                return starts;
             });
-            console.log('First measure progress fractions', widths);
-            assert(widths.length > 3 && widths[0] < 0.1 && widths.at(-1) > 0.7);
-            assert(widths.every((w,i) => w <= 1 && (!i || w >= widths[i-1])));
+            assert.deepEqual(starts, Array.from({length:16}, (_, i) => i * 6.25));
         }
         assert.deepEqual(errors, []);
         console.log('Companion PDF browser acceptance passed.');

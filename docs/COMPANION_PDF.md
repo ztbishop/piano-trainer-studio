@@ -49,12 +49,14 @@ The whole-score scan and numbering checks were ported from Guitar Trainer Studio
 
 Library attachment storage, reference cleanup and portable backups were adapted from Guitar Trainer Studio under the project AGPL. [Guitar Trainer commit 3a7752b](https://github.com/ztbishop/guitar-trainer-studio/commit/3a7752b)
 
-**Scores → PDF → Show approximate beat position (experimental)** adds a narrow blue progress strip at the top of the highlighted measure. It advances at digital score events and turns red while the virtual keyboard shows a wrong key. Printed notes may be spaced unevenly. Use the keyboard for pitch feedback. The option starts off on each app launch and requires no additional markings.
+**Scores → PDF → Show approximate beat position (experimental)** draws a narrow, translucent strip above the measure box. Dark blue shows the active event and turns red while the virtual keyboard shows a wrong key. When the event ends, a correctly played segment turns green and a mistake or missed note leaves a red segment. A wrong key followed by a correction still leaves a red mark. Rests and ungraded events leave no result color.
+
+Completed marks remain after pausing or finishing. A loop restart clears marks in the loop range, and a repeated visit refreshes its printed measure. Reset or turning the guide off clears the marks. The option starts off on each app launch.
 
 ### Beat guide trial and Guitar Trainer handoff
 
-The Chrome trial on the Arirang MIDI and TAB PDF measured 16 positions in the first bar. The strip starts with a five-pixel mark, reaches halfway on the ninth event, and ends at about 94% on the sixteenth. The grand-staff fixture also exercises wrong-key color and release in Wait mode. These checks establish musical progress; judging how well the cue reads alongside uneven engraving requires playing the piece.
+The Arirang MIDI and TAB PDF provide 16 successive segments in the first bar. The ninth starts halfway across the measure and the sixteenth starts at about 94%. Try how the guide reads on dense runs, long rests and repeats. Printed notes can be spaced unevenly, especially where a system begins with a clef and key signature.
 
-Try the same passage with the guide off and on. Check whether the strip helps you keep your place during dense runs, long rests and a repeated passage. Its length represents the current event’s offset from the written measure start divided by the actual measure duration, including pickups. It uses the existing playback cursor and mapped PDF box. No timer, page analysis or additional saved data is needed.
+The segment begins at the event’s offset from the written measure start and spans the event’s scheduled score duration, capped at the barline. Both values are expressed as fractions of the written measure duration. The guide uses the existing playback cursor, grading and mapped PDF box.
 
-For an alphaTab trial after piano acceptance, use Guitar Trainer’s playback visit to resolve the printed box, then express the current beat’s tick offset and the measure duration in the same tick coordinate system. Reuse Guitar Trainer’s live wrong-input state. Check pause, seek, both repeat passes, held wrong keys and release. Keep the indicator optional and separate from note grading and box detection.
+For an alphaTab trial after piano acceptance, use Guitar Trainer’s playback visit to resolve the printed box, then express the beat’s start, end and measure duration in the same tick coordinate system. Reuse Guitar Trainer’s live wrong-input state and finalize each segment from its grading outcome. Keep completed marks for review and clear the relevant marks on loop restart. Check pause, seek, repeats, wrong-key release and a correction in Wait mode.

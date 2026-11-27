@@ -2724,6 +2724,7 @@ function triggerVirtualKey(midi, isPressed, source = 'midi', velocity = 100) {
                         AppState.realtimeWrongPressInCurrentContext = true;
                     }
                     registerHeldIncorrectFeedback(midi, targetStaffId, forceMIdx, anchor);
+                    globalThis.CompanionPDF?.wrongBeat();
                     AppState.score.wrong++;
                     updateScoreDisplay();
                 }
@@ -2790,6 +2791,7 @@ function checkWaitModeAdvance() {
         const loopRestart = AppState.pendingLoopRestart;
         AppState.pendingLoopRestart = null;
         const advance = () => {
+            globalThis.CompanionPDF?.finishBeat(AppState.expectedNotes);
             if (loopRestart) {
                 loopRestart.callback();
             } else {
@@ -3366,6 +3368,7 @@ function clearTransientPlaybackState({ clearVisualState = false } = {}) {
 }
 
 function stopPlaybackState({ pauseTransport = true } = {}) {
+    globalThis.CompanionPDF?.cancelBeat();
     cancelPlaybackRun();
     AppState.isPlaying = false;
     AppState.countInActive = false;
@@ -3456,6 +3459,7 @@ function resetPlaybackToLoopStart(fromToolbar) {
     }
     osmd.cursor.update();
     globalThis.SpeedTrainer?.reset();
+    globalThis.CompanionPDF?.resetBeats();
     handleAutoScroll(fromToolbar);
     AppState.ledPreviewTraversalIndex = -1;
     AppState.lastLedPreviewEvents = [];
@@ -4168,6 +4172,7 @@ function playbackLoop() {
         fallbackLength,
         getMeasureTimingInfo
     });
+    globalThis.CompanionPDF?.beginBeat(currentMeasure, currentTimestamp, beatsToWait);
 
     const currentRunningBpm = AppState.baseBpm * AppState.speedPercent;
     const waitSeconds = beatsToWait * (60 / currentRunningBpm);
@@ -4208,6 +4213,7 @@ function playbackLoop() {
                 return;
             }
             Tone.Transport.stop(); 
+            globalThis.CompanionPDF?.resetBeats(true);
 
             osmd.cursor.reset();
             while (!osmd.cursor.Iterator.EndReached && osmd.cursor.Iterator.CurrentMeasureIndex < minLoop - 1) {

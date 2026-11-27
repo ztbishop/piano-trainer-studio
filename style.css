@@ -5339,16 +5339,16 @@ body > .toolbar-popup, #practice-popup, #options-overlay {
 #pdf-sheet.mapping { cursor: crosshair; touch-action: none; user-select: none; }
 .pdf-box { position: absolute; box-sizing: border-box; border: 2px dashed #2563a8; color: #123653; font: bold .8rem sans-serif; }
 .pdf-box.current { border: 2px solid #1474bb; background: rgb(61 164 226 / 23%); }
-#pdf-pages.beat-guide:not(.marking) .pdf-box.current::after {
-    content: "";
+.pdf-beat-mark {
     position: absolute;
     pointer-events: none;
-    inset: 0 auto auto 0;
-    width: var(--pdf-beat-width, 0);
+    bottom: calc(100% + 2px);
     height: 5px;
-    background: #1265a0;
+    background: rgb(15 75 155 / 23%);
 }
-body.pdf-beat-feedback:has(#virtual-keyboard .wrong) #pdf-pages.beat-guide .pdf-box.current::after { background: #b52d30; }
+.pdf-beat-mark.correct-event { background: rgb(16 131 63 / 23%); }
+.pdf-beat-mark.missed-event,
+body.pdf-beat-feedback:has(#virtual-keyboard .wrong) .pdf-beat-mark.active-event { background: rgb(193 35 44 / 23%); }
 #pdf-pages .pdf-boxes button.pdf-box {
     pointer-events: auto; border: 0; border-radius: 0; padding: 0; min-width: 0; min-height: 0;
     box-shadow: none; background: transparent !important;

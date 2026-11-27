@@ -30,21 +30,43 @@ function initPdfCompanion() {
   const findPage = byId('find-page'), useScore = byId('use-score');
   const pagesRoot=byId('pages');
   const beatGuide = byId('beat-guide');
-  function updateBeatGuide(iterator) {
-    const measure = osmd.Sheet?.SourceMeasures?.[iterator?.CurrentMeasureIndex];
-    const offset = iterator?.currentTimeStamp?.RealValue - measure?.AbsoluteTimestamp?.RealValue;
-    const progress = offset / measure?.Duration?.RealValue;
-    if (iterator?.EndReached || !Number.isFinite(progress) || progress < 0 || progress > 1) {
-      pagesRoot.style.removeProperty('--pdf-beat-width');
-      return;
+  let beatMark, beatMistake = false;
+  const markedVisits = new Map();
+  function cancelBeat() {
+    beatMark?.remove();
+    beatMark = undefined;
+  }
+  function clearBeats(numbers) {
+    cancelBeat();
+    reader.clearBeatMarks(numbers);
+    if (numbers) for (const number of numbers) markedVisits.delete(number);
+    else markedVisits.clear();
+  }
+  function beginBeat(measure, timestamp, beats) {
+    if (!beatGuide.checked || !visible || editing) return;
+    cancelBeat();
+    const number = mapping[currentVisit];
+    if (!boxes[number] || !measure) return;
+    const start = (timestamp - measure.AbsoluteTimestamp.RealValue) / measure.Duration.RealValue;
+    const end = Math.min(1, start + beats / 4 / measure.Duration.RealValue);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start) return;
+    if (markedVisits.get(number) !== currentVisit) {
+      reader.clearBeatMarks([number]);
+      markedVisits.set(number, currentVisit);
     }
-    pagesRoot.style.setProperty('--pdf-beat-width', 'max(5px, ' + (100 * progress) + '%)');
+    beatMistake = false;
+    beatMark = reader.addBeatMark(number, start, end);
+  }
+  function finishBeat(notes) {
+    if (!beatMark) return;
+    if (notes.length) {
+      beatMark.className = 'pdf-beat-mark ' + (beatMistake || notes.some(note => !note.hit) ? 'missed-event' : 'correct-event');
+      beatMark = undefined;
+    } else cancelBeat();
   }
   beatGuide.onchange = () => {
-    pagesRoot.classList.toggle('beat-guide', beatGuide.checked);
     document.body.classList.toggle('pdf-beat-feedback', beatGuide.checked);
-    if (beatGuide.checked) updateBeatGuide(osmd.cursor?.Iterator);
-    else pagesRoot.style.removeProperty('--pdf-beat-width');
+    if (!beatGuide.checked) clearBeats();
   };
   const reader=readingPages(scroll,pagesRoot,jumpToMeasure,number=>{
     if(number===page || !visible || view.hidden)return;
@@ -371,6 +393,7 @@ function initPdfCompanion() {
     if(scrollToPage)reader.jump(page);
   }
   function setEditing(value) {
+    if (beatGuide.checked) clearBeats();
     editing = value;
     endReview();byId('position').hidden=true;
     cancelDrag();
@@ -421,13 +444,11 @@ function initPdfCompanion() {
       paintBoxes(!editing);
     }
     renderPage();
-    if (beatGuide.checked && visible && !editing) updateBeatGuide(osmd.cursor?.Iterator);
   }
   function position(iterator, reveal = false) {
     if (!pdf || !iterator || !visits.length) return false;
     const next = iterator.EndReached ? visits.length - 1 : visitIndex(visits, iterator.CurrentEnrolledTimestamp.RealValue);
     if (next !== currentVisit) { currentVisit = next; sync(); }
-    if (beatGuide.checked && visible && !editing) updateBeatGuide(iterator);
     if (reveal && visible && !editing) {
       const number = mapping[next];
       if (boxes[number]) {
@@ -630,7 +651,9 @@ function initPdfCompanion() {
   attach.onclick = () => file.click();
   file.onchange = () => { const selected = file.files[0]; file.value = ''; if (selected) open(selected); };
   new ResizeObserver(renderPage).observe(scroll);
-  return {position, reset, attachment, bindSaved, restoreLibrary,
+  return {position, reset, attachment, bindSaved, restoreLibrary, beginBeat, finishBeat, cancelBeat,
+    wrongBeat: () => { if (beatMark) beatMistake = true; },
+    resetBeats: (loopOnly = false) => { if (beatGuide.checked) clearBeats(loopOnly ? loopMeasures : undefined); },
     needsLibrarySave: id => !!attachedFile && (id !== boundScoreId || needsRetry),
     loopChanged: sync, resize: renderPage, scoreReady: () => { attach.disabled = false; }};
 }

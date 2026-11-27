@@ -1230,6 +1230,7 @@ function buildExpectedNotesFromEntries(entries, currentMeasureIdx, currentTimest
 }
 
 function processMissedNotes() {
+    globalThis.CompanionPDF?.finishBeat(AppState.expectedNotes);
     let missedCount = 0;
     const suppressMissedVisuals = AppState.mode === 'realtime' && AppState.realtimeWrongPressInCurrentContext;
 

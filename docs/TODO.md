@@ -10,7 +10,7 @@ The previously reproduced runtime defects FIX-001–FIX-007 have implementations
 
 ## Things still to test or investigate
 
-- Evaluate the optional [PDF beat guide](COMPANION_PDF.md#beat-guide-trial-and-guitar-trainer-handoff) during real Arirang practice, especially irregularly spaced passages. Decide whether to keep, tune or remove it before requesting a Guitar Trainer port.
+- Evaluate the optional [PDF beat guide](COMPANION_PDF.md#beat-guide-trial-and-guitar-trainer-handoff) during physical-piano practice. Chrome checks cover Arirang's first-bar segments, Wait wrong-key release and correction, Realtime success and loop reset. Check whether the colors and approximate positions are helpful on dense or irregularly spaced passages before requesting a Guitar Trainer port.
 
 ### Companion scores and practice workflows
 
