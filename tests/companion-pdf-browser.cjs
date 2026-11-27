@@ -257,6 +257,12 @@ async function main() {
         await openPdfMenu(page);
         await el('pdf-visit').selectOption('2');
         await expectVisit(3,1);
+        await openPdfMenu(page);
+        assert.equal(await el('pdf-beat-guide').isChecked(), false);
+        await el('pdf-beat-guide').check();
+        await el('btn-scores').click();
+        await el('scores-panel').waitFor({state:'hidden'});
+        assert.equal(await el('pdf-pages').evaluate(p => p.style.getPropertyValue('--pdf-beat-width')), 'max(5px, 0%)');
         await mode('wait');
         await el('btn-looper').click();
         await el('val-loop-max').fill('4'); await el('val-loop-max').press('Tab');
@@ -274,7 +280,12 @@ async function main() {
         const press = midi => page.evaluate(n => {
             triggerVirtualKey(n,true,'ui'); triggerVirtualKey(n,false,'ui');
         },midi);
-        await press(71); await press(60);
+        const stripColor = () => box(1).evaluate(b => getComputedStyle(b, '::after').backgroundColor);
+        await page.evaluate(() => triggerVirtualKey(71,true,'ui'));
+        assert.equal(await stripColor(), 'rgb(181, 45, 48)');
+        await page.evaluate(() => triggerVirtualKey(71,false,'ui'));
+        assert.equal(await stripColor(), 'rgb(18, 101, 160)');
+        await press(60);
         await expectVisit(3,1);
         assert.deepEqual(await page.evaluate(() => AppState.score), {correct:1,wrong:1});
         await press(48);
@@ -390,6 +401,29 @@ async function main() {
         await expectVisit(3,1);
         await press(60); await press(48); await expectVisit(4,2);
         await el('btn-play').click();
+        if (process.env.PT_BEAT_SCORE && process.env.PT_BEAT_PDF) {
+            await el('file-input').setInputFiles(process.env.PT_BEAT_SCORE);
+            await page.waitForFunction(() => osmd.Sheet?.SourceMeasures.length > 6 && !document.querySelector('#pdf-attach').disabled);
+            await el('pdf-file').setInputFiles(process.env.PT_BEAT_PDF);
+            await el('pdf-find').click();
+            await el('pdf-use-score').click({timeout:120000});
+            await openPdfMenu(page);
+            await el('pdf-beat-guide').check();
+            const widths = await page.evaluate(() => {
+                const it = osmd.Sheet.MusicPartManager.getIterator();
+                const widths = [];
+                while (!it.EndReached && it.CurrentMeasureIndex === 0) {
+                    CompanionPDF.position(it);
+                    const box = document.querySelector('#pdf-pages .pdf-box.current');
+                    widths.push(parseFloat(getComputedStyle(box, '::after').width) / box.clientWidth);
+                    it.moveToNext();
+                }
+                return widths;
+            });
+            console.log('First measure progress fractions', widths);
+            assert(widths.length > 3 && widths[0] < 0.1 && widths.at(-1) > 0.7);
+            assert(widths.every((w,i) => w <= 1 && (!i || w >= widths[i-1])));
+        }
         assert.deepEqual(errors, []);
         console.log('Companion PDF browser acceptance passed.');
     } catch (error) {

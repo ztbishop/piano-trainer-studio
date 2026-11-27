@@ -10,6 +10,8 @@ The previously reproduced runtime defects FIX-001–FIX-007 have implementations
 
 ## Things still to test or investigate
 
+- Evaluate the optional [PDF beat guide](COMPANION_PDF.md#beat-guide-trial-and-guitar-trainer-handoff) during real Arirang practice, especially irregularly spaced passages. Decide whether to keep, tune or remove it before requesting a Guitar Trainer port.
+
 ### Companion scores and practice workflows
 
 - [x] **Review a whole PDF scan at once.** Numbered boxes appear across all printed pages before saving. A single acceptance saves the draft, including optional page corrections. [Workflow](COMPANION_PDF.md#correct-the-printed-boxes)

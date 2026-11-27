@@ -29,6 +29,23 @@ function initPdfCompanion() {
   const find=byId('find'), action=byId('action'), replace=byId('replace');
   const findPage = byId('find-page'), useScore = byId('use-score');
   const pagesRoot=byId('pages');
+  const beatGuide = byId('beat-guide');
+  function updateBeatGuide(iterator) {
+    const measure = osmd.Sheet?.SourceMeasures?.[iterator?.CurrentMeasureIndex];
+    const offset = iterator?.currentTimeStamp?.RealValue - measure?.AbsoluteTimestamp?.RealValue;
+    const progress = offset / measure?.Duration?.RealValue;
+    if (iterator?.EndReached || !Number.isFinite(progress) || progress < 0 || progress > 1) {
+      pagesRoot.style.removeProperty('--pdf-beat-width');
+      return;
+    }
+    pagesRoot.style.setProperty('--pdf-beat-width', 'max(5px, ' + (100 * progress) + '%)');
+  }
+  beatGuide.onchange = () => {
+    pagesRoot.classList.toggle('beat-guide', beatGuide.checked);
+    document.body.classList.toggle('pdf-beat-feedback', beatGuide.checked);
+    if (beatGuide.checked) updateBeatGuide(osmd.cursor?.Iterator);
+    else pagesRoot.style.removeProperty('--pdf-beat-width');
+  };
   const reader=readingPages(scroll,pagesRoot,jumpToMeasure,number=>{
     if(number===page || !visible || view.hidden)return;
     if (scoreReview && !proposals) { page=number; pageSelect.value=String(number); return; }
@@ -404,11 +421,13 @@ function initPdfCompanion() {
       paintBoxes(!editing);
     }
     renderPage();
+    if (beatGuide.checked && visible && !editing) updateBeatGuide(osmd.cursor?.Iterator);
   }
   function position(iterator, reveal = false) {
     if (!pdf || !iterator || !visits.length) return false;
     const next = iterator.EndReached ? visits.length - 1 : visitIndex(visits, iterator.CurrentEnrolledTimestamp.RealValue);
     if (next !== currentVisit) { currentVisit = next; sync(); }
+    if (beatGuide.checked && visible && !editing) updateBeatGuide(iterator);
     if (reveal && visible && !editing) {
       const number = mapping[next];
       if (boxes[number]) {
